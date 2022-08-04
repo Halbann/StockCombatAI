@@ -33,6 +33,7 @@
 
 # References
 Source/KerbalCombatSystems/References
+Source/KerbalCombatSystems/References/
 
 # Build products and files generated during gameplay
 GameData/KCS/Plugins
