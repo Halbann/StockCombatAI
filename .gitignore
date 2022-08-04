@@ -1,0 +1,51 @@
+# VisualStudio
+.vs/
+[Bb]in/
+[Oo]bj/
+
+# User-specific files
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+
+# Visual Studio 2015 cache/options directory
+.vs/
+
+# Monodevelop
+[Ee]xported[Oo]bj/
+*.userprefs
+
+# VisualStudio Code
+.vscode/
+
+# Vim
+*.swp
+
+# Unity
+[Ll]ibrary/
+[Tt]emp/
+/*.pidb
+/*.user
+
+# Symlink to references in KSP directory
+Managed
+ContinuousCollision/Managed
+
+# Build products and files generated during gameplay
+#GameData/ContinuousCollisions/Plugins
+#GameData/ContinuousCollisions/Plugins/
+
+# OS Specific
+.DS_STORE*
+[Tt]humbs.db
+
+#netkan for generating ckan test files
+netkan.exe
+*.ckan
+
+#zip files for archived art assets
+*.zip
+
+# .swp files from vim (temporary files that vim creates when editing a file)
+*.swp
