@@ -29,11 +29,13 @@
 /*.user
 
 # Symlink to references in KSP directory
-Source/StockCombatAI/Managed
+Source/KerbalCombatSystems/Managed
 
 # Build products and files generated during gameplay
-#GameData/ContinuousCollisions/Plugins
-#GameData/ContinuousCollisions/Plugins/
+GameData/KCS/Plugins
+GameData/KCS/Plugins/
+GameData/KCS/PluginData
+GameData/KCS/PluginData/
 
 # OS Specific
 .DS_STORE*
@@ -49,5 +51,5 @@ netkan.exe
 # .swp files from vim (temporary files that vim creates when editing a file)
 *.swp
 
-Source/StockCombatAI/bin/
-Source/StockCombatAI/obj/
+Source/KerbalCombatSystems/bin/
+Source/KerbalCombatSystems/obj/
