@@ -17,8 +17,8 @@ namespace KerbalCombatSystems
             guiActive = true,
             guiActiveEditor = true,
             guiName = "Max Range",
-            groupName = missileGuidanceGroupName,
-            groupDisplayName = missileGuidanceGroupName),
+            groupName = DecouplerDesignationGroupName,
+            groupDisplayName = DecouplerDesignationGroupName),
             UI_FloatRange(minValue = 200f, maxValue = 5000f, stepIncrement = 50f, scene = UI_Scene.All)]
         public float maxRange = 1000f;
 
@@ -26,8 +26,8 @@ namespace KerbalCombatSystems
             guiActive = true,
             guiActiveEditor = true,
             guiName = "Min Range",
-            groupName = missileGuidanceGroupName,
-            groupDisplayName = missileGuidanceGroupName),
+            groupName = DecouplerDesignationGroupName,
+            groupDisplayName = DecouplerDesignationGroupName),
             UI_FloatRange(minValue = 100f, maxValue = 4000f, stepIncrement = 50f, scene = UI_Scene.All)]
         public float minRange = 500f;
 
@@ -35,8 +35,8 @@ namespace KerbalCombatSystems
             guiActive = true,
             guiActiveEditor = true,
             guiName = "Use for Interception",
-            groupName = missileGuidanceGroupName,
-            groupDisplayName = missileGuidanceGroupName),
+            groupName = DecouplerDesignationGroupName,
+            groupDisplayName = DecouplerDesignationGroupName),
             UI_Toggle(enabledText = "Enabled", disabledText = "Disabled", scene = UI_Scene.All)]
         public bool useAsInterceptor = false;
     }
