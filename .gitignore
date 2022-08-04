@@ -32,8 +32,10 @@
 Source/StockCombatAI/Managed
 
 # Build products and files generated during gameplay
-#GameData/ContinuousCollisions/Plugins
-#GameData/ContinuousCollisions/Plugins/
+GameData/KCS/Plugins
+GameData/KCS/Plugins/
+GameData/KCS/PluginData
+GameData/KCS/PluginData/
 
 # OS Specific
 .DS_STORE*
