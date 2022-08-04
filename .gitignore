@@ -29,8 +29,7 @@
 /*.user
 
 # Symlink to references in KSP directory
-Managed
-ContinuousCollision/Managed
+Source/Managed
 
 # Build products and files generated during gameplay
 #GameData/ContinuousCollisions/Plugins
