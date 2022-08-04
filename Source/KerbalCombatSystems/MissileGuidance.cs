@@ -1,38 +1,39 @@
 ﻿using System;
-using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using KSP.UI.Screens;
 using UnityEngine;
+using System.IO;
 
-namespace StockCombatAI
+namespace KerbalCombatSystems
 {
     public class ModuleMissileGuidance : PartModule
     {
         const string missileGuidanceGroupName = "Missile Guidance";
 
-        [KSPField(isPersistant = true, 
-            guiActive = true, 
-            guiActiveEditor = true, 
+        [KSPField(isPersistant = true,
+            guiActive = true,
+            guiActiveEditor = true,
             guiName = "Max Range",
             groupName = missileGuidanceGroupName,
             groupDisplayName = missileGuidanceGroupName),
             UI_FloatRange(minValue = 200f, maxValue = 5000f, stepIncrement = 50f, scene = UI_Scene.All)]
         public float maxRange = 1000f;
 
-        [KSPField(isPersistant = true, 
-            guiActive = true, 
-            guiActiveEditor = true, 
+        [KSPField(isPersistant = true,
+            guiActive = true,
+            guiActiveEditor = true,
             guiName = "Min Range",
             groupName = missileGuidanceGroupName,
             groupDisplayName = missileGuidanceGroupName),
             UI_FloatRange(minValue = 100f, maxValue = 4000f, stepIncrement = 50f, scene = UI_Scene.All)]
         public float minRange = 500f;
 
-        [KSPField(isPersistant = true, 
-            guiActive = true, 
-            guiActiveEditor = true, 
+        [KSPField(isPersistant = true,
+            guiActive = true,
+            guiActiveEditor = true,
             guiName = "Use for Interception",
             groupName = missileGuidanceGroupName,
             groupDisplayName = missileGuidanceGroupName),
@@ -52,19 +53,20 @@ namespace StockCombatAI
         public void FireMissile()
         {
             Debug.Log($"Firing missile, let 'em have it! Max range: {maxRange}, Min range: {minRange}, Interceptor: {useAsInterceptor}");
-            
+
             // set target
 
             target = vessel.targetObject.GetVessel();
-            
+
             // electric charge check
             // fuel check
             // propulsion check
 
             // find decoupler
-            
+
             ModuleDecouple decoupler = FindDecoupler(part);
-            if (decoupler == null) {
+            if (decoupler == null)
+            {
                 Debug.Log("Missile launch failed. Couldn't find decoupler.");
                 return;
             };
