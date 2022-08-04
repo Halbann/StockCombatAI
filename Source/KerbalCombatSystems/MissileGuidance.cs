@@ -16,20 +16,21 @@ namespace KerbalCombatSystems
         [KSPField(isPersistant = true,
             guiActive = true,
             guiActiveEditor = true,
-            guiName = "Max Range",
+            guiName = "Targetting Range",
             groupName = missileGuidanceGroupName,
             groupDisplayName = missileGuidanceGroupName),
-            UI_FloatRange(minValue = 200f, maxValue = 5000f, stepIncrement = 50f, scene = UI_Scene.All)]
-        public float maxRange = 1000f;
+            UI_MinMaxRange(minValueX = 100f, maxValueX = 5000f, minValueY = 200f, maxValueY = 5000f, stepIncrement = 50f, scene = UI_Scene.All)]
+    
+        public Vector2 MinMaxRange = new Vector2(500f, 1000f);
 
         [KSPField(isPersistant = true,
             guiActive = true,
             guiActiveEditor = true,
-            guiName = "Min Range",
+            guiName = "Terminal Velocity",
             groupName = missileGuidanceGroupName,
             groupDisplayName = missileGuidanceGroupName),
-            UI_FloatRange(minValue = 100f, maxValue = 4000f, stepIncrement = 50f, scene = UI_Scene.All)]
-        public float minRange = 500f;
+            UI_FloatRange(minValue = 10f, maxValue = 2000f, stepIncrement = 50f, scene = UI_Scene.All)]
+        public float terminalVelocity = 300f;
 
         [KSPField(isPersistant = true,
             guiActive = true,
@@ -52,7 +53,9 @@ namespace KerbalCombatSystems
                   groupDisplayName = missileGuidanceGroupName)]
         public void FireMissile()
         {
-            Debug.Log($"Firing missile, let 'em have it! Max range: {maxRange}, Min range: {minRange}, Interceptor: {useAsInterceptor}");
+        float maxRange = MinMaxRange.x;
+        float minRange = MinMaxRange.y;
+        Debug.Log($"Firing missile, let 'em have it! Max range: {maxRange}, Min range: {minRange}, Interceptor: {useAsInterceptor}");
 
             // set target
 

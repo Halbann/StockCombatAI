@@ -11,25 +11,14 @@ namespace KerbalCombatSystems
 {
     public class ModuleDecouplerDesignate : PartModule
     {
-        const string DecouplerDesignationGroupName = "Missile Guidance";
+        const string DecouplerDesignationGroupName = "Decoupler Designation";
 
-        [KSPField(isPersistant = true,
-            guiActive = true,
-            guiActiveEditor = true,
-            guiName = "Max Range",
-            groupName = DecouplerDesignationGroupName,
-            groupDisplayName = DecouplerDesignationGroupName),
-            UI_FloatRange(minValue = 200f, maxValue = 5000f, stepIncrement = 50f, scene = UI_Scene.All)]
-        public float maxRange = 1000f;
-
-        [KSPField(isPersistant = true,
-            guiActive = true,
-            guiActiveEditor = true,
-            guiName = "Min Range",
-            groupName = DecouplerDesignationGroupName,
-            groupDisplayName = DecouplerDesignationGroupName),
-            UI_FloatRange(minValue = 100f, maxValue = 4000f, stepIncrement = 50f, scene = UI_Scene.All)]
-        public float minRange = 500f;
+     
+        [KSPField(isPersistant = true, guiActive = true, guiActiveEditor = true, guiName = "Decoupler Type",
+            groupName = "Decoupler Designation Scroll"),
+            UI_ChooseOption(controlEnabled = true, affectSymCounterparts = UI_Scene.None,
+            options = new string[] { "Default", "Missile", "Rocket", "Bomb", "Countermeasure", "Escape Pod"})]
+        public string DecouplerType = "Default";
 
         [KSPField(isPersistant = true,
             guiActive = true,
