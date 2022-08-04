@@ -1,0 +1,6 @@
+C:\Users\Lawrence\Documents\Project Files\Visual Studio\StockCombatAI\StockCombatAI\bin\Debug\StockCombatAI.dll
+C:\Users\Lawrence\Documents\Project Files\Visual Studio\StockCombatAI\StockCombatAI\bin\Debug\StockCombatAI.pdb
+C:\Users\Lawrence\Documents\Project Files\Visual Studio\StockCombatAI\StockCombatAI\obj\Debug\StockCombatAI.csprojAssemblyReference.cache
+C:\Users\Lawrence\Documents\Project Files\Visual Studio\StockCombatAI\StockCombatAI\obj\Debug\StockCombatAI.csproj.CoreCompileInputs.cache
+C:\Users\Lawrence\Documents\Project Files\Visual Studio\StockCombatAI\StockCombatAI\obj\Debug\StockCombatAI.dll
+C:\Users\Lawrence\Documents\Project Files\Visual Studio\StockCombatAI\StockCombatAI\obj\Debug\StockCombatAI.pdb
