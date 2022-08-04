@@ -29,7 +29,7 @@
 /*.user
 
 # Symlink to references in KSP directory
-Source/Managed
+Source/StockCombatAI/Managed
 
 # Build products and files generated during gameplay
 #GameData/ContinuousCollisions/Plugins
