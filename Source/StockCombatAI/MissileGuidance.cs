@@ -8,7 +8,7 @@ using UnityEngine;
 
 namespace StockCombatAI
 {
-    public class MissileGuidanceModule : PartModule
+    public class ModuleMissileGuidance : PartModule
     {
         const string missileGuidanceGroupName = "Missile Guidance";
 
