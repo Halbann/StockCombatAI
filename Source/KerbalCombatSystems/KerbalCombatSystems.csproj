@@ -51,9 +51,14 @@
       <HintPath>References\UnityEngine.CoreModule.dll</HintPath>
       <Private>False</Private>
     </Reference>
+    <Reference Include="UnityEngine.InputLegacyModule">
+      <HintPath>References\UnityEngine.InputLegacyModule.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
   </ItemGroup>
   <ItemGroup>
     <Compile Include="DecouplerDesignator.cs" />
+    <Compile Include="KCSDebug.cs" />
     <Compile Include="MissileGuidance.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>

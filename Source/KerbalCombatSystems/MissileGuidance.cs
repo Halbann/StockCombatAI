@@ -164,12 +164,15 @@ namespace KerbalCombatSystems
                 vessel.Autopilot.SAS.LockRotation(progressiveRotation);
 
                 float angle = Quaternion.Angle(vessel.ReferenceTransform.rotation, quat);
-                vessel.ctrlState.mainThrottle = angle < 5 ? 1 : 0;
+                vessel.ctrlState.mainThrottle = (angle < 5) ? 1 : 0;
+
+                if (Vector3.Dot(targetVectorNormal, relVelNrm) > 0.999999
+                    && Vector3.Dot(relVel, targetVectorNormal) > terminalVelocity) {
+                    vessel.ctrlState.mainThrottle = 0;
+                }
 
                 if (targetVector.magnitude < 10)
-                {
                     engageAutopilot = false;
-                }
 
                 //debugging linedraws
                 Vector3[] linePositions = { target.transform.position, vessel.transform.position };
@@ -196,7 +199,8 @@ namespace KerbalCombatSystems
             Material LineMaterial = new Material(Shader.Find("Standard"));
             LineMaterial.color = LineColour;
             Line.material = LineMaterial;
-            Line.SetWidth(0.5f, 0f);
+            Line.startWidth = 0.5f;
+            Line.endWidth = 0f;
             return Line;
         }
 
