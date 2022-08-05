@@ -22,7 +22,6 @@ namespace KerbalCombatSystems
 
         private void Update()
         {
-            bool key = Input.GetKeyDown(KeyCode.F12);
             //on press f12 toggle missile lines
             if (Input.GetKeyDown(KeyCode.F12) && !Input.GetKey(KeyCode.LeftAlt))
             {
