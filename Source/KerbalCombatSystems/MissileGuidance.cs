@@ -44,13 +44,11 @@ namespace KerbalCombatSystems
             UI_Toggle(enabledText = "Enabled", disabledText = "Disabled", scene = UI_Scene.All)]
         public bool useAsInterceptor = false;
 
-
         // Missile guidance variables.
 
         public bool engageAutopilot = false;
         Vessel target;
         Vessel firer;
-
 
         // Debugging line variables.
 
@@ -109,7 +107,6 @@ namespace KerbalCombatSystems
                 engine.Activate();
             }
 
-
             // pulse to 5 m/s.
 
             var burnTime = 0.5f;
@@ -117,7 +114,6 @@ namespace KerbalCombatSystems
             vessel.ctrlState.mainThrottle = driftVelocity / burnTime / GetMaxAcceleration(vessel);
             yield return new WaitForSeconds(burnTime);
             vessel.ctrlState.mainThrottle = 0;
-
 
             // wait until clear of firer
 
@@ -131,7 +127,6 @@ namespace KerbalCombatSystems
                 targetRay.direction = target.transform.position - vessel.transform.position;
                 lineOfSight = !RayIntersectsVessel(firer, targetRay);
             }
-
 
             // Create debug lines.
 
