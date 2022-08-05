@@ -20,20 +20,48 @@ namespace KerbalCombatSystems
             guiActive = true,
             guiActiveEditor = true,
             guiName = "Targetting Range",
+            guiUnits = "m",
             groupName = missileGuidanceGroupName,
             groupDisplayName = missileGuidanceGroupName),
-            UI_MinMaxRange(minValueX = 100f, maxValueX = 5000f, minValueY = 200f, maxValueY = 5000f, stepIncrement = 50f, scene = UI_Scene.All)]
-    
+            UI_MinMaxRange(
+                minValueX = 100f,
+                maxValueX = 5000f,
+                minValueY = 200f,
+                maxValueY = 5000f,
+                stepIncrement = 50f,
+                scene = UI_Scene.All
+            )]
         public Vector2 MinMaxRange = new Vector2(500f, 1000f);
 
         [KSPField(isPersistant = true,
-            guiActive = true,
-            guiActiveEditor = true,
-            guiName = "Terminal Velocity",
-            groupName = missileGuidanceGroupName,
-            groupDisplayName = missileGuidanceGroupName),
-            UI_FloatRange(minValue = 10f, maxValue = 2000f, stepIncrement = 50f, scene = UI_Scene.All)]
+              guiActive = true,
+              guiActiveEditor = true,
+              guiName = "Terminal Velocity",
+              guiUnits = "m/s",
+              groupName = missileGuidanceGroupName,
+              groupDisplayName = missileGuidanceGroupName),
+              UI_FloatRange(
+                  minValue = 50f,
+                  maxValue = 2000f,
+                  stepIncrement = 50f,
+                  scene = UI_Scene.All
+              )]
         public float terminalVelocity = 300f;
+
+        [KSPField(isPersistant = true,
+               guiActive = true,
+               guiActiveEditor = true,
+               guiName = "Preferred Target Mass",
+               guiUnits = "t",
+               groupName = missileGuidanceGroupName,
+               groupDisplayName = missileGuidanceGroupName),
+               UI_FloatRange(
+                   minValue = 0f,
+                   maxValue = 1000f,
+                   stepIncrement = 0.01f,
+                   scene = UI_Scene.All
+               )]
+        public float TMassPreference = 50f;
 
         [KSPField(isPersistant = true,
             guiActive = true,
@@ -41,8 +69,25 @@ namespace KerbalCombatSystems
             guiName = "Use for Interception",
             groupName = missileGuidanceGroupName,
             groupDisplayName = missileGuidanceGroupName),
-            UI_Toggle(enabledText = "Enabled", disabledText = "Disabled", scene = UI_Scene.All)]
+            UI_Toggle(
+                enabledText = "Enabled",
+                disabledText = "Disabled",
+                scene = UI_Scene.All
+            )]
         public bool useAsInterceptor = false;
+
+        [KSPField(isPersistant = true,
+            guiActive = true,
+            guiActiveEditor = true,
+            guiName = "Velocity Match",
+            groupName = missileGuidanceGroupName,
+            groupDisplayName = missileGuidanceGroupName),
+            UI_Toggle(
+                enabledText = "Enabled",
+                disabledText = "Disabled",
+                scene = UI_Scene.All
+            )]
+        public bool MatchTargetVelocity = true;
 
         // Missile guidance variables.
 
@@ -52,6 +97,7 @@ namespace KerbalCombatSystems
 
         // Debugging line variables.
 
+        GameObject DebugScriptHolder;
         LineRenderer targetLine, rvLine, correctionLine, SASLine;
 
         // 'Fire' button.
@@ -85,7 +131,7 @@ namespace KerbalCombatSystems
 
             // find decoupler
             ModuleDecouple decoupler = FindDecoupler(part);
-            
+
             // try to pop decoupler
             try
             {
@@ -123,6 +169,8 @@ namespace KerbalCombatSystems
                 lineOfSight = !RayIntersectsVessel(firer, targetRay);
             }
 
+            // declare line renderer location
+            DebugScriptHolder = FindObjectOfType<KCSDebug>().gameObject;
             // initialise debug line renderer
             targetLine = DrawLine(Color.red);
             rvLine = DrawLine(Color.green);
@@ -167,7 +215,8 @@ namespace KerbalCombatSystems
                 vessel.ctrlState.mainThrottle = (angle < 5) ? 1 : 0;
 
                 if (Vector3.Dot(targetVectorNormal, relVelNrm) > 0.999999
-                    && Vector3.Dot(relVel, targetVectorNormal) > terminalVelocity) {
+                    && Vector3.Dot(relVel, targetVectorNormal) > terminalVelocity)
+                {
                     vessel.ctrlState.mainThrottle = 0;
                 }
 
@@ -194,21 +243,25 @@ namespace KerbalCombatSystems
 
         public LineRenderer DrawLine(Color LineColour)
         {
+            //spawn new line
             LineRenderer Line = new GameObject().AddComponent<LineRenderer>();
             Line.useWorldSpace = true;
+            //create a material for the line with its unique colour
             Material LineMaterial = new Material(Shader.Find("Standard"));
             LineMaterial.color = LineColour;
             Line.material = LineMaterial;
+            //make it a point
             Line.startWidth = 0.5f;
             Line.endWidth = 0f;
+            //pass the line back to be associated with a vector
             return Line;
         }
 
         protected void PlotLine(Vector3[] Positions, LineRenderer Line)
         {
             //get showline status from Debug script
-            bool DebugStatus = FindObjectOfType<KCSDebug>().ShowLines;
-            
+            bool DebugStatus = DebugScriptHolder.GetComponent<KCSDebug>().ShowLines;
+
             if (DebugStatus)
             {
                 Line.positionCount = 2;
@@ -224,6 +277,9 @@ namespace KerbalCombatSystems
         {
             Part currentPart = origin.parent;
             ModuleDecouple decoupler;
+
+            //ModuleDecouplerDesignate DecouplerType;	
+
 
             for (int i = 0; i < 99; i++)
             {
@@ -242,7 +298,7 @@ namespace KerbalCombatSystems
             return thrust / vessel.GetTotalMass();
         }
 
-        
+
 
         private bool RayIntersectsVessel(Vessel v, Ray r)
         {
@@ -258,16 +314,3 @@ namespace KerbalCombatSystems
         }
     }
 }
-
-
-
-        
-      
-
-            
-
-               
-        
-
-        
-

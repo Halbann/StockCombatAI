@@ -14,13 +14,19 @@ namespace KerbalCombatSystems
         const string DecouplerDesignationGroupName = "Decoupler Designation";
 
      
-        [KSPField(isPersistant = true, guiActive = true, guiActiveEditor = true, guiName = "Decoupler Type",
-            groupName = "Decoupler Designation Scroll"),
+        [KSPField(
+            isPersistant = true, 
+            guiActive = true, 
+            guiActiveEditor = true, 
+            guiName = "Decoupler Type",
+            groupName = DecouplerDesignationGroupName,
+            groupDisplayName = DecouplerDesignationGroupName),
             UI_ChooseOption(controlEnabled = true, affectSymCounterparts = UI_Scene.None,
-            options = new string[] { "Default", "Missile", "Rocket", "Bomb", "Countermeasure", "Escape Pod"})]
+            options = new string[] { "Default", "Missile", "Rocket", "Bomb", "Countermeasure", "Escape Pod", "Warhead" })]
         public string DecouplerType = "Default";
 
-        [KSPField(isPersistant = true,
+        [KSPField(
+            isPersistant = true,
             guiActive = true,
             guiActiveEditor = true,
             guiName = "Use for Interception",
