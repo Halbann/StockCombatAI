@@ -52,11 +52,7 @@ namespace KerbalCombatSystems
 
         // Debugging line variables.
 
-        LineRenderer targetLine;
-        LineRenderer rvLine;
-        LineRenderer correctionLine;
-        LineRenderer SASLine;
-        public bool drawDebugLines = true;
+        LineRenderer targetLine, rvLine, correctionLine, SASLine;
 
         // 'Fire' button.
 
@@ -84,23 +80,24 @@ namespace KerbalCombatSystems
 
         public IEnumerator Launch()
         {
-            // find decoupler
-
-            ModuleDecouple decoupler = FindDecoupler(part);
-            if (decoupler == null)
-            {
-                Debug.Log("Missile launch failed. Couldn't find decoupler.");
-                yield break;
-            };
-
             // set firer
             firer = vessel;
 
-            // pop decoupler
-            decoupler.Decouple();
+            // find decoupler
+            ModuleDecouple decoupler = FindDecoupler(part);
+            
+            // try to pop decoupler
+            try
+            {
+                decoupler.Decouple();
+            }
+            catch
+            {
+                //notify of error but launch anyway for freefloating missiles
+                Debug.Log("Couldn't find decoupler.");
+            }
 
             // turn on engines
-
             List<ModuleEngines> engines = vessel.FindPartModulesImplementing<ModuleEngines>();
             foreach (ModuleEngines engine in engines)
             {
@@ -108,7 +105,6 @@ namespace KerbalCombatSystems
             }
 
             // pulse to 5 m/s.
-
             var burnTime = 0.5f;
             var driftVelocity = 5;
             vessel.ctrlState.mainThrottle = driftVelocity / burnTime / GetMaxAcceleration(vessel);
@@ -116,7 +112,6 @@ namespace KerbalCombatSystems
             vessel.ctrlState.mainThrottle = 0;
 
             // wait until clear of firer
-
             bool lineOfSight = false;
             Ray targetRay = new Ray();
 
@@ -128,20 +123,13 @@ namespace KerbalCombatSystems
                 lineOfSight = !RayIntersectsVessel(firer, targetRay);
             }
 
-            // Create debug lines.
-
-            if (drawDebugLines)
-            {
-                float th = 0.5f;
-
-                targetLine = CreateDebugLine(Color.magenta, th);
-                rvLine = CreateDebugLine(Color.green, th);
-                correctionLine = CreateDebugLine(Color.white, th);
-                SASLine = CreateDebugLine(Color.blue, th);
-            }
+            // initialise debug line renderer
+            targetLine = DrawLine(Color.red);
+            rvLine = DrawLine(Color.green);
+            correctionLine = DrawLine(Color.white);
+            SASLine = DrawLine(Color.blue);
 
             // enable autopilot
-
             engageAutopilot = true;
 
             yield break;
@@ -183,20 +171,15 @@ namespace KerbalCombatSystems
                     engageAutopilot = false;
                 }
 
-                if (drawDebugLines)
-                {
-                    Vector3[] linePositions = { target.transform.position, vessel.transform.position };
-                    targetLine.SetPositions(linePositions);
-
-                    linePositions = new[]{ vessel.transform.position, vessel.transform.position + (correction * (50 * correctionRatio)) };
-                    correctionLine.SetPositions(linePositions);
-
-                    linePositions = new[]{ vessel.transform.position, vessel.transform.position + (relVelNrm * 50) };
-                    rvLine.SetPositions(linePositions);
-
-                    linePositions = new[]{ vessel.transform.position, vessel.transform.position + ((progressiveRotation * Vector3.up) * 50) };
-                    SASLine.SetPositions(linePositions);
-                }
+                //debugging linedraws
+                Vector3[] linePositions = { target.transform.position, vessel.transform.position };
+                PlotLine(linePositions, targetLine);
+                linePositions = new Vector3[] { vessel.transform.position, vessel.transform.position + (correction * 50) };
+                PlotLine(linePositions, correctionLine);
+                linePositions = new Vector3[] { vessel.transform.position, vessel.transform.position + (relVelNrm * 50) };
+                PlotLine(linePositions, rvLine);
+                linePositions = new Vector3[] { vessel.transform.position, vessel.transform.position + ((progressiveRotation * Vector3.up) * 50) };
+                PlotLine(linePositions, SASLine);
             }
         }
         public override void OnStart(StartState state)
@@ -204,6 +187,33 @@ namespace KerbalCombatSystems
         }
         public override void OnUpdate()
         {
+        }
+
+        public LineRenderer DrawLine(Color LineColour)
+        {
+            LineRenderer Line = new GameObject().AddComponent<LineRenderer>();
+            Line.useWorldSpace = true;
+            Material LineMaterial = new Material(Shader.Find("Standard"));
+            LineMaterial.color = LineColour;
+            Line.material = LineMaterial;
+            Line.SetWidth(0.5f, 0f);
+            return Line;
+        }
+
+        protected void PlotLine(Vector3[] Positions, LineRenderer Line)
+        {
+            //get showline status from Debug script
+            bool DebugStatus = FindObjectOfType<KCSDebug>().ShowLines;
+            
+            if (DebugStatus)
+            {
+                Line.positionCount = 2;
+                Line.SetPositions(Positions);
+            }
+            else
+            {
+                Line.positionCount = 0;
+            }
         }
 
         ModuleDecouple FindDecoupler(Part origin)
@@ -228,17 +238,7 @@ namespace KerbalCombatSystems
             return thrust / vessel.GetTotalMass();
         }
 
-        LineRenderer CreateDebugLine(Color color, float thickness)
-        {
-            LineRenderer line = new GameObject().AddComponent<LineRenderer>();
-            line.useWorldSpace = true;
-            line.startWidth = thickness;
-            line.endWidth = thickness;
-            Material lineMaterial = new Material(Shader.Find("Standard"));
-            lineMaterial.color = color;
-            line.material = lineMaterial;
-            return line;
-        }
+        
 
         private bool RayIntersectsVessel(Vessel v, Ray r)
         {
@@ -254,3 +254,16 @@ namespace KerbalCombatSystems
         }
     }
 }
+
+
+
+        
+      
+
+            
+
+               
+        
+
+        
+
