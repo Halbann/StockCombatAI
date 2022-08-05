@@ -6,11 +6,14 @@ using System.Threading.Tasks;
 using KSP.UI.Screens;
 using UnityEngine;
 using System.IO;
+using System.Collections;
 
 namespace KerbalCombatSystems
 {
     public class ModuleMissileGuidance : PartModule
     {
+        // User parameters changed via UI.
+
         const string missileGuidanceGroupName = "Missile Guidance";
 
         [KSPField(isPersistant = true,
@@ -41,15 +44,23 @@ namespace KerbalCombatSystems
             UI_Toggle(enabledText = "Enabled", disabledText = "Disabled", scene = UI_Scene.All)]
         public bool useAsInterceptor = false;
 
-        public bool engageAutopilot = false;
-        //bool sas_orientation_set = false;
 
+        // Missile guidance variables.
+
+        public bool engageAutopilot = false;
         Vessel target;
+        Vessel firer;
+
+
+        // Debugging line variables.
 
         LineRenderer targetLine;
         LineRenderer rvLine;
         LineRenderer correctionLine;
         LineRenderer SASLine;
+        public bool drawDebugLines = true;
+
+        // 'Fire' button.
 
         [KSPEvent(guiActive = true,
                   guiActiveEditor = false,
@@ -58,9 +69,9 @@ namespace KerbalCombatSystems
                   groupDisplayName = missileGuidanceGroupName)]
         public void FireMissile()
         {
-        float maxRange = MinMaxRange.x;
-        float minRange = MinMaxRange.y;
-        Debug.Log($"Firing missile, let 'em have it! Max range: {maxRange}, Min range: {minRange}, Interceptor: {useAsInterceptor}");
+            float maxRange = MinMaxRange.x;
+            float minRange = MinMaxRange.y;
+            Debug.Log($"Firing missile, let 'em have it! Max range: {maxRange}, Min range: {minRange}, Interceptor: {useAsInterceptor}");
 
             // set target
 
@@ -70,18 +81,27 @@ namespace KerbalCombatSystems
             // fuel check
             // propulsion check
 
+            StartCoroutine(Launch());
+        }
+
+        public IEnumerator Launch()
+        {
             // find decoupler
 
             ModuleDecouple decoupler = FindDecoupler(part);
             if (decoupler == null)
             {
                 Debug.Log("Missile launch failed. Couldn't find decoupler.");
-                return;
+                yield break;
             };
 
-            // pop decoupler
+            // set firer
+            firer = vessel;
 
+            // pop decoupler
             decoupler.Decouple();
+
+            // turn on engines
 
             List<ModuleEngines> engines = vessel.FindPartModulesImplementing<ModuleEngines>();
             foreach (ModuleEngines engine in engines)
@@ -90,61 +110,55 @@ namespace KerbalCombatSystems
             }
 
 
-            // throttle up
+            // pulse to 5 m/s.
 
-            vessel.ctrlState.mainThrottle = 1;
+            var burnTime = 0.5f;
+            var driftVelocity = 5;
+            vessel.ctrlState.mainThrottle = driftVelocity / burnTime / GetMaxAcceleration(vessel);
+            yield return new WaitForSeconds(burnTime);
+            vessel.ctrlState.mainThrottle = 0;
 
-            // Start line renderer
 
-            //lineRenderer = new LineRenderer();
-            //var myLineRenderer = Instantiate(lineRenderer);
+            // wait until clear of firer
 
-            float th = 0.5f;
+            bool lineOfSight = false;
+            Ray targetRay = new Ray();
 
-            targetLine = new GameObject().AddComponent<LineRenderer>();
-            targetLine.useWorldSpace = true;
-            Material lineMaterial = new Material(Shader.Find("Standard"));
-            lineMaterial.color = Color.magenta;
-            targetLine.material = lineMaterial;
-            targetLine.SetWidth(th, th);
+            while (!lineOfSight)
+            {
+                yield return new WaitForSeconds(0.5f);
+                targetRay.origin = vessel.ReferenceTransform.position;
+                targetRay.direction = target.transform.position - vessel.transform.position;
+                lineOfSight = !RayIntersectsVessel(firer, targetRay);
+            }
 
-            rvLine =  new GameObject().AddComponent<LineRenderer>();
-            rvLine.useWorldSpace = true;
-            Material lineMaterial2 = new Material(Shader.Find("Standard"));
-            lineMaterial2.color = Color.green;
-            rvLine.material = lineMaterial2;
-            rvLine.SetWidth(th, th);
 
-            correctionLine =  new GameObject().AddComponent<LineRenderer>();
-            correctionLine.useWorldSpace = true;
-            Material lineMaterial3 = new Material(Shader.Find("Standard"));
-            lineMaterial3.color = Color.white;
-            correctionLine.material = lineMaterial3;
-            correctionLine.SetWidth(th, th);
+            // Create debug lines.
 
-            SASLine =  new GameObject().AddComponent<LineRenderer>();
-            SASLine.useWorldSpace = true;
-            Material lineMaterial4 = new Material(Shader.Find("Standard"));
-            lineMaterial4.color = Color.blue;
-            SASLine.material = lineMaterial4;
-            SASLine.SetWidth(th, th);
+            if (drawDebugLines)
+            {
+                float th = 0.5f;
 
+                targetLine = CreateDebugLine(Color.magenta, th);
+                rvLine = CreateDebugLine(Color.green, th);
+                correctionLine = CreateDebugLine(Color.white, th);
+                SASLine = CreateDebugLine(Color.blue, th);
+            }
 
             // enable autopilot
 
             engageAutopilot = true;
+
+            yield break;
         }
 
         public void FixedUpdate()
         {
             if (engageAutopilot)
             {
-                Vector3 targetVector = (target.transform.position - vessel.transform.position).normalized;
-
-                    Vector3[] linePositions1 = { target.transform.position, vessel.transform.position };
-                    targetLine.SetPositions(linePositions1);
-
-                Vector3 up = Vector3.Cross(targetVector, vessel.orbit.GetOrbitNormal());
+                Vector3 targetVector = target.transform.position - vessel.transform.position;
+                Vector3 targetVectorNormal = targetVector.normalized;
+                Vector3 up = Vector3.Cross(targetVectorNormal, vessel.orbit.GetOrbitNormal());
 
                 bool sasWasOn = vessel.ActionGroups[KSPActionGroup.SAS];
                 vessel.ActionGroups.SetGroup(KSPActionGroup.SAS, true);
@@ -158,23 +172,36 @@ namespace KerbalCombatSystems
                 Vector3 relVel = vessel.GetObtVelocity() - target.GetObtVelocity();
                 Vector3 relVelNrm = relVel.normalized;
 
-                    Vector3[] linePositions3 = { vessel.transform.position, vessel.transform.position + (relVelNrm * 50) };
-                    rvLine.SetPositions(linePositions3);
-
-                float correctionRatio = (relVel.magnitude / GetCurrentAcceleration(vessel)) * 1.33f;
-
-                Vector3 correction = Vector3.LerpUnclamped(relVelNrm, targetVector, 1 + correctionRatio);
-
-                    Vector3[] linePositions2 = { vessel.transform.position, vessel.transform.position + (correction * 50) };
-                    correctionLine.SetPositions(linePositions2);
+                float correctionRatio = Mathf.Max((relVel.magnitude / GetMaxAcceleration(vessel)) * 1.33f, 0.1f);
+                Vector3 correction = Vector3.LerpUnclamped(relVelNrm, targetVectorNormal, 1 + correctionRatio);
 
                 Quaternion quat = Quaternion.LookRotation(correction, up) * Quaternion.Euler(90, 0, 0);
                 Quaternion cquat = vessel.Autopilot.SAS.lockedRotation;
                 Quaternion progressiveRotation = Quaternion.Slerp(cquat, quat, 0.1f);
                 vessel.Autopilot.SAS.LockRotation(progressiveRotation);
 
-                    Vector3[] linePositions4 = { vessel.transform.position, vessel.transform.position + ((progressiveRotation * Vector3.up) * 50) };
-                    SASLine.SetPositions(linePositions4);
+                float angle = Quaternion.Angle(vessel.ReferenceTransform.rotation, quat);
+                vessel.ctrlState.mainThrottle = angle < 5 ? 1 : 0;
+
+                if (targetVector.magnitude < 10)
+                {
+                    engageAutopilot = false;
+                }
+
+                if (drawDebugLines)
+                {
+                    Vector3[] linePositions = { target.transform.position, vessel.transform.position };
+                    targetLine.SetPositions(linePositions);
+
+                    linePositions = new[]{ vessel.transform.position, vessel.transform.position + (correction * (50 * correctionRatio)) };
+                    correctionLine.SetPositions(linePositions);
+
+                    linePositions = new[]{ vessel.transform.position, vessel.transform.position + (relVelNrm * 50) };
+                    rvLine.SetPositions(linePositions);
+
+                    linePositions = new[]{ vessel.transform.position, vessel.transform.position + ((progressiveRotation * Vector3.up) * 50) };
+                    SASLine.SetPositions(linePositions);
+                }
             }
         }
         public override void OnStart(StartState state)
@@ -198,11 +225,37 @@ namespace KerbalCombatSystems
             return null;
         }
 
-        float GetCurrentAcceleration(Vessel v)
+        float GetMaxAcceleration(Vessel v)
         {
             List<ModuleEngines> engines = v.FindPartModulesImplementing<ModuleEngines>();
-            float thrust = engines.Sum(e => e.GetCurrentThrust());
+            float thrust = engines.Sum(e => e.MaxThrustOutputVac(true));
+
             return thrust / vessel.GetTotalMass();
+        }
+
+        LineRenderer CreateDebugLine(Color color, float thickness)
+        {
+            LineRenderer line = new GameObject().AddComponent<LineRenderer>();
+            line.useWorldSpace = true;
+            line.startWidth = thickness;
+            line.endWidth = thickness;
+            Material lineMaterial = new Material(Shader.Find("Standard"));
+            lineMaterial.color = color;
+            line.material = lineMaterial;
+            return line;
+        }
+
+        private bool RayIntersectsVessel(Vessel v, Ray r)
+        {
+            foreach (Part p in v.parts)
+            {
+                foreach (Bounds b in p.GetColliderBounds())
+                {
+                    if (b.IntersectRay(r)) return true;
+                }
+            }
+
+            return false;
         }
     }
 }
