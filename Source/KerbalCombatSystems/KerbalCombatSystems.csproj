@@ -81,6 +81,7 @@
     <Compile Include="MissileGuidance.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="ObjectTracking.cs" />
+    <Compile Include="ShipController.cs" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 </Project>
