@@ -178,7 +178,7 @@ namespace KerbalCombatSystems
             rvLine = KCSDebug.CreateLine(Color.green);
 
             // enable autopilot
-            fc = new KCSFlightController(vessel);
+            fc = part.gameObject.AddComponent<KCSFlightController>();
             engageAutopilot = true;
 
             yield break;
@@ -212,7 +212,7 @@ namespace KerbalCombatSystems
             if (targetVector.magnitude < 10)
                 engageAutopilot = false;
 
-            fc.Update();
+            fc.Drive();
 
             // Update debug lines.
             KCSDebug.PlotLine(new[]{ target.transform.position, vessel.transform.position }, targetLine);
@@ -228,7 +228,6 @@ namespace KerbalCombatSystems
         {
             rvLine.gameObject.DestroyGameObject();
             targetLine.gameObject.DestroyGameObject();
-            fc = null; // Don't know if this happens automatically or not.
         }
 
         ModuleDecouple FindDecoupler(Part origin)

@@ -54,7 +54,7 @@ namespace KerbalCombatSystems
         {
             if (HighLogic.LoadedSceneIsFlight)
             {
-                fc = new KCSFlightController(part.vessel);
+                fc = part.gameObject.AddComponent<KCSFlightController>();
             }
         }
 
@@ -95,7 +95,7 @@ namespace KerbalCombatSystems
 
         public void FixedUpdate()
         {
-            if (controllerRunning) fc.Update();
+            if (controllerRunning) fc.Drive();
         }
     }
 }

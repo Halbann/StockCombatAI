@@ -7,7 +7,7 @@ using UnityEngine;
 
 namespace KerbalCombatSystems
 {
-    class KCSFlightController
+    class KCSFlightController : MonoBehaviour
     {
         public Vector3 attitude;
         private bool facingDesiredRotation;
@@ -16,27 +16,26 @@ namespace KerbalCombatSystems
         public float throttleLerpRate = 0.05f;
         public float alignmentToleranceforBurn = 5;
 
-        private readonly Vessel controllingVessel;
+        private Vessel controllingVessel;
 
         LineRenderer currentVectorLine, targetVectorLine;
 
-        public KCSFlightController(Vessel vessel)
+        public void Start()
         {
-            controllingVessel = vessel;
+            controllingVessel = gameObject.GetComponent<Part>().vessel;
 
             // initialise debug lines
             currentVectorLine = KCSDebug.CreateLine(Color.yellow);
             targetVectorLine = KCSDebug.CreateLine(Color.red);
         }
 
-        // This doesn't work. Unity won't let a gameobject be destroyed from here.
-        ~KCSFlightController()
+        private void OnDestroy()
         {
             currentVectorLine.gameObject.DestroyGameObject();
             targetVectorLine.gameObject.DestroyGameObject();
         }
 
-        public void Update()
+        public void Drive()
         {
             UpdateSAS(controllingVessel);
             UpdateThrottle(controllingVessel);
