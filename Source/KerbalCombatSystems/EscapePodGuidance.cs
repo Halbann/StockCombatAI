@@ -31,7 +31,6 @@ namespace KerbalCombatSystems
                   groupDisplayName = EscapeGuidanceGroupName)]
         public void BeginEscape()
         {
-
             StartCoroutine(Escape());
         }
         
@@ -55,11 +54,14 @@ namespace KerbalCombatSystems
                 Debug.Log("Couldn't find decoupler.");
             }
 
+            yield return null; // wait a frame
+
+            // todo: set control point to first probe ya find
 
             if (vessel.mainBody.atmosphere)
             {
                 //if planet has an atmosphere set target orientation retrograde
-                BurnDirection = -vessel.GetObtVelocity();
+                BurnDirection = vessel.GetObtVelocity().normalized * -1;
             }
             else if (vessel.GetObtVelocity().magnitude > vessel.VesselDeltaV.TotalDeltaVActual/2f)
             {
