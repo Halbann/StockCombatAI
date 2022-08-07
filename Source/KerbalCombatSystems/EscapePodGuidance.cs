@@ -89,8 +89,6 @@ namespace KerbalCombatSystems
         public void FixedUpdate()
         {
             if (EngageAutopilot) UpdateGuidance();
-
-            fc.Drive();
         }
 
         private void UpdateGuidance()
