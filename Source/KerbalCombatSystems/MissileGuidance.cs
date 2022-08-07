@@ -95,8 +95,15 @@ namespace KerbalCombatSystems
         Vessel target;
         Vessel firer;
         ModuleDecouple decoupler;
-        
         KCSFlightController fc;
+        private Vector3 targetVector;
+        private Vector3 targetVectorNormal;
+        private Vector3 relVel;
+        private Vector3 relVelNrm;
+        private float relVelmag;
+        private float correctionRatio;
+        private Vector3 correction;
+        private bool drift;
 
         // Debugging line variables.
 
@@ -114,6 +121,7 @@ namespace KerbalCombatSystems
             float maxRange = MinMaxRange.x;
             float minRange = MinMaxRange.y;
 
+            if (vessel.targetObject == null) return;
             target = vessel.targetObject.GetVessel();
             firer = vessel;
 
@@ -192,16 +200,16 @@ namespace KerbalCombatSystems
                 return;
             }
 
-            Vector3 targetVector = target.transform.position - vessel.transform.position;
-            Vector3 targetVectorNormal = targetVector.normalized;
-            Vector3 relVel = vessel.GetObtVelocity() - target.GetObtVelocity();
-            Vector3 relVelNrm = relVel.normalized;
-            float relVelmag = relVel.magnitude;
+            targetVector = target.transform.position - vessel.transform.position;
+            targetVectorNormal = targetVector.normalized;
+            relVel = vessel.GetObtVelocity() - target.GetObtVelocity();
+            relVelNrm = relVel.normalized;
+            relVelmag = relVel.magnitude;
 
-            float correctionRatio = Mathf.Max((relVelmag / GetMaxAcceleration(vessel)) * 1.33f, 0.1f);
-            Vector3 correction = Vector3.LerpUnclamped(relVelNrm, targetVectorNormal, 1 + correctionRatio);
+            correctionRatio = Mathf.Max((relVelmag / GetMaxAcceleration(vessel)) * 1.33f, 0.1f);
+            correction = Vector3.LerpUnclamped(relVelNrm, targetVectorNormal, 1 + correctionRatio);
 
-            bool drift = Vector3.Dot(targetVectorNormal, relVelNrm) > 0.999999
+            drift = Vector3.Dot(targetVectorNormal, relVelNrm) > 0.999999
                 && Vector3.Dot(relVel, targetVectorNormal) > terminalVelocity;
 
             fc.attitude = correction;
