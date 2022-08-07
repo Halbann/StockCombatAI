@@ -16,6 +16,7 @@ namespace KerbalCombatSystems
         const string EscapeGuidanceGroupName = "Escape Pod Guidance";
 
 
+        KCSFlightController fc;
         private bool EngageAutopilot;
 
         private Vessel Parent;
@@ -55,7 +56,6 @@ namespace KerbalCombatSystems
             }
 
 
-
             if (vessel.mainBody.atmosphere)
             {
                 //if planet has an atmosphere set target orientation retrograde
@@ -69,25 +69,38 @@ namespace KerbalCombatSystems
             else
             {
                 //set target orientation to away from the vessel by default
-                Vector3 targetVector = vessel.transform.position - Parent.transform.position;
-                Vector3 BurnDirection = targetVector.normalized;
+                BurnDirection = vessel.transform.position - Parent.transform.position;
             }
 
+            // turn on engines
+            List<ModuleEngines> engines = vessel.FindPartModulesImplementing<ModuleEngines>();
+            foreach (ModuleEngines engine in engines)
+            {
+                engine.Activate();
+            }
 
             // enable autopilot
+            fc = part.gameObject.AddComponent<KCSFlightController>();
             EngageAutopilot = true;
 
             yield break;
         }
+
         public void FixedUpdate()
         {
-            if (EngageAutopilot)
-            {
+            if (EngageAutopilot) UpdateGuidance();
 
-            }
-
+            fc.Drive();
         }
 
+        private void UpdateGuidance()
+        {
+            fc.attitude = BurnDirection.normalized;
+            fc.alignmentToleranceforBurn = 20;
+            //burn baby burn
+            fc.throttle = 1;
+            fc.Drive();
+        }
 
         ModuleDecouple FindDecoupler(Part origin)
         {
