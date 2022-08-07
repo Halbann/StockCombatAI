@@ -183,65 +183,6 @@ namespace KerbalCombatSystems
             yield break;
         }
 
-        /*public void FixedUpdate()
-        {
-            if (engageAutopilot)
-            {
-                if (target == null)
-                {
-                    engageAutopilot = false;
-                    return;
-                }
-                Vector3 targetVector = target.transform.position - vessel.transform.position;
-                Vector3 targetVectorNormal = targetVector.normalized;
-                Vector3 up = Vector3.Cross(targetVectorNormal, vessel.orbit.GetOrbitNormal());
-
-                bool sasWasOn = vessel.ActionGroups[KSPActionGroup.SAS];
-                vessel.ActionGroups.SetGroup(KSPActionGroup.SAS, true);
-                vessel.ActionGroups.SetGroup(KSPActionGroup.RCS, true);
-
-                if (vessel.Autopilot.Mode != VesselAutopilot.AutopilotMode.StabilityAssist || !vessel.Autopilot.Enabled || !sasWasOn)
-                {
-                    vessel.Autopilot.Enable(VesselAutopilot.AutopilotMode.StabilityAssist);
-                }
-
-                Vector3 relVel = vessel.GetObtVelocity() - target.GetObtVelocity();
-                Vector3 relVelNrm = relVel.normalized;
-                float relVelmag = relVel.magnitude;
-
-                float correctionRatio = Mathf.Max((relVelmag / GetMaxAcceleration(vessel)) * 1.33f, 0.1f);
-                Vector3 correction = Vector3.LerpUnclamped(relVelNrm, targetVectorNormal, 1 + correctionRatio);
-
-                Quaternion quat = Quaternion.LookRotation(correction, up) * Quaternion.Euler(90, 0, 0);
-                Quaternion cquat = vessel.Autopilot.SAS.lockedRotation;
-                Quaternion progressiveRotation = Quaternion.Slerp(cquat, quat, 0.1f);
-                vessel.Autopilot.SAS.LockRotation(progressiveRotation);
-
-                float angle = Quaternion.Angle(vessel.ReferenceTransform.rotation, quat);
-                float tolerance = relVelmag > 50 ? 5 : 20;
-                vessel.ctrlState.mainThrottle = angle < tolerance ? 1 : 0;
-
-                if (Vector3.Dot(targetVectorNormal, relVelNrm) > 0.999999
-                    && Vector3.Dot(relVel, targetVectorNormal) > terminalVelocity)
-                {
-                    vessel.ctrlState.mainThrottle = 0;
-                }
-
-                if (targetVector.magnitude < 10)
-                    engageAutopilot = false;
-
-                //debugging linedraws
-                Vector3[] linePositions = { target.transform.position, vessel.transform.position };
-                PlotLine(linePositions, targetLine);
-                linePositions = new Vector3[] { vessel.transform.position, vessel.transform.position + (correction * 50) };
-                PlotLine(linePositions, correctionLine);
-                linePositions = new Vector3[] { vessel.transform.position, vessel.transform.position + (relVelNrm * 50) };
-                PlotLine(linePositions, rvLine);
-                linePositions = new Vector3[] { vessel.transform.position, vessel.transform.position + ((progressiveRotation * Vector3.up) * 50) };
-                PlotLine(linePositions, SASLine);
-            }
-        }*/
-
         private void UpdateGuidance()
         {
             if (target == null)
