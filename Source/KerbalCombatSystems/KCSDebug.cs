@@ -38,10 +38,13 @@ namespace KerbalCombatSystems
             }
         }
 
-        public static LineRenderer CreateLine(Color LineColour)
+        public static LineRenderer CreateLine(Color LineColour, Part part)
         {
             //spawn new line
-            LineRenderer Line = new GameObject().AddComponent<LineRenderer>();
+            GameObject lineGameObject = new GameObject();
+            LineRenderer Line = lineGameObject.AddComponent<LineRenderer>();
+            lineGameObject.transform.SetParent(part.transform, true);
+
             Line.useWorldSpace = true;
             //create a material for the line with its unique colour
             Material LineMaterial = new Material(Shader.Find("Standard"));

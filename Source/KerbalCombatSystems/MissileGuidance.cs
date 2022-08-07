@@ -120,6 +120,7 @@ namespace KerbalCombatSystems
             // find decoupler
             decoupler = FindDecoupler(part);
 
+            // todo:
             // electric charge check
             // fuel check
             // propulsion check
@@ -173,8 +174,8 @@ namespace KerbalCombatSystems
             }
 
             // initialise debug line renderer
-            targetLine = KCSDebug.CreateLine(Color.magenta);
-            rvLine = KCSDebug.CreateLine(Color.green);
+            targetLine = KCSDebug.CreateLine(Color.magenta, part);
+            rvLine = KCSDebug.CreateLine(Color.green, part);
 
             // enable autopilot
             fc = new KCSFlightController(vessel);
@@ -221,8 +222,13 @@ namespace KerbalCombatSystems
         public void FixedUpdate()
         {
             if (engageAutopilot) UpdateGuidance();
-        }        
-        
+        }
+
+        /*public void OnExplode()
+        {
+            //targetLine.positionCount = 0;
+            //rvLine.positionCount = 0;
+        }*/
         ModuleDecouple FindDecoupler(Part origin)
         {
             Part currentPart = origin.parent;

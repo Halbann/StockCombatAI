@@ -21,6 +21,9 @@ namespace KerbalCombatSystems
         private Coroutine shipControllerCoroutine;
         Vessel target;
         KCSFlightController fc;
+        List<ModuleMissileGuidance> missiles;
+        float lastFired;
+        float fireInterval;
 
         [KSPEvent(guiActive = true,
                   guiActiveEditor = false,
@@ -31,6 +34,7 @@ namespace KerbalCombatSystems
         {
             if (!controllerRunning)
             {
+                CheckWeapons();
                 shipControllerCoroutine = StartCoroutine(ShipController());
             }
             else
@@ -39,6 +43,11 @@ namespace KerbalCombatSystems
             }
 
             controllerRunning = !controllerRunning;
+        }
+
+        private void CheckWeapons()
+        {
+            missiles = vessel.FindPartModulesImplementing<ModuleMissileGuidance>();
         }
 
         public override void OnStart(StartState state)
@@ -59,11 +68,27 @@ namespace KerbalCombatSystems
                 {
                     fc.attitude = (target.ReferenceTransform.position - vessel.ReferenceTransform.position).normalized;
                     fc.throttle = 1;
+
+                    if (Time.time - lastFired > fireInterval)
+                    {
+                        lastFired = Time.time;
+                        fireInterval = UnityEngine.Random.Range(5, 15);
+
+                        if (missiles.Count > 0)
+                        {
+                            var missileIndex = UnityEngine.Random.Range(0, missiles.Count - 1);
+                            missiles[missileIndex].FireMissile();
+
+                            yield return null;
+                            CheckWeapons();
+                        }
+                    }  
                 } 
                 else
                 {
                     fc.throttle = 0;
                 }
+
                 yield return new WaitForSeconds(updateInterval);
             } 
         }

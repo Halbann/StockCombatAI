@@ -27,8 +27,8 @@ namespace KerbalCombatSystems
             controllingVessel = vessel;
 
             // initialise debug lines
-            currentVectorLine = KCSDebug.CreateLine(Color.yellow);
-            targetVectorLine = KCSDebug.CreateLine(Color.red);
+            currentVectorLine = KCSDebug.CreateLine(Color.yellow, vessel.rootPart);
+            targetVectorLine = KCSDebug.CreateLine(Color.red, vessel.rootPart);
         }
 
         public void Update()
