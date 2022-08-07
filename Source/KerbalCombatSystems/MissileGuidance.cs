@@ -215,7 +215,7 @@ namespace KerbalCombatSystems
             fc.Drive();
 
             // Update debug lines.
-            KCSDebug.PlotLine(new[]{ target.transform.position, vessel.transform.position }, targetLine);
+            KCSDebug.PlotLine(new[]{ vessel.transform.position, target.transform.position }, targetLine);
             KCSDebug.PlotLine(new[]{ vessel.transform.position, vessel.transform.position + (relVelNrm * 50) }, rvLine);
         }
 
@@ -226,8 +226,8 @@ namespace KerbalCombatSystems
 
         public void OnDestroy()
         {
-            rvLine.gameObject.DestroyGameObject();
-            targetLine.gameObject.DestroyGameObject();
+            KCSDebug.DestroyLine(rvLine);
+            KCSDebug.DestroyLine(targetLine);
         }
 
         ModuleDecouple FindDecoupler(Part origin)

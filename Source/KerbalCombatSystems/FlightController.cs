@@ -31,8 +31,8 @@ namespace KerbalCombatSystems
 
         private void OnDestroy()
         {
-            currentVectorLine.gameObject.DestroyGameObject();
-            targetVectorLine.gameObject.DestroyGameObject();
+            KCSDebug.DestroyLine(currentVectorLine);
+            KCSDebug.DestroyLine(targetVectorLine);
         }
 
         public void Drive()

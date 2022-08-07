@@ -62,10 +62,11 @@ namespace KerbalCombatSystems
         {
             while (true)
             {
-                target = vessel.targetObject.GetVessel();
+                var targetObject = vessel.targetObject;
 
-                if (target != null)
+                if (targetObject != null)
                 {
+                    target = targetObject.GetVessel();
                     fc.attitude = (target.ReferenceTransform.position - vessel.ReferenceTransform.position).normalized;
                     fc.throttle = 1;
 

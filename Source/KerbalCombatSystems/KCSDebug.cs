@@ -66,5 +66,12 @@ namespace KerbalCombatSystems
                 Line.positionCount = 0;
             }
         }
+
+        public static void DestroyLine(LineRenderer line)
+        {
+            if (line == null) return;
+            if (line.gameObject == null) return;
+            line.gameObject.DestroyGameObject();
+        }
     }
 }
