@@ -174,8 +174,8 @@ namespace KerbalCombatSystems
             }
 
             // initialise debug line renderer
-            targetLine = KCSDebug.CreateLine(Color.magenta, part);
-            rvLine = KCSDebug.CreateLine(Color.green, part);
+            targetLine = KCSDebug.CreateLine(Color.magenta);
+            rvLine = KCSDebug.CreateLine(Color.green);
 
             // enable autopilot
             fc = new KCSFlightController(vessel);
@@ -224,11 +224,13 @@ namespace KerbalCombatSystems
             if (engageAutopilot) UpdateGuidance();
         }
 
-        /*public void OnExplode()
+        public void OnDestroy()
         {
-            //targetLine.positionCount = 0;
-            //rvLine.positionCount = 0;
-        }*/
+            rvLine.gameObject.DestroyGameObject();
+            targetLine.gameObject.DestroyGameObject();
+            fc = null; // Don't know if this happens automatically or not.
+        }
+
         ModuleDecouple FindDecoupler(Part origin)
         {
             Part currentPart = origin.parent;

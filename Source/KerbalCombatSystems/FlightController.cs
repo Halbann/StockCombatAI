@@ -10,7 +10,6 @@ namespace KerbalCombatSystems
     class KCSFlightController
     {
         public Vector3 attitude;
-        //public Quaternion attitude;
         private bool facingDesiredRotation;
         public float throttle;
         private float throttleLerped;
@@ -18,7 +17,6 @@ namespace KerbalCombatSystems
         public float alignmentToleranceforBurn = 5;
 
         private readonly Vessel controllingVessel;
-        //private Quaternion requestedAttitude;
 
         LineRenderer currentVectorLine, targetVectorLine;
 
@@ -27,8 +25,15 @@ namespace KerbalCombatSystems
             controllingVessel = vessel;
 
             // initialise debug lines
-            currentVectorLine = KCSDebug.CreateLine(Color.yellow, vessel.rootPart);
-            targetVectorLine = KCSDebug.CreateLine(Color.red, vessel.rootPart);
+            currentVectorLine = KCSDebug.CreateLine(Color.yellow);
+            targetVectorLine = KCSDebug.CreateLine(Color.red);
+        }
+
+        // This doesn't work. Unity won't let a gameobject be destroyed from here.
+        ~KCSFlightController()
+        {
+            currentVectorLine.gameObject.DestroyGameObject();
+            targetVectorLine.gameObject.DestroyGameObject();
         }
 
         public void Update()
