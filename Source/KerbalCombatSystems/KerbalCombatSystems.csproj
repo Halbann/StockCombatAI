@@ -72,13 +72,14 @@
     <Reference Include="UnityEngine.InputModule">
       <HintPath>References\UnityEngine.InputModule.dll</HintPath>
       <Private>False</Private>
-	</Reference>
+    </Reference>
     <Reference Include="UnityEngine.UI">
       <HintPath>References\UnityEngine.UI.dll</HintPath>
       <Private>False</Private>
-	</Reference>
+    </Reference>
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="FlightController.cs" />
     <Compile Include="CombatRobotics.cs" />
     <Compile Include="DecouplerDesignator.cs" />
     <Compile Include="EscapePodGuidance.cs" />

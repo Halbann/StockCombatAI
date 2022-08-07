@@ -14,23 +14,13 @@ namespace KerbalCombatSystems
 
         const string shipControllerGroupName = "Ship AI";
         private bool controllerRunning = false;
-
+        public float updateInterval = 0.1f;
 
         // Ship AI variables.
 
         private Coroutine shipControllerCoroutine;
         Vessel target;
-
-        // Movement variables
-
-        Quaternion desiredRotation;
-        float desiredThrottle;
-
-        Quaternion lck;
-        Quaternion currentLock;
-        Quaternion progressiveLock;
-        bool facingDesiredRotation;
-        float throttle;
+        KCSFlightController fc;
 
         [KSPEvent(guiActive = true,
                   guiActiveEditor = false,
@@ -51,45 +41,36 @@ namespace KerbalCombatSystems
             controllerRunning = !controllerRunning;
         }
 
+        public override void OnStart(StartState state)
+        {
+            if (HighLogic.LoadedSceneIsFlight)
+            {
+                fc = new KCSFlightController(part.vessel);
+            }
+        }
+
         private IEnumerator ShipController()
         {
-            target = vessel.targetObject.GetVessel();
+            while (true)
+            {
+                target = vessel.targetObject.GetVessel();
 
-            if (target != null)
-            {
-                desiredRotation = Quaternion.LookRotation((target.ReferenceTransform.position - vessel.ReferenceTransform.position).normalized, vessel.up);
-                desiredThrottle = 1;
+                if (target != null)
+                {
+                    fc.attitude = (target.ReferenceTransform.position - vessel.ReferenceTransform.position).normalized;
+                    fc.throttle = 1;
+                } 
+                else
+                {
+                    fc.throttle = 0;
+                }
+                yield return new WaitForSeconds(updateInterval);
             } 
-            else
-            {
-                desiredThrottle = 0;
-            }
-            yield return new WaitForSeconds(1);
         }
 
         public void FixedUpdate()
         {
-            if (controllerRunning)
-            {
-                MovementHandler();
-            }
-        }
-
-        private void MovementHandler()
-        {
-            lck = desiredRotation * Quaternion.Euler(90, 0, 0);
-            currentLock = vessel.Autopilot.SAS.lockedRotation;
-            var a2 = Quaternion.Angle(currentLock, lck);
-            progressiveLock = Quaternion.Slerp(currentLock, lck, 0.1f * (a2 / 100));
-            vessel.Autopilot.SAS.LockRotation(progressiveLock);
-
-            var a = Quaternion.Angle(vessel.ReferenceTransform.rotation * Quaternion.Euler(-90, 0, 0), desiredRotation);
-            facingDesiredRotation = Quaternion.Angle(vessel.ReferenceTransform.rotation * Quaternion.Euler(-90, 0, 0), desiredRotation) < 5;
-            throttle = facingDesiredRotation ? desiredThrottle : 0;
-
-            vessel.ctrlState.mainThrottle = throttle;
-            if (FlightGlobals.ActiveVessel != null && vessel == FlightGlobals.ActiveVessel)
-                FlightInputHandler.state.mainThrottle = throttle; //so that the on-screen throttle gauge reflects the autopilot throttle
+            if (controllerRunning) fc.Update();
         }
     }
 }
