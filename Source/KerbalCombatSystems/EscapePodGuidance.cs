@@ -23,6 +23,7 @@ namespace KerbalCombatSystems
         private bool EngageAutopilot;
         bool Escaped;
 
+        ModuleDecouple decoupler;
         //the ship being escaped from
         private Vessel Parent;
         //target burn direction
@@ -36,14 +37,15 @@ namespace KerbalCombatSystems
                   groupDisplayName = EscapeGuidanceGroupName)]
         public void BeginEscape()
         {
+            // find decoupler
+            decoupler = FindDecoupler(part);
+            Debug.Log("Ejecting");
             StartCoroutine(Escape());
         }
 
         //escape guidance is called when when no ship controller can be found onboard
-        public IEnumerator Escape()
+        private IEnumerator Escape()
         {
-            // find decoupler
-            ModuleDecouple decoupler = FindDecoupler(part);
 
             Debug.Log(Parent.name);
 
@@ -104,7 +106,7 @@ namespace KerbalCombatSystems
             Parent = vessel;
 
             //find ai parts and add to list
-            AIModules = vessel.FindPartModulesImplementing<ModuleShipController>().ToList();
+            AIModules = vessel.FindPartModulesImplementing<ModuleShipController>();
             foreach (var ModuleShipController in AIModules)
             {
                 AIPartList.Add(ModuleShipController.part);
@@ -122,33 +124,29 @@ namespace KerbalCombatSystems
                 fc.throttle = 1;
                 fc.Drive();
             }
-            CheckConnection();
+
+            if (!Escaped)
+            {
+                CheckConnection();
+            }
         }
 
         //method to check for the existence of any ship ai
         private void CheckConnection()
         {
+            Escaped = true;
+           
             foreach (Part AIPart in AIPartList)
             {
                 //if part does not exist on the same ship
-                if (!AIPart || AIPart.vessel != vessel)
+                if (AIPart.vessel == vessel)
                 {
-                    //remove part from list
-                    AIPartList.Remove(AIPart);
+                    Escaped = false;
                 }
             }
-
-            if (!Escaped)
-            {
-                //if the part list is now empty begin the escape sequence
-                if (AIPartList.Count().Equals(0))
-                {
-                    Debug.Log("Abandon Ship");
-                    BeginEscape();
-                }
-                // put your code that runs once here
-                Escaped = true;
-            }
+            
+            //if the part list is now empty begin the escape sequence
+            if (Escaped) BeginEscape();
         }
 
         ModuleDecouple FindDecoupler(Part origin)
