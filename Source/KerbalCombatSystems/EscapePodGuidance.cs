@@ -14,7 +14,7 @@ namespace KerbalCombatSystems
     class ModuleEscapePodGuidance : PartModule
     {
         const string EscapeGuidanceGroupName = "Escape Pod Guidance";
-
+private List<GameObject>();
 
         KCSFlightController fc;
         private bool EngageAutopilot;
@@ -88,8 +88,13 @@ namespace KerbalCombatSystems
 
             yield break;
         }
+        
+        private void Start()
+        {
+        //find ai parts and add to list
+        }
 
-        public void FixedUpdate()
+        private void FixedUpdate()
         {
             if (EngageAutopilot) 
             {
@@ -99,10 +104,22 @@ namespace KerbalCombatSystems
             fc.throttle = 1;
             fc.Drive();
             }
-            UpdateGuidance();
+            CheckConnection();
         }
 
+//method to check for the existence of any ship ai
+        private void CheckConnection()
+        {
+        foreach(GameObject AIPart in AIPartlist)
+        {
+        bool DeadCheck = true;
+        //if part exists on the same ship
+        if(AIPart && AIPart.vessel == vessel) Dead check = false;
         
+        }
+        
+     if(DeadCheck) BeginEscape();
+        }
 
         ModuleDecouple FindDecoupler(Part origin)
         {
