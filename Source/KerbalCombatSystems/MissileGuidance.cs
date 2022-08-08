@@ -288,13 +288,16 @@ namespace KerbalCombatSystems
         ModuleDecouple FindDecoupler(Part origin)
         {
             Part currentPart = origin.parent;
-            ModuleDecouple decoupler;
-
+            ModuleDecouple Decoupler;
             //ModuleDecouplerDesignate DecouplerType;	
+
 
             for (int i = 0; i < 99; i++)
             {
-                if (currentPart.isDecoupler(out decoupler)) return decoupler;
+                //Get Decoupler type from designation module
+                string DecouplerType = currentPart.GetComponent<ModuleDecouplerDesignate>().DecouplerType;
+                //check if it is a decoupler and the correct type
+                if (currentPart.isDecoupler(out Decoupler) && DecouplerType == "Missile") return Decoupler;
                 currentPart = currentPart.parent;
             }
 

@@ -92,19 +92,28 @@ namespace KerbalCombatSystems
         
         private void Start()
         {
-            //find ai parts and add to list
+            //create the appropriate lists
             AIPartList = new List<Part>();
+            List<ModuleShipController> AIModules;
+            //find ai parts and add to list
+
+            AIModules = vessel.FindPartModulesImplementing<ModuleShipController>();
+            foreach (var ModuleShipController in AIModules)
+            {
+                AIPartList.Add(ModuleShipController.part);
+            }
+
         }
 
         private void FixedUpdate()
         {
             if (EngageAutopilot) 
             {
-            fc.attitude = BurnDirection;
-            fc.alignmentToleranceforBurn = 20;
-            //burn baby burn
-            fc.throttle = 1;
-            fc.Drive();
+                fc.attitude = BurnDirection;
+                fc.alignmentToleranceforBurn = 20;
+                //burn baby burn
+                fc.throttle = 1;
+                fc.Drive();
             }
             CheckConnection();
         }
@@ -130,16 +139,14 @@ namespace KerbalCombatSystems
         {
             Part currentPart = origin.parent;
             ModuleDecouple Decoupler;
-            ModuleDecouplerDesignate Designation;
-
             //ModuleDecouplerDesignate DecouplerType;	
-
-
+            
             for (int i = 0; i < 99; i++)
             {
-                //bool DecoupleCheck = currentPart.isDecoupler && currentPart.ModuleDecouplerDesignate.DecouplerType = "Escape Pod";
-                bool DecouplerCheck = currentPart.isDecoupler(out Decoupler);
-                if (DecouplerCheck) return Decoupler;
+                //Get Decoupler type from designation module
+                string DecouplerType = currentPart.GetComponent<ModuleDecouplerDesignate>().DecouplerType;
+                //check if it is a decoupler and the correct type
+                if (currentPart.isDecoupler(out Decoupler) && DecouplerType == "Escape Pod") return Decoupler;
                 currentPart = currentPart.parent;
             }
 
