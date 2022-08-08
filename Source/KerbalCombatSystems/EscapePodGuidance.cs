@@ -15,11 +15,15 @@ namespace KerbalCombatSystems
     {
         const string EscapeGuidanceGroupName = "Escape Pod Guidance";
 
+        //the 
         private List<Part> AIPartList;
 
+        //universal flight controller and toggle
         KCSFlightController fc;
         private bool EngageAutopilot;
+        bool Escaped;
 
+        //the ship being escaped from
         private Vessel Parent;
         //target burn direction
         private Vector3 BurnDirection;
@@ -34,15 +38,14 @@ namespace KerbalCombatSystems
         {
             StartCoroutine(Escape());
         }
-        
 
+        //escape guidance is called when when no ship controller can be found onboard
         public IEnumerator Escape()
         {
-            //designate ship that's being escaped from
-            Parent = vessel;
-
             // find decoupler
             ModuleDecouple decoupler = FindDecoupler(part);
+
+            Debug.Log(Parent.name);
 
             // try to pop decoupler
             try
@@ -86,8 +89,7 @@ namespace KerbalCombatSystems
             // enable autopilot
             fc = part.gameObject.AddComponent<KCSFlightController>();
             EngageAutopilot = true;
-
-            yield break;
+            
         }
         
         private void Start()
@@ -95,9 +97,14 @@ namespace KerbalCombatSystems
             //create the appropriate lists
             AIPartList = new List<Part>();
             List<ModuleShipController> AIModules;
-            //find ai parts and add to list
 
-            AIModules = vessel.FindPartModulesImplementing<ModuleShipController>();
+            Escaped = false;
+
+            //designate ship that's being escaped from
+            Parent = vessel;
+
+            //find ai parts and add to list
+            AIModules = vessel.FindPartModulesImplementing<ModuleShipController>().ToList();
             foreach (var ModuleShipController in AIModules)
             {
                 AIPartList.Add(ModuleShipController.part);
@@ -124,15 +131,24 @@ namespace KerbalCombatSystems
             foreach (Part AIPart in AIPartList)
             {
                 //if part does not exist on the same ship
-                if (AIPart.vessel != vessel)
+                if (!AIPart || AIPart.vessel != vessel)
                 {
                     //remove part from list
                     AIPartList.Remove(AIPart);
                 }
             }
-            
-            //if the part list is now empty begin the escape sequence
-            if(AIPartList.Count() == 0) BeginEscape();
+
+            if (!Escaped)
+            {
+                //if the part list is now empty begin the escape sequence
+                if (AIPartList.Count().Equals(0))
+                {
+                    Debug.Log("Abandon Ship");
+                    BeginEscape();
+                }
+                // put your code that runs once here
+                Escaped = true;
+            }
         }
 
         ModuleDecouple FindDecoupler(Part origin)
