@@ -82,11 +82,11 @@ namespace KerbalCombatSystems
             guiName = "Velocity Match",
             groupName = missileGuidanceGroupName,
             groupDisplayName = missileGuidanceGroupName),
-            UI_Toggle(
+        UI_Toggle(
                 enabledText = "Enabled",
                 disabledText = "Disabled",
                 scene = UI_Scene.All
-            )]
+        )]
         public bool MatchTargetVelocity = true;
 
         // Missile guidance variables.
@@ -108,6 +108,48 @@ namespace KerbalCombatSystems
         // Debugging line variables.
 
         LineRenderer targetLine, rvLine;
+
+        // Set persistent missile code in editor and flight.
+
+        [KSPField(isPersistant = true)]
+        public string missileCode = "";
+
+        [KSPEvent(guiActive = true,
+                  guiActiveEditor = true,
+                  guiName = "Set Missile Code",
+                  groupName = missileGuidanceGroupName,
+                  groupDisplayName = missileGuidanceGroupName,
+                  name = "missileCodeEvent")]
+        public void SetMissileCode()
+        {
+            VesselRenameDialog.SpawnNameFromPart(part, SetMissileCodeCallback, Dismiss, Remove, false, VesselType.Probe);
+        }
+
+        public void SetMissileCodeCallback(String code, VesselType arg2, int arg3)
+        {
+            missileCode = code;
+            UpdateMissileCodeUI();
+        }
+
+        private void UpdateMissileCodeUI()
+        {
+            var e = Events["SetMissileCode"];
+            var name = missileCode == "" ? "None" : missileCode;
+            e.guiName = "Set Missile Code:                                " + name;
+
+            if (part.vesselNaming == null)
+                part.vesselNaming = new VesselNaming();
+
+            part.vesselNaming.vesselName = missileCode;
+        }
+
+        // This needs to exist for the dialog to work.
+        public void Dismiss() {}
+        public void Remove()
+        {
+            missileCode = "";
+            UpdateMissileCodeUI();
+        }
 
         // 'Fire' button.
 
@@ -225,6 +267,11 @@ namespace KerbalCombatSystems
             // Update debug lines.
             KCSDebug.PlotLine(new[]{ vessel.transform.position, target.transform.position }, targetLine);
             KCSDebug.PlotLine(new[]{ vessel.transform.position, vessel.transform.position + (relVelNrm * 50) }, rvLine);
+        }
+
+        public void Start()
+        {
+            UpdateMissileCodeUI();
         }
 
         public void FixedUpdate()

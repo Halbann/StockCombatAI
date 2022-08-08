@@ -8,6 +8,7 @@ using UnityEngine;
 
 namespace KerbalCombatSystems
 {
+    // Overall controller for KCS. Setup battles, 
     [KSPAddon(KSPAddon.Startup.Flight, false)]
     class KCSController : MonoBehaviour
     {
@@ -77,6 +78,11 @@ namespace KerbalCombatSystems
             }
         }
 
+        public void FireSelectedWeapon()
+        {
+
+        }
+
         // GUI functions.
 
         void OnGUI()
@@ -97,13 +103,10 @@ namespace KerbalCombatSystems
             boxStyle = GUI.skin.GetStyle("Box");
             GUILayout.BeginVertical();
 
-            GUILayout.Label("This is a GUI for KCS.");
-
             GUIList();
-
             if (GUILayout.Button("Update List")) UpdateList();
             if (GUILayout.Button("Enable/Disable AIs")) ToggleAIs();
-                
+            if (GUILayout.Button("Fire")) FireSelectedWeapon();
 
             GUILayout.EndVertical();
             GUI.DragWindow(new Rect(0, 0, 10000, 500));
