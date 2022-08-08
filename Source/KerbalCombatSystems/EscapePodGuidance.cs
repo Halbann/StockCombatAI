@@ -66,12 +66,13 @@ namespace KerbalCombatSystems
             else if (vessel.GetObtVelocity().magnitude > vessel.VesselDeltaV.TotalDeltaVActual/2f)
             {
                 //if burn has a chance to deorbit set target orientation to prograde
-                BurnDirection = vessel.GetObtVelocity();
+                BurnDirection = vessel.GetObtVelocity().normalized;
             }
             else
             {
                 //set target orientation to away from the vessel by default
                 BurnDirection = vessel.transform.position - Parent.transform.position;
+                BurnDirection = BurnDirection.normalized;
             }
 
             // turn on engines
@@ -95,7 +96,7 @@ namespace KerbalCombatSystems
 
         private void UpdateGuidance()
         {
-            fc.attitude = BurnDirection.normalized;
+            fc.attitude = BurnDirection;
             fc.alignmentToleranceforBurn = 20;
             //burn baby burn
             fc.throttle = 1;
