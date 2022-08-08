@@ -14,7 +14,8 @@ namespace KerbalCombatSystems
     class ModuleEscapePodGuidance : PartModule
     {
         const string EscapeGuidanceGroupName = "Escape Pod Guidance";
-private List<GameObject>();
+
+        private List<Part> AIPartList;
 
         KCSFlightController fc;
         private bool EngageAutopilot;
@@ -91,7 +92,8 @@ private List<GameObject>();
         
         private void Start()
         {
-        //find ai parts and add to list
+            //find ai parts and add to list
+            AIPartList = new List<Part>();
         }
 
         private void FixedUpdate()
@@ -107,32 +109,37 @@ private List<GameObject>();
             CheckConnection();
         }
 
-//method to check for the existence of any ship ai
+        //method to check for the existence of any ship ai
         private void CheckConnection()
         {
-        foreach(GameObject AIPart in AIPartlist)
-        {
-        bool DeadCheck = true;
-        //if part exists on the same ship
-        if(AIPart && AIPart.vessel == vessel) Dead check = false;
-        
-        }
-        
-     if(DeadCheck) BeginEscape();
+            foreach (Part AIPart in AIPartList)
+            {
+                //if part does not exist on the same ship
+                if (AIPart.vessel != vessel)
+                {
+                    //remove part from list
+                    AIPartList.Remove(AIPart);
+                }
+            }
+            
+            //if the part list is now empty begin the escape sequence
+            if(AIPartList.Count() == 0) BeginEscape();
         }
 
         ModuleDecouple FindDecoupler(Part origin)
         {
             Part currentPart = origin.parent;
-            ModuleDecouple decoupler;
+            ModuleDecouple Decoupler;
+            ModuleDecouplerDesignate Designation;
 
             //ModuleDecouplerDesignate DecouplerType;	
 
 
             for (int i = 0; i < 99; i++)
             {
-            bool DecoupleCheck = if(currentPart.isDecoupler) && currentPart.DecouplerType = "Escape Pod";
-                if (DecouplerCheck) return decoupler;
+                //bool DecoupleCheck = currentPart.isDecoupler && currentPart.ModuleDecouplerDesignate.DecouplerType = "Escape Pod";
+                bool DecouplerCheck = currentPart.isDecoupler(out Decoupler);
+                if (DecouplerCheck) return Decoupler;
                 currentPart = currentPart.parent;
             }
 
