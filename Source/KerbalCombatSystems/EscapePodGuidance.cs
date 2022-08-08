@@ -50,8 +50,8 @@ namespace KerbalCombatSystems
             }
             catch
             {
-                //notify of error but launch anyway for freefloating missiles
-                Debug.Log("Couldn't find decoupler.");
+                //notify of error but launch anyway for pods that have lost decoupler
+                Debug.Log("Couldn't find decoupler on " + vessel.name + "escape pod");
             }
 
             yield return null; // wait a frame
@@ -91,17 +91,18 @@ namespace KerbalCombatSystems
 
         public void FixedUpdate()
         {
-            if (EngageAutopilot) UpdateGuidance();
-        }
-
-        private void UpdateGuidance()
-        {
+            if (EngageAutopilot) 
+            {
             fc.attitude = BurnDirection;
             fc.alignmentToleranceforBurn = 20;
             //burn baby burn
             fc.throttle = 1;
             fc.Drive();
+            }
+            UpdateGuidance();
         }
+
+        
 
         ModuleDecouple FindDecoupler(Part origin)
         {
@@ -113,7 +114,8 @@ namespace KerbalCombatSystems
 
             for (int i = 0; i < 99; i++)
             {
-                if (currentPart.isDecoupler(out decoupler)) return decoupler;
+            bool DecoupleCheck = if(currentPart.isDecoupler) && currentPart.DecouplerType = "Escape Pod";
+                if (DecouplerCheck) return decoupler;
                 currentPart = currentPart.parent;
             }
 
