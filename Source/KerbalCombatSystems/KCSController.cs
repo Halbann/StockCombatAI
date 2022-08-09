@@ -16,7 +16,7 @@ namespace KerbalCombatSystems
         private static ApplicationLauncherButton appLauncherButton;
         private static bool addedAppLauncherButton = false;
         private static bool guiEnabled = false;
-        private int windowWidth = 550;
+        private int windowWidth = 300;
         private int windowHeight = 700;
         private Rect windowRect;
         private GUIStyle boxStyle;
@@ -248,5 +248,31 @@ namespace KerbalCombatSystems
         }
         public void EnableGui() { guiEnabled = true; }
         public void DisableGui() { guiEnabled = false; }
+
+        public static ModuleDecouple FindDecoupler(Part origin, string type, bool ignoreTypeRequirement)
+        {
+            Part currentPart;
+            Part nextPart = origin.parent;
+            ModuleDecouple Decoupler;
+            ModuleDecouplerDesignate module;
+
+            for (int i = 0; i < 99; i++)
+            {
+                currentPart = nextPart;
+                nextPart = currentPart.parent;
+
+                if (nextPart == null) break;
+                if (!currentPart.isDecoupler(out Decoupler)) continue;
+
+                module = currentPart.GetComponent<ModuleDecouplerDesignate>();
+                if (module == null) continue;
+
+                if (module.DecouplerType != type && !ignoreTypeRequirement) continue;
+
+                return Decoupler;
+            }
+
+            return null;
+        }
     }
 }

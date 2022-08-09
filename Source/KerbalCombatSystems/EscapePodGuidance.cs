@@ -38,7 +38,7 @@ namespace KerbalCombatSystems
         public void BeginEscape()
         {
             // find decoupler
-            decoupler = FindDecoupler(part);
+            decoupler = KCSController.FindDecoupler(part, "Escape Pod", false);
             Debug.Log("Ejecting");
             StartCoroutine(Escape());
         }
@@ -147,24 +147,6 @@ namespace KerbalCombatSystems
             
             //if the part list is now empty begin the escape sequence
             if (Escaped) BeginEscape();
-        }
-
-        ModuleDecouple FindDecoupler(Part origin)
-        {
-            Part currentPart = origin.parent;
-            ModuleDecouple Decoupler;
-            //ModuleDecouplerDesignate DecouplerType;	
-            
-            for (int i = 0; i < 99; i++)
-            {
-                //Get Decoupler type from designation module
-                string DecouplerType = currentPart.GetComponent<ModuleDecouplerDesignate>().DecouplerType;
-                //check if it is a decoupler and the correct type
-                if (currentPart.isDecoupler(out Decoupler) && DecouplerType == "Escape Pod") return Decoupler;
-                currentPart = currentPart.parent;
-            }
-
-            return null;
         }
     }
 }

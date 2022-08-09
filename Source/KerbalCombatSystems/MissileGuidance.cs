@@ -168,7 +168,7 @@ namespace KerbalCombatSystems
             firer = vessel;
 
             // find decoupler
-            decoupler = FindDecoupler(part);
+            decoupler = KCSController.FindDecoupler(part, "Missile", true);
 
             // todo:
             // electric charge check
@@ -283,25 +283,6 @@ namespace KerbalCombatSystems
         {
             KCSDebug.DestroyLine(rvLine);
             KCSDebug.DestroyLine(targetLine);
-        }
-
-        ModuleDecouple FindDecoupler(Part origin)
-        {
-            Part currentPart = origin.parent;
-            ModuleDecouple Decoupler;
-            //ModuleDecouplerDesignate DecouplerType;	
-
-
-            for (int i = 0; i < 99; i++)
-            {
-                //Get Decoupler type from designation module
-                string DecouplerType = currentPart.GetComponent<ModuleDecouplerDesignate>().DecouplerType;
-                //check if it is a decoupler and the correct type
-                if (currentPart.isDecoupler(out Decoupler) && DecouplerType == "Missile") return Decoupler;
-                currentPart = currentPart.parent;
-            }
-
-            return null;
         }
 
         float GetMaxAcceleration(Vessel v)
