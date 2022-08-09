@@ -36,7 +36,7 @@ namespace KerbalCombatSystems
                   guiName = "Trigger Combat Mode")]
         public void CombatTrigger()
         {
-            Debug.Log("Extending KAL-500 Position");
+            Debug.Log("[KCS]: Extending KAL-500 Position");
             //trigger robotics to end of sequence(trigger Combat)
             KAL.SetDirection(Forward);
             KAL.SequencePlay();
@@ -48,7 +48,7 @@ namespace KerbalCombatSystems
                   guiName = "Trigger Passive Mode")]
         public void PassiveTrigger()
         {
-            Debug.Log("Resetting KAL-500 Position");
+            Debug.Log("[KCS]: Resetting KAL-500 Position");
             //trigger robotics to start of sequence(trigger Passive)
             KAL.SetDirection(Forward);
             //Reverse doens't work as advertised so setting as forward then reversing

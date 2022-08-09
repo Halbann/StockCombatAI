@@ -27,14 +27,7 @@ namespace KerbalCombatSystems
             {
                 //switch bool return
                 ShowLines = !ShowLines;
-                if (ShowLines)
-                {
-                    Debug.Log("Line Enabled");
-                }
-                else
-                {
-                    Debug.Log("Line disabled");
-                }
+                Debug.Log("[KCS]: Lines " + (ShowLines ? "enabled." : "disabled."));
             }
         }
 

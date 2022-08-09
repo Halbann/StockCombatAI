@@ -39,7 +39,7 @@ namespace KerbalCombatSystems
         {
             // find decoupler
             decoupler = KCS.FindDecoupler(part, "Escape Pod", false);
-            Debug.Log("Ejecting");
+            Debug.Log("[KCS]: Ejecting");
             StartCoroutine(Escape());
         }
 
@@ -57,7 +57,7 @@ namespace KerbalCombatSystems
             catch
             {
                 //notify of error but launch anyway for pods that have lost decoupler
-                Debug.Log("Couldn't find decoupler on " + vessel.name + "escape pod");
+                Debug.Log("[KCS]: Couldn't find decoupler on " + vessel.name + "escape pod");
             }
 
             yield return null; // wait a frame

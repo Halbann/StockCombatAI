@@ -118,6 +118,9 @@ namespace KerbalCombatSystems
             UpdateWeaponList();
         }
 
+
+
+
         // GUI functions.
 
         void OnGUI()
