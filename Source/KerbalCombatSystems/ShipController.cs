@@ -20,6 +20,7 @@ namespace KerbalCombatSystems
 
         private Coroutine shipControllerCoroutine;
         private KCSFlightController fc;
+        private KCSController controller;
         public Vessel target;
         public List<ModuleMissileGuidance> missiles;
         float lastFired;
@@ -55,6 +56,7 @@ namespace KerbalCombatSystems
             if (HighLogic.LoadedSceneIsFlight)
             {
                 fc = part.gameObject.AddComponent<KCSFlightController>();
+                controller = FindObjectOfType<KCSController>();
             }
         }
 
@@ -62,11 +64,14 @@ namespace KerbalCombatSystems
         {
             while (true)
             {
-                var targetObject = vessel.targetObject;
+                // Find target.
 
-                if (targetObject != null)
+                FindTarget();
+
+                // Engage. todo: Need to separate update of target position from main coroutine.
+
+                if (target != null)
                 {
-                    target = targetObject.GetVessel();
                     fc.attitude = (target.ReferenceTransform.position - vessel.ReferenceTransform.position).normalized;
                     fc.throttle = 1;
 
@@ -92,6 +97,12 @@ namespace KerbalCombatSystems
 
                 yield return new WaitForSeconds(updateInterval);
             } 
+        }
+
+        void FindTarget()
+        {
+            // todo: how to exlcude self?
+            target = controller.ships.OrderBy(s => KCS.VesselDistance(s.v, vessel)).First().v;
         }
 
         public void FixedUpdate()

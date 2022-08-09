@@ -16,19 +16,22 @@ namespace KerbalCombatSystems
         private static ApplicationLauncherButton appLauncherButton;
         private static bool addedAppLauncherButton = false;
         private static bool guiEnabled = false;
+
         private int windowWidth = 300;
         private int windowHeight = 700;
         private Rect windowRect;
         private GUIStyle boxStyle;
+        private int scrollViewHeight;
+        private Vector2 scrollPosition;
+        GUIStyle buttonStyle;
+
         private string[] modes = { "Weapons", "Ships" }; 
         private string mode = "Weapons";
 
         List<ModuleShipController> shipControllerList;
         List<ModuleMissileGuidance> weaponList;
         ModuleMissileGuidance selectedWeapon;
-        private int scrollViewHeight;
-        private Vector2 scrollPosition;
-        GUIStyle buttonStyle;
+        public List<KCSShip> ships;
 
         private void Start()
         {
@@ -67,15 +70,18 @@ namespace KerbalCombatSystems
         {
             var loadedVessels = FlightGlobals.VesselsLoaded;
             shipControllerList = new List<ModuleShipController>();
+            ships = new List<KCSShip>();
 
             foreach (Vessel v in loadedVessels)
             {
                 var p = v.FindPartModuleImplementing<ModuleShipController>();
-                if (p != null)
-                    shipControllerList.Add(p);
+                if (p == null) continue;
+
+                shipControllerList.Add(p);
+                ships.Add(new KCSShip(v, v.GetTotalMass())); // todo: Should update mass instead
             }
         }
-
+        
         private void UpdateWeaponList()
         {
             var c = FlightGlobals.ActiveVessel.FindPartModuleImplementing<ModuleShipController>();
@@ -248,31 +254,5 @@ namespace KerbalCombatSystems
         }
         public void EnableGui() { guiEnabled = true; }
         public void DisableGui() { guiEnabled = false; }
-
-        public static ModuleDecouple FindDecoupler(Part origin, string type, bool ignoreTypeRequirement)
-        {
-            Part currentPart;
-            Part nextPart = origin.parent;
-            ModuleDecouple Decoupler;
-            ModuleDecouplerDesignate module;
-
-            for (int i = 0; i < 99; i++)
-            {
-                currentPart = nextPart;
-                nextPart = currentPart.parent;
-
-                if (nextPart == null) break;
-                if (!currentPart.isDecoupler(out Decoupler)) continue;
-
-                module = currentPart.GetComponent<ModuleDecouplerDesignate>();
-                if (module == null) continue;
-
-                if (module.DecouplerType != type && !ignoreTypeRequirement) continue;
-
-                return Decoupler;
-            }
-
-            return null;
-        }
     }
 }

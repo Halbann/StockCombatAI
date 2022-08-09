@@ -38,7 +38,7 @@ namespace KerbalCombatSystems
         public void BeginEscape()
         {
             // find decoupler
-            decoupler = KCSController.FindDecoupler(part, "Escape Pod", false);
+            decoupler = KCS.FindDecoupler(part, "Escape Pod", false);
             Debug.Log("Ejecting");
             StartCoroutine(Escape());
         }

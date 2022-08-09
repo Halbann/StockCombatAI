@@ -168,7 +168,7 @@ namespace KerbalCombatSystems
             firer = vessel;
 
             // find decoupler
-            decoupler = KCSController.FindDecoupler(part, "Missile", true);
+            decoupler = KCS.FindDecoupler(part, "Missile", true);
 
             // todo:
             // electric charge check
@@ -207,7 +207,7 @@ namespace KerbalCombatSystems
             // pulse to 5 m/s.
             var burnTime = 0.5f;
             var driftVelocity = 5;
-            vessel.ctrlState.mainThrottle = driftVelocity / burnTime / GetMaxAcceleration(vessel);
+            vessel.ctrlState.mainThrottle = driftVelocity / burnTime / KCS.GetMaxAcceleration(vessel);
             yield return new WaitForSeconds(burnTime);
             vessel.ctrlState.mainThrottle = 0;
 
@@ -220,7 +220,7 @@ namespace KerbalCombatSystems
                 yield return new WaitForSeconds(0.5f);
                 targetRay.origin = vessel.ReferenceTransform.position;
                 targetRay.direction = target.transform.position - vessel.transform.position;
-                lineOfSight = !RayIntersectsVessel(firer, targetRay);
+                lineOfSight = !KCS.RayIntersectsVessel(firer, targetRay);
             }
 
             // initialise debug line renderer
@@ -248,7 +248,7 @@ namespace KerbalCombatSystems
             relVelNrm = relVel.normalized;
             relVelmag = relVel.magnitude;
 
-            correctionRatio = Mathf.Max((relVelmag / GetMaxAcceleration(vessel)) * 1.33f, 0.1f);
+            correctionRatio = Mathf.Max((relVelmag / KCS.GetMaxAcceleration(vessel)) * 1.33f, 0.1f);
             correction = Vector3.LerpUnclamped(relVelNrm, targetVectorNormal, 1 + correctionRatio);
 
             drift = Vector3.Dot(targetVectorNormal, relVelNrm) > 0.999999
@@ -283,27 +283,6 @@ namespace KerbalCombatSystems
         {
             KCSDebug.DestroyLine(rvLine);
             KCSDebug.DestroyLine(targetLine);
-        }
-
-        float GetMaxAcceleration(Vessel v)
-        {
-            List<ModuleEngines> engines = v.FindPartModulesImplementing<ModuleEngines>();
-            float thrust = engines.Sum(e => e.MaxThrustOutputVac(true));
-
-            return thrust / vessel.GetTotalMass();
-        }
-
-        private bool RayIntersectsVessel(Vessel v, Ray r)
-        {
-            foreach (Part p in v.parts)
-            {
-                foreach (Bounds b in p.GetColliderBounds())
-                {
-                    if (b.IntersectRay(r)) return true;
-                }
-            }
-
-            return false;
         }
     }
 }

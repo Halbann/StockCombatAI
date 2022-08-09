@@ -83,6 +83,7 @@
     <Compile Include="CombatRobotics.cs" />
     <Compile Include="DecouplerDesignator.cs" />
     <Compile Include="EscapePodGuidance.cs" />
+    <Compile Include="KCS.cs" />
     <Compile Include="KCSDebug.cs" />
     <Compile Include="KCSController.cs" />
     <Compile Include="MissileGuidance.cs" />
