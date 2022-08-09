@@ -59,17 +59,22 @@ namespace KerbalCombatSystems
 
         void UpdateSAS(Vessel v)
         {
+            if (v == null) return;
+
             // SAS must be turned off. Don't know why.
             if (v.ActionGroups[KSPActionGroup.SAS])
                 v.ActionGroups.SetGroup(KSPActionGroup.SAS, false);
 
+            var ap = v.Autopilot;
+            if (ap == null) return;
+
             // The offline SAS must not be on stability assist. Normal seems to work on most probes.
-            if (v.Autopilot.Mode != VesselAutopilot.AutopilotMode.Normal)
+            if (ap.Mode != VesselAutopilot.AutopilotMode.Normal)
             {
-                v.Autopilot.SetMode(VesselAutopilot.AutopilotMode.Normal);
+                ap.SetMode(VesselAutopilot.AutopilotMode.Normal);
             }
 
-            v.Autopilot.SAS.SetTargetOrientation(attitude, false);
+            ap.SAS.SetTargetOrientation(attitude, false);
 
             // Update debug lines.
             Vector3 origin = v.ReferenceTransform.position;

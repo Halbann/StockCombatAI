@@ -19,9 +19,9 @@ namespace KerbalCombatSystems
         // Ship AI variables.
 
         private Coroutine shipControllerCoroutine;
-        Vessel target;
-        KCSFlightController fc;
-        List<ModuleMissileGuidance> missiles;
+        private KCSFlightController fc;
+        public Vessel target;
+        public List<ModuleMissileGuidance> missiles;
         float lastFired;
         float fireInterval;
 
@@ -45,7 +45,7 @@ namespace KerbalCombatSystems
             controllerRunning = !controllerRunning;
         }
 
-        private void CheckWeapons()
+        public void CheckWeapons()
         {
             missiles = vessel.FindPartModulesImplementing<ModuleMissileGuidance>();
         }

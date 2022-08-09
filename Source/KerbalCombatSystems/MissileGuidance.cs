@@ -125,7 +125,7 @@ namespace KerbalCombatSystems
             VesselRenameDialog.SpawnNameFromPart(part, SetMissileCodeCallback, Dismiss, Remove, false, VesselType.Probe);
         }
 
-        public void SetMissileCodeCallback(String code, VesselType arg2, int arg3)
+        public void SetMissileCodeCallback(String code, VesselType t, int i)
         {
             missileCode = code;
             UpdateMissileCodeUI();
