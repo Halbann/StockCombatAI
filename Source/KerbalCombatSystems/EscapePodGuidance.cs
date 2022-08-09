@@ -37,18 +37,14 @@ namespace KerbalCombatSystems
                   groupDisplayName = EscapeGuidanceGroupName)]
         public void BeginEscape()
         {
-            // find decoupler
+            //find decoupler
             decoupler = KCS.FindDecoupler(part, "Escape Pod", false);
-            Debug.Log("[KCS]: Ejecting");
+            Debug.Log("[KCS]: Ejecting from " + Parent.name);
             StartCoroutine(Escape());
         }
-
-        //escape guidance is called when when no ship controller can be found onboard
+ 
         private IEnumerator Escape()
         {
-
-            Debug.Log(Parent.name);
-
             // try to pop decoupler
             try
             {
@@ -135,20 +131,23 @@ namespace KerbalCombatSystems
 
         //method to check for the existence of any ship ai
         private void CheckConnection()
-        {
-            Escaped = true;
+        {;
            
             foreach (Part AIPart in AIPartList)
             {
-                //if part does not exist on the same ship
-                if (AIPart.vessel == vessel)
+                //if part does not exist / on the same ship
+                if (AIPart.vessel == vessel) continue;
                 {
-                    Escaped = false;
+                    AIPartList.Remove(Part);
                 }
             }
             
             //if the part list is now empty begin the escape sequence
-            if (Escaped) BeginEscape();
+            if (AIPartList.Count().Equals(0)) 
+            {
+                   Escaped = true
+                   BeginEscape();
+            }
         }
     }
 }
