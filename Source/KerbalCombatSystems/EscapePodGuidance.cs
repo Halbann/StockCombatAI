@@ -39,11 +39,11 @@ namespace KerbalCombatSystems
         {
             //find decoupler
             decoupler = KCS.FindDecoupler(part, "Escape Pod", false);
-            Debug.Log("[KCS]: Ejecting from " + Parent.name);
-            StartCoroutine(Escape());
+            Debug.Log("[KCS]: Escaping from " + Parent.GetName());
+            StartCoroutine(RunEscapeSequence());
         }
  
-        private IEnumerator Escape()
+        private IEnumerator RunEscapeSequence()
         {
             // try to pop decoupler
             try
@@ -53,12 +53,10 @@ namespace KerbalCombatSystems
             catch
             {
                 //notify of error but launch anyway for pods that have lost decoupler
-                Debug.Log("[KCS]: Couldn't find decoupler on " + vessel.name + "escape pod");
+                Debug.Log("[KCS]: Couldn't find decoupler on " + vessel.GetName() + " (Escape Pod)");
             }
 
             yield return null; // wait a frame
-
-            // todo: set control point to first probe ya find
 
             if (vessel.mainBody.atmosphere)
             {
@@ -87,7 +85,8 @@ namespace KerbalCombatSystems
             // enable autopilot
             fc = part.gameObject.AddComponent<KCSFlightController>();
             EngageAutopilot = true;
-            
+
+            yield break;
         }
         
         private void Start()
@@ -118,7 +117,6 @@ namespace KerbalCombatSystems
             {
                 fc.attitude = BurnDirection;
                 fc.alignmentToleranceforBurn = 20;
-                //burn baby burn
                 fc.throttle = 1;
                 fc.Drive();
             }
@@ -137,16 +135,14 @@ namespace KerbalCombatSystems
             {
                 //if part does not exist / on the same ship
                 if (AIPart.vessel == vessel) continue;
-                {
-                    AIPartList.Remove(Part);
-                }
+                AIPartList.Remove(AIPart);
             }
             
             //if the part list is now empty begin the escape sequence
             if (AIPartList.Count().Equals(0)) 
             {
-                   Escaped = true
-                   BeginEscape();
+                Escaped = true;
+                BeginEscape();
             }
         }
     }
