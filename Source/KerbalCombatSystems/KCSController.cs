@@ -29,8 +29,8 @@ namespace KerbalCombatSystems
         private string mode = "Weapons";
 
         List<ModuleShipController> shipControllerList;
-        List<ModuleMissileGuidance> weaponList;
-        ModuleMissileGuidance selectedWeapon;
+        List<ModuleWeaponController> weaponList;
+        ModuleWeaponController selectedWeapon;
         public List<KCSShip> ships;
 
         private void Start()
@@ -86,20 +86,20 @@ namespace KerbalCombatSystems
         {
             var c = FlightGlobals.ActiveVessel.FindPartModuleImplementing<ModuleShipController>();
             if (c == null) { 
-                weaponList = new List<ModuleMissileGuidance>();
+                weaponList = new List<ModuleWeaponController>();
                 return;
             };
 
             c.CheckWeapons();
-            weaponList = c.missiles;
+            weaponList = c.weapons;
 
             // need to sort by distance from root part so that we don't fire bumper torpedos.
             //weaponList.OrderBy(m => m.vessel.parts.FindIndex 
 
             // todo: replace this.
-            var ungroupedMissiles = weaponList.FindAll(m => m.missileCode == "");
+            var ungroupedMissiles = weaponList.FindAll(m => m.weaponCode == "");
             weaponList = weaponList.Except(ungroupedMissiles).ToList();
-            weaponList = weaponList.GroupBy(m => m.missileCode).Select(g => g.First()).ToList();
+            weaponList = weaponList.GroupBy(m => m.weaponCode).Select(g => g.First()).ToList();
             weaponList = weaponList.Concat(ungroupedMissiles).ToList();
         }
 
@@ -114,7 +114,7 @@ namespace KerbalCombatSystems
         public void FireSelectedWeapon()
         {
             if (selectedWeapon == null) return;
-            selectedWeapon.FireMissile();
+            selectedWeapon.Fire();
             UpdateWeaponList();
         }
 
@@ -216,7 +216,7 @@ namespace KerbalCombatSystems
                     {
                         foreach (var w in weaponList)
                         {
-                            string missileCode = w.missileCode == "" ? "Missile" : w.missileCode;
+                            string missileCode = w.weaponCode == "" ? "Weapon" : w.weaponCode;
                             string weaponName = String.Format("{0}\n<color=#808080ff>Part Count: {1}, Mass: {2} t</color>", 
                                 missileCode, "Unknown", "Unknown");
 

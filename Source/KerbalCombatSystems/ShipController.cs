@@ -22,7 +22,7 @@ namespace KerbalCombatSystems
         private KCSFlightController fc;
         private KCSController controller;
         public Vessel target;
-        public List<ModuleMissileGuidance> missiles;
+        public List<ModuleWeaponController> weapons;
         float lastFired;
         float fireInterval;
         float maxDetectionRange;
@@ -49,7 +49,7 @@ namespace KerbalCombatSystems
 
         public void CheckWeapons()
         {
-            missiles = vessel.FindPartModulesImplementing<ModuleMissileGuidance>();
+            weapons = vessel.FindPartModulesImplementing<ModuleWeaponController>();
         }
 
         public override void OnStart(StartState state)
@@ -82,11 +82,11 @@ namespace KerbalCombatSystems
                         lastFired = Time.time;
                         fireInterval = UnityEngine.Random.Range(5, 15);
 
-                        if (missiles.Count > 0)
+                        if (weapons.Count > 0)
                         {
-                            var missileIndex = UnityEngine.Random.Range(0, missiles.Count - 1);
-                            missiles[missileIndex].target = target;
-                            missiles[missileIndex].FireMissile();
+                            var missileIndex = UnityEngine.Random.Range(0, weapons.Count - 1);
+                            weapons[missileIndex].target = target;
+                            weapons[missileIndex].Fire();
 
                             yield return null;
                             CheckWeapons();

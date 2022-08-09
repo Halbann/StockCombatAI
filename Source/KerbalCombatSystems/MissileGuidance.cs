@@ -10,91 +10,11 @@ using System.Collections;
 
 namespace KerbalCombatSystems
 {
-    public class ModuleMissileGuidance : PartModule
+    public class ModuleMissile : PartModule
     {
-        // User parameters changed via UI.
-
-        const string missileGuidanceGroupName = "Missile Guidance";
-
-        [KSPField(isPersistant = true,
-            guiActive = true,
-            guiActiveEditor = true,
-            guiName = "Targetting Range",
-            guiUnits = "m",
-            groupName = missileGuidanceGroupName,
-            groupDisplayName = missileGuidanceGroupName),
-            UI_MinMaxRange(
-                minValueX = 100f,
-                maxValueX = 5000f,
-                minValueY = 200f,
-                maxValueY = 5000f,
-                stepIncrement = 50f,
-                scene = UI_Scene.All
-            )]
-        public Vector2 MinMaxRange = new Vector2(500f, 1000f);
-
-        [KSPField(isPersistant = true,
-              guiActive = true,
-              guiActiveEditor = true,
-              guiName = "Terminal Velocity",
-              guiUnits = "m/s",
-              groupName = missileGuidanceGroupName,
-              groupDisplayName = missileGuidanceGroupName),
-              UI_FloatRange(
-                  minValue = 50f,
-                  maxValue = 2000f,
-                  stepIncrement = 50f,
-                  scene = UI_Scene.All
-              )]
-        public float terminalVelocity = 300f;
-
-        [KSPField(isPersistant = true,
-               guiActive = true,
-               guiActiveEditor = true,
-               guiName = "Preferred Target Mass",
-               guiUnits = "t",
-               groupName = missileGuidanceGroupName,
-               groupDisplayName = missileGuidanceGroupName),
-               UI_FloatRange(
-                   minValue = 0f,
-                   maxValue = 1000f,
-                   stepIncrement = 0.01f,
-                   scene = UI_Scene.All
-               )]
-        public float TMassPreference = 50f;
-
-        [KSPField(isPersistant = true,
-            guiActive = true,
-            guiActiveEditor = true,
-            guiName = "Use for Interception",
-            groupName = missileGuidanceGroupName,
-            groupDisplayName = missileGuidanceGroupName),
-            UI_Toggle(
-                enabledText = "Enabled",
-                disabledText = "Disabled",
-                scene = UI_Scene.All
-            )]
-        public bool useAsInterceptor = false;
-
-        [KSPField(isPersistant = true,
-            guiActive = true,
-            guiActiveEditor = true,
-            guiName = "Velocity Match",
-            groupName = missileGuidanceGroupName,
-            groupDisplayName = missileGuidanceGroupName),
-        UI_Toggle(
-                enabledText = "Enabled",
-                disabledText = "Disabled",
-                scene = UI_Scene.All
-        )]
-        public bool MatchTargetVelocity = true;
-
         // Missile guidance variables.
 
         public bool engageAutopilot = false;
-        public Vessel target;
-        Vessel firer;
-        ModuleDecouple decoupler;
         KCSFlightController fc;
         private Vector3 targetVector;
         private Vector3 targetVectorNormal;
@@ -104,73 +24,17 @@ namespace KerbalCombatSystems
         private float correctionRatio;
         private Vector3 correction;
         private bool drift;
+        Vessel target;
+        Vessel firer;
+        ModuleDecouple decoupler;
 
         // Debugging line variables.
 
         LineRenderer targetLine, rvLine;
+        private float terminalVelocity;
 
-        // Set persistent missile code in editor and flight.
-
-        [KSPField(isPersistant = true)]
-        public string missileCode = "";
-
-        [KSPEvent(guiActive = true,
-                  guiActiveEditor = true,
-                  guiName = "Set Missile Code",
-                  groupName = missileGuidanceGroupName,
-                  groupDisplayName = missileGuidanceGroupName,
-                  name = "missileCodeEvent")]
-        public void SetMissileCode()
+        private IEnumerator Launch()
         {
-            VesselRenameDialog.SpawnNameFromPart(part, SetMissileCodeCallback, Dismiss, Remove, false, VesselType.Probe);
-        }
-
-        public void SetMissileCodeCallback(String code, VesselType t, int i)
-        {
-            missileCode = code;
-            UpdateMissileCodeUI();
-        }
-
-        private void UpdateMissileCodeUI()
-        {
-            var e = Events["SetMissileCode"];
-            var name = missileCode == "" ? "None" : missileCode;
-            e.guiName = "Set Missile Code:                                " + name;
-
-            if (part.vesselNaming == null)
-                part.vesselNaming = new VesselNaming();
-
-            part.vesselNaming.vesselName = missileCode;
-        }
-
-        // This needs to exist for the dialog to work.
-        public void Dismiss() {}
-        public void Remove()
-        {
-            missileCode = "";
-            UpdateMissileCodeUI();
-        }
-
-        // 'Fire' button.
-
-        [KSPEvent(guiActive = true,
-                  guiActiveEditor = false,
-                  guiName = "Fire",
-                  groupName = missileGuidanceGroupName,
-                  groupDisplayName = missileGuidanceGroupName)]
-        public void FireMissile()
-        {
-            float maxRange = MinMaxRange.x;
-            float minRange = MinMaxRange.y;
-
-            if (target == null)
-            {
-                if (vessel.targetObject == null) return;
-                target = vessel.targetObject.GetVessel();
-            }
-
-            firer = vessel;
-
             // find decoupler
             decoupler = KCS.FindDecoupler(part, "Missile", true);
 
@@ -179,13 +43,6 @@ namespace KerbalCombatSystems
             // fuel check
             // propulsion check
 
-            Debug.Log($"Firing missile, let 'em have it! Max range: {maxRange}, Min range: {minRange}, Interceptor: {useAsInterceptor}");
-            
-            StartCoroutine(Launch());
-        }
-
-        private IEnumerator Launch()
-        {
             // try to pop decoupler
             try
             {
@@ -275,7 +132,11 @@ namespace KerbalCombatSystems
 
         public void Start()
         {
-            UpdateMissileCodeUI();
+            target = part.FindModuleImplementing<ModuleWeaponController>().target;
+            terminalVelocity = part.FindModuleImplementing<ModuleWeaponController>().terminalVelocity;
+            firer = vessel;
+
+            StartCoroutine(Launch());
         }
 
         public void FixedUpdate()
@@ -288,5 +149,6 @@ namespace KerbalCombatSystems
             KCSDebug.DestroyLine(rvLine);
             KCSDebug.DestroyLine(targetLine);
         }
+
     }
 }
