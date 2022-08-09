@@ -22,17 +22,8 @@ namespace KerbalCombatSystems
             groupName = DecouplerDesignationGroupName,
             groupDisplayName = DecouplerDesignationGroupName),
             UI_ChooseOption(controlEnabled = true, affectSymCounterparts = UI_Scene.None,
-            options = new string[] { "Default", "Missile", "Rocket", "Bomb", "Countermeasure", "Escape Pod", "Warhead" })]
+            options = new string[] { "Default", "Weapon", "Countermeasure", "Escape Pod", "Warhead" })]
         public string DecouplerType = "Default";
-
-        [KSPField(
-            isPersistant = true,
-            guiActive = true,
-            guiActiveEditor = true,
-            guiName = "Use for Interception",
-            groupName = DecouplerDesignationGroupName,
-            groupDisplayName = DecouplerDesignationGroupName),
-            UI_Toggle(enabledText = "Enabled", disabledText = "Disabled", scene = UI_Scene.All)]
-        public bool useAsInterceptor = false;
+        
     }
 }

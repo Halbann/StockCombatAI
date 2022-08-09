@@ -143,6 +143,13 @@ namespace KerbalCombatSystems
                 Escaped = true;
                 BeginEscape();
             }
+
+            if (vessel.VesselDeltaV.TotalDeltaVActual == 0)
+            {
+                //todo: disable shipcontroller, hatbat should know as the author
+            }
+
+
         }
     }
 }

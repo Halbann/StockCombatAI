@@ -36,7 +36,7 @@ namespace KerbalCombatSystems
         private IEnumerator Launch()
         {
             // find decoupler
-            decoupler = KCS.FindDecoupler(part, "Missile", true);
+            decoupler = KCS.FindDecoupler(part, "Weapon", true);
 
             // todo:
             // electric charge check

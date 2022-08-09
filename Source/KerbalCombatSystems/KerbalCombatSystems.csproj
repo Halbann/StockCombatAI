@@ -79,6 +79,9 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="MassCannonTargetting.cs" />
+    <Compile Include="BombGuidance.cs" />
+    <Compile Include="RocketTargetting.cs" />
     <Compile Include="FlightController.cs" />
     <Compile Include="CombatRobotics.cs" />
     <Compile Include="DecouplerDesignator.cs" />
@@ -86,6 +89,7 @@
     <Compile Include="KCS.cs" />
     <Compile Include="KCSDebug.cs" />
     <Compile Include="KCSController.cs" />
+    <Compile Include="FireworkTargetting.cs" />
     <Compile Include="MissileGuidance.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="ObjectTracking.cs" />

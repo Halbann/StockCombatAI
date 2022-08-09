@@ -16,6 +16,9 @@ namespace KerbalCombatSystems
         const string weaponGroupName = "Weapon Settings";
         const string missileGroupName = "Missile Guidance";
         const string rocketGroupName = "Rocket Settings";
+        const string FireworkGroupName = "Firework Settings";
+        const string MCGroupName = "Mass Cannon Settings";
+        const string BombGroupName = "Bomb Settings";
 
         // Generic weapon fields.
 
@@ -99,6 +102,98 @@ namespace KerbalCombatSystems
 
         // Bomb fields.
 
+        [KSPField(isPersistant = true,
+              guiActive = true,
+              guiActiveEditor = true,
+              guiName = "Release Velocity",
+              guiUnits = "m/s",
+              groupName = BombGroupName,
+              groupDisplayName = BombGroupName),
+              UI_FloatRange(
+                  minValue = 30f,
+                  maxValue = 500f,
+                  stepIncrement = 10f,
+                  scene = UI_Scene.All
+              )]
+        public float BombReleaseVelocity = 300f;
+        
+        [KSPField(isPersistant = true,
+              guiActive = true,
+              guiActiveEditor = true,
+              guiName = "Minimum Safe Distance",
+              guiUnits = "m",
+              groupName = BombGroupName,
+              groupDisplayName = BombGroupName),
+              UI_FloatRange(
+                  minValue = 50f,
+                  maxValue = 1000f,
+                  stepIncrement = 50f,
+                  scene = UI_Scene.All
+              )]
+        public float BombSafeDistance = 200f;
+
+        //Firework Fields
+
+        [KSPField(isPersistant = true,
+              guiActive = true,
+              guiActiveEditor = true,
+              guiName = "Firework Shot Burst",
+              guiUnits = "Rounds",
+              groupName = missileGroupName,
+              groupDisplayName = missileGroupName),
+              UI_FloatRange(
+                  minValue = 1f,
+                  maxValue = 8f,
+                  stepIncrement = 1f,
+                  scene = UI_Scene.All
+              )]
+        public float FWRoundBurst = 2f;
+
+        [KSPField(isPersistant = true,
+            guiActive = true,
+            guiActiveEditor = true,
+            guiName = "Use for Flak",
+            groupName = missileGroupName,
+            groupDisplayName = missileGroupName),
+            UI_Toggle(
+                enabledText = "Enabled",
+                disabledText = "Disabled",
+                scene = UI_Scene.All
+            )]
+        public bool FWUseAsCIWS = false;
+
+        //mass cannon fields
+
+        [KSPField(isPersistant = true,
+              guiActive = true,
+              guiActiveEditor = true,
+              guiName = "Round Muzzle Velocity",
+              guiUnits = "m/s",
+              groupName = missileGroupName,
+              groupDisplayName = missileGroupName),
+              UI_FloatRange(
+                  minValue = 1f,
+                  maxValue = 10000f,
+                  stepIncrement = 50f,
+                  scene = UI_Scene.All
+              )]
+        public float MCMuzzleVelocity = 250f;
+
+        [KSPField(isPersistant = true,
+              guiActive = true,
+              guiActiveEditor = true,
+              guiName = "Mass Cannon Firing Length",
+              guiUnits = "seconds",
+              groupName = missileGroupName,
+              groupDisplayName = missileGroupName),
+              UI_FloatRange(
+                  minValue = 0f,
+                  maxValue = 10f,
+                  stepIncrement = 0.1f,
+                  scene = UI_Scene.All
+              )]
+        public float MCFireTime = 1f;
+        
 
         // Generic weapon variables.
 
@@ -107,7 +202,7 @@ namespace KerbalCombatSystems
         [KSPField(isPersistant = true)]
         string weaponType;
 
-        string[] types = { "Missile", "Rocket", "Bomb" }; 
+        string[] types = { "Missile", "Rocket", "Firework", "Bomb", "Mass Cannon" }; 
 
 
         // Set persistent weapon code in editor and flight.
@@ -179,6 +274,12 @@ namespace KerbalCombatSystems
                 case "Rocket":
                     moduleName = "ModuleRocket";
                     break;
+                case "Firework":
+                    moduleName = "ModuleFirework";
+                    break;
+                case "Mass Cannon":
+                    moduleName = "ModuleMassCannon";
+                    break;
                 case "Bomb":
                     moduleName = "ModuleBomb";
                     break;
@@ -222,14 +323,29 @@ namespace KerbalCombatSystems
         }
         private void UpdateUI()
         {
+            //Missile Fields
             Fields["terminalVelocity"].guiActive = weaponType == "Missile";
             Fields["terminalVelocity"].guiActiveEditor = weaponType == "Missile";
             Fields["useAsInterceptor"].guiActive = weaponType == "Missile";
             Fields["useAsInterceptor"].guiActiveEditor = weaponType == "Missile";
             Fields["MatchTargetVelocity"].guiActive = weaponType == "Missile";
             Fields["MatchTargetVelocity"].guiActiveEditor = weaponType == "Missile";
-            // Add other fields like this: 
-            // Fields["BombSpeed"].guiActiveEditor = weaponType == "Bomb";
+            //Firework fields
+            Fields["FWRoundBurst"].guiActive = weaponType == "Firework";
+            Fields["FWRoundBurst"].guiActiveEditor = weaponType == "Firework";
+            Fields["FWUseAsCIWS"].guiActive = weaponType == "Firework";
+            Fields["FWUseAsCIWS"].guiActiveEditor = weaponType == "Firework";
+            //Mass Cannon Fields
+            Fields["MCMuzzleVelocity"].guiActive = weaponType == "Mass Cannon";
+            Fields["MCMuzzleVelocity"].guiActiveEditor = weaponType == "Mass Cannon";
+            Fields["MCFireTime"].guiActive = weaponType == "Mass Cannon";
+            Fields["MCFireTime"].guiActiveEditor = weaponType == "Mass Cannon";
+            //Bomb Fields
+            Fields["BombSafeDistance"].guiActive = weaponType == "Bomb";
+            Fields["BombSafeDistance"].guiActiveEditor = weaponType == "Bomb";
+            Fields["BombReleaseVelocity"].guiActive = weaponType == "Bomb";
+            Fields["BombReleaseVelocity"].guiActiveEditor = weaponType == "Bomb";
+
             RefreshAssociatedWindows(part);
         }
 
