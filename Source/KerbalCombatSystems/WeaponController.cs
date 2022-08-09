@@ -138,7 +138,7 @@ namespace KerbalCombatSystems
               guiActive = true,
               guiActiveEditor = true,
               guiName = "Firework Shot Burst",
-              guiUnits = "Rounds",
+              guiUnits = " Rounds",
               groupName = missileGroupName,
               groupDisplayName = missileGroupName),
               UI_FloatRange(
@@ -183,7 +183,7 @@ namespace KerbalCombatSystems
               guiActive = true,
               guiActiveEditor = true,
               guiName = "Mass Cannon Firing Length",
-              guiUnits = "seconds",
+              guiUnits = " Seconds",
               groupName = missileGroupName,
               groupDisplayName = missileGroupName),
               UI_FloatRange(
