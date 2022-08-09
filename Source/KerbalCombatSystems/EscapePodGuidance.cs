@@ -116,6 +116,8 @@ namespace KerbalCombatSystems
 
         private void FixedUpdate()
         {
+            if (!HighLogic.LoadedSceneIsFlight) return;
+
             if (EngageAutopilot) 
             {
                 fc.attitude = BurnDirection;

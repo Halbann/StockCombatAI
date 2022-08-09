@@ -185,11 +185,19 @@ namespace KerbalCombatSystems
                             string craftName = String.Format("{0}\n<color=#808080ff>Part Count: {1}, Mass: {2} t</color>", 
                                 v.GetDisplayName(), v.parts.Count, Math.Round(v.GetTotalMass(), 1));
 
+                            string AI = String.Format("<color={0}>AI</color>", controller.controllerRunning ? "#07D207" : "#FFFFFF");
+
+                            GUILayout.BeginHorizontal();
                             if (GUILayout.Button(craftName))
                             {
-                                FlightGlobals.SetActiveVessel(v);
+                                FlightGlobals.ForceSetActiveVessel(v);
                                 UpdateWeaponList();
                             }
+                            if (GUILayout.Button(AI))
+                            {
+                                controller.ToggleAI();
+                            }
+                            GUILayout.EndHorizontal();
                         }
                     }
                 GUILayout.EndScrollView();

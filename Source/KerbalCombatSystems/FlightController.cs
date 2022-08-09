@@ -44,6 +44,7 @@ namespace KerbalCombatSystems
 
         private void UpdateThrottle(Vessel v)
         {
+            if (v == null) return;
             var af = Vector3.Angle(v.ReferenceTransform.up, attitude); 
 
             facingDesiredRotation = af < alignmentToleranceforBurn;

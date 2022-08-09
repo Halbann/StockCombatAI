@@ -13,7 +13,7 @@ namespace KerbalCombatSystems
         // User parameters changed via UI.
 
         const string shipControllerGroupName = "Ship AI";
-        private bool controllerRunning = false;
+        public bool controllerRunning = false;
         public float updateInterval = 0.1f;
 
         // Ship AI variables.
@@ -25,6 +25,7 @@ namespace KerbalCombatSystems
         public List<ModuleMissileGuidance> missiles;
         float lastFired;
         float fireInterval;
+        float maxDetectionRange;
 
         [KSPEvent(guiActive = true,
                   guiActiveEditor = false,
@@ -66,6 +67,7 @@ namespace KerbalCombatSystems
             {
                 // Find target.
 
+                UpdateDetectionRange();
                 FindTarget();
 
                 // Engage. todo: Need to separate update of target position from main coroutine.
@@ -83,6 +85,7 @@ namespace KerbalCombatSystems
                         if (missiles.Count > 0)
                         {
                             var missileIndex = UnityEngine.Random.Range(0, missiles.Count - 1);
+                            missiles[missileIndex].target = target;
                             missiles[missileIndex].FireMissile();
 
                             yield return null;
@@ -99,10 +102,26 @@ namespace KerbalCombatSystems
             } 
         }
 
+        void UpdateDetectionRange()
+        {
+            var sensors = vessel.FindPartModulesImplementing<ModuleObjectTracking>();
+            if (sensors.Count < 1)
+            {
+                maxDetectionRange = 1000; // visual range perhaps?
+                return;
+            }
+
+            maxDetectionRange = sensors.Max(s => s.detectionRange);
+        }
+
         void FindTarget()
         {
-            // todo: how to exlcude self?
-            target = controller.ships.OrderBy(s => KCS.VesselDistance(s.v, vessel)).First().v;
+            var ships = controller.ships.FindAll(s => KCS.VesselDistance(s.v, vessel) < maxDetectionRange);
+            ships.Remove(ships.Find(s => s.v == vessel));
+
+            if (ships.Count < 1) return;
+
+            target = ships.OrderBy(s => KCS.VesselDistance(s.v, vessel)).First().v;
         }
 
         public void FixedUpdate()

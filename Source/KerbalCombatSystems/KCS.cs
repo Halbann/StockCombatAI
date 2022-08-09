@@ -16,6 +16,8 @@ namespace KerbalCombatSystems
             ModuleDecouple Decoupler;
             ModuleDecouplerDesignate module;
 
+            if (nextPart == null) return null;
+
             for (int i = 0; i < 99; i++)
             {
                 currentPart = nextPart;

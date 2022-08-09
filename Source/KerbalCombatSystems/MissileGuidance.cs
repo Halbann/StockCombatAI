@@ -92,7 +92,7 @@ namespace KerbalCombatSystems
         // Missile guidance variables.
 
         public bool engageAutopilot = false;
-        Vessel target;
+        public Vessel target;
         Vessel firer;
         ModuleDecouple decoupler;
         KCSFlightController fc;
@@ -163,8 +163,12 @@ namespace KerbalCombatSystems
             float maxRange = MinMaxRange.x;
             float minRange = MinMaxRange.y;
 
-            if (vessel.targetObject == null) return;
-            target = vessel.targetObject.GetVessel();
+            if (target == null)
+            {
+                if (vessel.targetObject == null) return;
+                target = vessel.targetObject.GetVessel();
+            }
+
             firer = vessel;
 
             // find decoupler
