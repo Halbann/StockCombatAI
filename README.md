@@ -3,4 +3,4 @@ Kerbal Combat Suite (KCS) is a mod for Kerbal Space Program. Its goal is to act 
 # Developers
 - HatBat
 - Spartwo
-- Miffedstarfish
+- MiffedStarfish
