@@ -34,17 +34,21 @@ namespace KerbalCombatSystems
                   groupDisplayName = shipControllerGroupName)]
         public void ToggleAI()
         {
-            if (!controllerRunning)
-            {
-                CheckWeapons();
-                shipControllerCoroutine = StartCoroutine(ShipController());
-            }
-            else
-            {
-                StopCoroutine(shipControllerCoroutine);
-            }
+            if (!controllerRunning) StartAI();
+            else StopAI();
+        }
 
-            controllerRunning = !controllerRunning;
+        public void StartAI()
+        {
+            CheckWeapons();
+            shipControllerCoroutine = StartCoroutine(ShipController());
+            controllerRunning = true;
+        }
+
+        public void StopAI()
+        {
+            controllerRunning = false;
+            StopCoroutine(shipControllerCoroutine);
         }
 
         public void CheckWeapons()
