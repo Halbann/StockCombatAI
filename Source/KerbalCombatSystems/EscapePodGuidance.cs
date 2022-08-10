@@ -58,15 +58,16 @@ namespace KerbalCombatSystems
 
             yield return null; // wait a frame
 
-            if (vessel.mainBody.atmosphere)
-            {
-                //if planet has an atmosphere set target orientation retrograde
-                BurnDirection = vessel.GetObtVelocity().normalized * -1;
-            }
-            else if (vessel.GetObtVelocity().magnitude > vessel.VesselDeltaV.TotalDeltaVActual/2f)
+            if (vessel.GetObtVelocity().magnitude > vessel.VesselDeltaV.TotalDeltaVActual/2f)
             {
                 //if burn has a chance to deorbit set target orientation to prograde
                 BurnDirection = vessel.GetObtVelocity().normalized;
+
+                if (vessel.mainBody.atmosphere)
+                {
+                    //if planet has an atmosphere set target orientation retrograde
+                    BurnDirection = vessel.GetObtVelocity().normalized * -1;
+                }
             }
             else
             {
