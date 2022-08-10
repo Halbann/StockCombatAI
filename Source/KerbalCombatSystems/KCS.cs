@@ -64,7 +64,7 @@ namespace KerbalCombatSystems
         }
     }
 
-    public class KCSShip
+    /*public class KCSShip
     {
         public Vessel v;
         public float initialMass;
@@ -74,5 +74,11 @@ namespace KerbalCombatSystems
             v = ship;
             initialMass = mass;
         }
+    }*/
+
+    public enum Side
+    {
+        A,
+        B
     }
 }

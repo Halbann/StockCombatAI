@@ -26,6 +26,8 @@ namespace KerbalCombatSystems
         float lastFired;
         float fireInterval;
         float maxDetectionRange;
+        public float initialMass;
+        public Side side;
 
         [KSPEvent(guiActive = true,
                   guiActiveEditor = false,
@@ -40,6 +42,7 @@ namespace KerbalCombatSystems
 
         public void StartAI()
         {
+            initialMass = vessel.GetTotalMass();
             CheckWeapons();
             shipControllerCoroutine = StartCoroutine(ShipController());
             controllerRunning = true;
@@ -116,21 +119,36 @@ namespace KerbalCombatSystems
             }
 
             maxDetectionRange = sensors.Max(s => s.detectionRange);
+            // todo: deploy any sensors that aren't deployed
         }
 
         void FindTarget()
         {
-            var ships = controller.ships.FindAll(s => KCS.VesselDistance(s.v, vessel) < maxDetectionRange);
-            ships.Remove(ships.Find(s => s.v == vessel));
+            var ships = controller.ships.FindAll(
+                s => KCS.VesselDistance(s.vessel, vessel) < maxDetectionRange
+                && s.side != side);
+            //ships.Remove(ships.Find(s => s.vessel == vessel));
 
             if (ships.Count < 1) return;
 
-            target = ships.OrderBy(s => KCS.VesselDistance(s.v, vessel)).First().v;
+            target = ships.OrderBy(s => KCS.VesselDistance(s.vessel, vessel)).First().vessel;
         }
 
         public void FixedUpdate()
         {
             if (controllerRunning) fc.Drive();
+        }
+
+        public void ToggleSide()
+        {
+            if (side == Side.A)
+            {
+                side = Side.B;
+            }
+            else
+            {
+                side = Side.A;
+            }
         }
     }
 }

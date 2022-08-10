@@ -200,7 +200,7 @@ namespace KerbalCombatSystems
         public Vessel target;
 
         [KSPField(isPersistant = true)]
-        string weaponType;
+        public string weaponType;
 
         string[] types = { "Missile", "Rocket", "Firework", "Bomb", "Mass Cannon" }; 
 
@@ -237,6 +237,7 @@ namespace KerbalCombatSystems
                 part.vesselNaming = new VesselNaming();
 
             part.vesselNaming.vesselName = weaponCode;
+            part.partInfo.showVesselNaming = false;
         }
 
         // This needs to exist for the dialog to work.

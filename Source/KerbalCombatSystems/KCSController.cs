@@ -28,10 +28,11 @@ namespace KerbalCombatSystems
         private string[] modes = { "Weapons", "Ships" }; 
         private string mode = "Weapons";
 
-        List<ModuleShipController> shipControllerList;
+        public List<ModuleShipController> ships;
+
         List<ModuleWeaponController> weaponList;
         ModuleWeaponController selectedWeapon;
-        public List<KCSShip> ships;
+        //public List<KCSShip> ships;
 
         private void Start()
         {
@@ -69,16 +70,16 @@ namespace KerbalCombatSystems
         private void UpdateShipList()
         {
             var loadedVessels = FlightGlobals.VesselsLoaded;
-            shipControllerList = new List<ModuleShipController>();
-            ships = new List<KCSShip>();
+            ships = new List<ModuleShipController>();
+            //ships = new List<KCSShip>();
 
             foreach (Vessel v in loadedVessels)
             {
                 var p = v.FindPartModuleImplementing<ModuleShipController>();
                 if (p == null) continue;
 
-                shipControllerList.Add(p);
-                ships.Add(new KCSShip(v, v.GetTotalMass())); // todo: Should update mass instead
+                ships.Add(p);
+                //ships.Add(new KCSShip(v, v.GetTotalMass())); // todo: Should update mass instead
             }
         }
         
@@ -105,7 +106,7 @@ namespace KerbalCombatSystems
 
         public void ToggleAIs()
         {
-            foreach (var controller in shipControllerList)
+            foreach (var controller in ships)
             {
                 controller.ToggleAI();
             }
@@ -125,6 +126,7 @@ namespace KerbalCombatSystems
 
         void OnGUI()
         {
+            // todo: don't draw when UI is hidden
             if (guiEnabled) DrawGUI();
         }
 
@@ -173,13 +175,13 @@ namespace KerbalCombatSystems
         private void ShipsGUI()
         {
             GUILayout.BeginVertical(boxStyle);
-                scrollViewHeight = Mathf.Max(Mathf.Min(15 * 30, 30 * shipControllerList.Count), 5 * 30);
+                scrollViewHeight = Mathf.Max(Mathf.Min(15 * 30, 30 * ships.Count), 5 * 30);
                 scrollPosition = GUILayout.BeginScrollView(scrollPosition, false, true, GUILayout.Height(scrollViewHeight), GUILayout.Width(windowWidth));
-                    if (shipControllerList.Count > 0)
+                    if (ships.Count > 0)
                     {
                         Vessel v;
 
-                        foreach (var controller in shipControllerList)
+                        foreach (var controller in ships)
                         {
                             v = controller.vessel;
                             string craftName = String.Format("{0}\n<color=#808080ff>Part Count: {1}, Mass: {2} t</color>", 
@@ -196,6 +198,10 @@ namespace KerbalCombatSystems
                             if (GUILayout.Button(AI))
                             {
                                 controller.ToggleAI();
+                            }
+                            if (GUILayout.Button(controller.side.ToString()))
+                            {
+                                controller.ToggleSide();
                             }
                             GUILayout.EndHorizontal();
                         }
@@ -216,7 +222,7 @@ namespace KerbalCombatSystems
                     {
                         foreach (var w in weaponList)
                         {
-                            string missileCode = w.weaponCode == "" ? "Weapon" : w.weaponCode;
+                            string missileCode = w.weaponCode == "" ? w.weaponType : w.weaponCode;
                             string weaponName = String.Format("{0}\n<color=#808080ff>Part Count: {1}, Mass: {2} t</color>", 
                                 missileCode, "Unknown", "Unknown");
 
