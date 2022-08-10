@@ -91,6 +91,8 @@ namespace KerbalCombatSystems
         
         private void Start()
         {
+            if (!HighLogic.LoadedSceneIsFlight) return;
+
             //create the appropriate lists
             AIPartList = new List<Part>();
             List<ModuleShipController> AIModules;
