@@ -62,6 +62,15 @@ namespace KerbalCombatSystems
 
             return false;
         }
+
+        public static Vector3 TargetLead(Vessel Target, Vessel Firer, float TravelVelocity)
+        {
+            float TravelTime = SQRT(((2 * TDistance)/ ProjAcceleration)/ 2)+3;
+            Vector3 FiringSolution = ((Enemy: VELOCITY:surface - SHIP:VELOCITY: surface) * TravelTime) +enemy:position;
+
+
+            return FiringSolution.
+        }
     }
 
     /*public class KCSShip
