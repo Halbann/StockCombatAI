@@ -139,8 +139,8 @@ namespace KerbalCombatSystems
               guiActiveEditor = true,
               guiName = "Firework Shot Burst",
               guiUnits = " Rounds",
-              groupName = missileGroupName,
-              groupDisplayName = missileGroupName),
+              groupName = FireworkGroupName,
+              groupDisplayName = FireworkGroupName),
               UI_FloatRange(
                   minValue = 1f,
                   maxValue = 8f,
@@ -150,11 +150,26 @@ namespace KerbalCombatSystems
         public float FWRoundBurst = 2f;
 
         [KSPField(isPersistant = true,
+              guiActive = true,
+              guiActiveEditor = true,
+              guiName = "Burst Round Spacing",
+              guiUnits = " Seconds",
+              groupName = FireworkGroupName,
+              groupDisplayName = FireworkGroupName),
+              UI_FloatRange(
+                  minValue = 0f,
+                  maxValue = 1f,
+                  stepIncrement = 0.05f,
+                  scene = UI_Scene.All
+              )]
+        public float FWBurstSpacing = 0.25f;
+
+        [KSPField(isPersistant = true,
             guiActive = true,
             guiActiveEditor = true,
             guiName = "Use for Flak",
-            groupName = missileGroupName,
-            groupDisplayName = missileGroupName),
+            groupName = FireworkGroupName,
+            groupDisplayName = FireworkGroupName),
             UI_Toggle(
                 enabledText = "Enabled",
                 disabledText = "Disabled",
@@ -169,8 +184,8 @@ namespace KerbalCombatSystems
               guiActiveEditor = true,
               guiName = "Round Muzzle Velocity",
               guiUnits = "m/s",
-              groupName = missileGroupName,
-              groupDisplayName = missileGroupName),
+              groupName = MCGroupName,
+              groupDisplayName = MCGroupName),
               UI_FloatRange(
                   minValue = 1f,
                   maxValue = 10000f,
@@ -184,8 +199,8 @@ namespace KerbalCombatSystems
               guiActiveEditor = true,
               guiName = "Mass Cannon Firing Length",
               guiUnits = " Seconds",
-              groupName = missileGroupName,
-              groupDisplayName = missileGroupName),
+              groupName = MCGroupName,
+              groupDisplayName = MCGroupName),
               UI_FloatRange(
                   minValue = 0f,
                   maxValue = 10f,
@@ -334,6 +349,8 @@ namespace KerbalCombatSystems
             //Firework fields
             Fields["FWRoundBurst"].guiActive = weaponType == "Firework";
             Fields["FWRoundBurst"].guiActiveEditor = weaponType == "Firework";
+            Fields["FWBurstSpacing"].guiActive = weaponType == "Firework";
+            Fields["FWBurstSpacing"].guiActiveEditor = weaponType == "Firework";
             Fields["FWUseAsCIWS"].guiActive = weaponType == "Firework";
             Fields["FWUseAsCIWS"].guiActiveEditor = weaponType == "Firework";
             //Mass Cannon Fields

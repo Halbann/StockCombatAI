@@ -13,34 +13,32 @@ namespace KerbalCombatSystems
     public class ModuleFirework : PartModule
     {
         // Firework Targetting variables.
-
         public bool OverrideAutopilot = false;
         KCSFlightController fc;
-        private Vector3 targetVector;
-        private Vector3 targetVectorNormal;
-        private Vector3 relVel;
-        private Vector3 relVelNrm;
-        private float relVelmag;
         Vessel Target;
+        private Vector3 LeadVector;
+
         // Debugging line variables.
-
         LineRenderer TargetLine, LeadLine;
-        private int RoundBurst;
 
-        /// stored shit
+        /// stored settings
+        private int RoundBurst;
+        private float BurstSpacing;
+
+        //list of valid launcher modules with ammo
         private List<ModulePartFirework> FireworkLaunchers;
-        //public, let the ship AI display maybe
-        public int Shells;
 
         private IEnumerator FireworkAim()
         {
+            //initially calculate aim vector
+            LeadVector = KCS.TargetLead(Target, part.parent, 100f);
 
-            //until aimed
-            //recalculate target vector
-
-            wait until vang(ship: facing:forevector, SteerTo) < 2 AND ship:ANGULARVEL: mag < 0.1.
-            set SteerTo to FiringSolution.
-            wait 3;
+            while(/*directive vector doesn't match the aim vector*/)
+            {
+                LeadVector = KCS.TargetLead(Target, part.parent, 100f);
+                //recalculate 5 times a second, get as low as is accurate
+                yield return new WaitForSeconds(0.2f);
+            }
 
             //once aligned correctly start the firing sequence
             StartCoroutine(FireShells());
@@ -50,6 +48,7 @@ namespace KerbalCombatSystems
         public void Start()
         {
             Target = part.FindModuleImplementing<ModuleWeaponController>().target;
+            RoundBurst = (int)part.FindModuleImplementing<ModuleWeaponController>().FWRoundBurst;
             RoundBurst = (int)part.FindModuleImplementing<ModuleWeaponController>().FWRoundBurst;
 
             //get list of fireworks
@@ -67,7 +66,7 @@ namespace KerbalCombatSystems
             {
                 //get end of launchers list
                 ModulePartFirework Launcher = FireworkLaunchers[FireworkLaunchers.Count()-1];
-                yield return new WaitForSeconds(0.25f);
+                yield return new WaitForSeconds(BurstSpacing);
                 //do the actual firing
                 Launcher.LaunchShell();
                 //clear expended launchers from the list
@@ -75,6 +74,8 @@ namespace KerbalCombatSystems
                 {
                     FireworkLaunchers.Remove(Launcher);
                 }
+                //continue to update the lead vector while firing
+                LeadVector = KCS.TargetLead(Target, part.parent, 100f);
             }
         }
 
@@ -102,7 +103,7 @@ namespace KerbalCombatSystems
                 {
                     FireworkLaunchers.Add(CurrentPart.GetComponent<ModulePartFirework>());
                     //set outbound velocity to maximum
-                    CurrentPart.GetComponent<ModulePartFirework>().shellVelocity = 50f;
+                    CurrentPart.GetComponent<ModulePartFirework>().shellVelocity = 100f;
                 }
             }
         }
