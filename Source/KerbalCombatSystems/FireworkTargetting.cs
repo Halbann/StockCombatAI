@@ -14,7 +14,7 @@ namespace KerbalCombatSystems
     {
         // Firework Targetting variables.
         public bool OverrideAutopilot = false;
-        KCSFlightController fc;
+       // KCSFlightController fc;
         Vessel Target;
         private Vector3 LeadVector;
 
@@ -30,10 +30,17 @@ namespace KerbalCombatSystems
 
         private IEnumerator FireworkAim()
         {
+            // initialise debug line renderer
+            TargetLine = KCSDebug.CreateLine(Color.magenta);
+            LeadLine = KCSDebug.CreateLine(Color.green);
+
             //initially calculate aim vector
             LeadVector = KCS.TargetLead(Target, part.parent, 100f);
 
-            while(/*directive vector doesn't match the aim vector*/)
+            //todo: add an appropriate aim deviation check
+
+            //while (Vector3.AngleBetween(LeadVector, part.parent.forward()) > 1)
+            while (0 > 1)
             {
                 LeadVector = KCS.TargetLead(Target, part.parent, 100f);
                 //recalculate 5 times a second, get as low as is accurate
@@ -47,28 +54,36 @@ namespace KerbalCombatSystems
 
         public void Start()
         {
+            Debug.Log($"[KCS]: start");
             Target = part.FindModuleImplementing<ModuleWeaponController>().target;
             RoundBurst = (int)part.FindModuleImplementing<ModuleWeaponController>().FWRoundBurst;
-            RoundBurst = (int)part.FindModuleImplementing<ModuleWeaponController>().FWRoundBurst;
+            BurstSpacing = (int)part.FindModuleImplementing<ModuleWeaponController>().FWBurstSpacing;
 
             //get list of fireworks
-            FindFireworks();
+            FindFireworks(part.parent);
 
-            StartCoroutine(FireworkAim());
+            //todo: skip over the aiming part if not on autopilot
 
+            //StartCoroutine(FireworkAim());
 
+            StartCoroutine(FireShells());
         }
 
         private IEnumerator FireShells()
         {
+            Debug.Log($"[KCS]: fireworks launchers " + FireworkLaunchers.Count());
             //fire amount of shells
             for (int i = 0; i < RoundBurst; i++)
             {
+                //check if launchers are empty and skip if so
+                if(FireworkLaunchers.Count.Equals(0)) continue;
+
                 //get end of launchers list
-                ModulePartFirework Launcher = FireworkLaunchers[FireworkLaunchers.Count()-1];
+                ModulePartFirework Launcher = FireworkLaunchers[FireworkLaunchers.Count-1];
                 yield return new WaitForSeconds(BurstSpacing);
                 //do the actual firing
                 Launcher.LaunchShell();
+
                 //clear expended launchers from the list
                 if (Launcher.fireworkShots == 0)
                 {
@@ -77,8 +92,10 @@ namespace KerbalCombatSystems
                 //continue to update the lead vector while firing
                 LeadVector = KCS.TargetLead(Target, part.parent, 100f);
             }
-        }
 
+            //delete the active module at the end.
+            part.RemoveModule(part.GetComponent<ModuleFirework>());
+        }
 
         public void OnDestroy()
         {
@@ -86,21 +103,33 @@ namespace KerbalCombatSystems
             KCSDebug.DestroyLine(TargetLine);
         }
 
-        public static void FindFireworks()
+        public void Update()
         {
-            Part Root = part.parent;
+            if (Target == null) return;
+            // Update debug lines.
+            KCSDebug.PlotLine(new[] { part.transform.position, Target.transform.position }, TargetLine);
+            KCSDebug.PlotLine(new[] { part.transform.position, LeadVector }, LeadLine);
 
-            //run through all child parts of the object the controller is attached to for fireworks modules
+        }
+
+        private void FindFireworks(Part Root)
+        {
+            Debug.Log($"[KCS]: finding firework modules");
+            //run through all child parts of the controllers parent for fireworks modules
             List<Part> FireworkLauncherParts = Root.FindChildParts<Part>(true).ToList();
+            //check the parent itself
+            FireworkLauncherParts.Add(Root);
             //spawn empty modules list to add to
-            List<ModulePartFirework> FireworkLaunchers = new List<ModulePartFirework>();
+            FireworkLaunchers = new List<ModulePartFirework>();
 
+            Debug.Log($"[KCS]: parts searched " + FireworkLauncherParts.Count());
 
             foreach (Part CurrentPart in FireworkLauncherParts)
             {
                 //check for the firework launchers module and add it to the list
-                if (CurrentPart.GetComponent<ModulePartFirework>())
+                if (CurrentPart.GetComponent<ModulePartFirework>() != null)
                 {
+                    Debug.Log($"[KCS]: adding firework module");
                     FireworkLaunchers.Add(CurrentPart.GetComponent<ModulePartFirework>());
                     //set outbound velocity to maximum
                     CurrentPart.GetComponent<ModulePartFirework>().shellVelocity = 100f;

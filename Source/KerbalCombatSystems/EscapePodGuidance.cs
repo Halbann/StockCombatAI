@@ -149,7 +149,8 @@ namespace KerbalCombatSystems
 
             if (vessel.VesselDeltaV.TotalDeltaVActual == 0)
             {
-                //todo: disable shipcontroller, hatbat should know as the author
+                //delete the active module at the end.
+                Destroy(fc);
             }
 
 
