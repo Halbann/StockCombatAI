@@ -62,6 +62,26 @@ namespace KerbalCombatSystems
 
             return false;
         }
+
+        public static Vector3 TargetLead(Vessel Target, Part Firer, float TravelVelocity)
+        {
+            Vector3 RelPos = Target.transform.position - Firer.transform.position;
+            Vector3 RelVel = Target.GetObtVelocity() - Firer.vessel.GetObtVelocity();
+
+
+            // Quadratic equation coefficients a*t^2 + b*t + c = 0
+            float a = Vector3.Dot(RelVel, RelVel) - TravelVelocity * TravelVelocity;
+            float b = 2f * Vector3.Dot(RelVel, RelPos);
+            float c = Vector3.Dot(RelPos, RelPos);
+
+            float desc = b * b - 4f * a * c;
+
+            float ForwardDelta = 2f * c / (Mathf.Sqrt(desc) - b);
+
+            //return the firing solution
+            return Target.transform.position + Target.GetObtVelocity() * ForwardDelta;
+            
+        }
     }
 
     /*public class KCSShip
