@@ -56,7 +56,7 @@ namespace KerbalCombatSystems
 
             // wait to try to prevent destruction of decoupler.
             // todo: could increase heat tolerance temporarily or calculate a lower throttle.
-            // yield return new WaitForSeconds(0.2f);
+            yield return new WaitForSeconds(0.2f);
 
             // turn on engines
             List<ModuleEngines> engines = vessel.FindPartModulesImplementing<ModuleEngines>();
@@ -65,21 +65,6 @@ namespace KerbalCombatSystems
                 engine.Activate();
             }
 
-
-            bool MatchTargetVelocity = part.FindModuleImplementing<ModuleWeaponController>().MatchTargetVelocity;
-            if (MatchTargetVelocity)
-            {
-                StartCoroutine(MatchVel());
-            }
-            else
-            {
-                StartCoroutine(NoMatch());
-            }
-            yield break;
-        }
-
-        private IEnumerator MatchVel()
-        {
             // pulse to 5 m/s.
             var burnTime = 0.5f;
             var driftVelocity = 5;
@@ -98,25 +83,6 @@ namespace KerbalCombatSystems
                 targetRay.direction = target.transform.position - vessel.transform.position;
                 lineOfSight = !KCS.RayIntersectsVessel(firer, targetRay);
             }
-
-            // initialise debug line renderer
-            targetLine = KCSDebug.CreateLine(Color.magenta);
-            rvLine = KCSDebug.CreateLine(Color.green);
-
-            // enable autopilot
-            fc = part.gameObject.AddComponent<KCSFlightController>();
-            engageAutopilot = true;
-
-            yield break;
-        }
-
-
-        private IEnumerator NoMatch()
-        {
-            //vacate the ship as fast as possible
-            vessel.ctrlState.mainThrottle = 1;
-            
-            yield return new WaitForSeconds(0.5f);
 
             // initialise debug line renderer
             targetLine = KCSDebug.CreateLine(Color.magenta);
@@ -169,7 +135,7 @@ namespace KerbalCombatSystems
             target = part.FindModuleImplementing<ModuleWeaponController>().target;
             terminalVelocity = part.FindModuleImplementing<ModuleWeaponController>().terminalVelocity;
             firer = vessel;
-            
+
             StartCoroutine(Launch());
         }
 
