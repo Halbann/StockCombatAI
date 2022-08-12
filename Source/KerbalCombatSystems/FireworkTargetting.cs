@@ -54,7 +54,6 @@ namespace KerbalCombatSystems
 
         public void Start()
         {
-            Debug.Log($"[KCS]: start");
             Target = part.FindModuleImplementing<ModuleWeaponController>().target;
             RoundBurst = (int)part.FindModuleImplementing<ModuleWeaponController>().FWRoundBurst;
             BurstSpacing = (int)part.FindModuleImplementing<ModuleWeaponController>().FWBurstSpacing;
@@ -71,23 +70,26 @@ namespace KerbalCombatSystems
 
         private IEnumerator FireShells()
         {
-            Debug.Log($"[KCS]: fireworks launchers " + FireworkLaunchers.Count());
+            int TempBurst = RoundBurst;
             //fire amount of shells
-            for (int i = 0; i < RoundBurst; i++)
+            for (int i = 0; i < TempBurst; i++)
             {
                 //check if launchers are empty and skip if so
                 if(FireworkLaunchers.Count.Equals(0)) continue;
 
+                yield return new WaitForSeconds(BurstSpacing);
                 //get end of launchers list
                 ModulePartFirework Launcher = FireworkLaunchers[FireworkLaunchers.Count-1];
-                yield return new WaitForSeconds(BurstSpacing);
                 //do the actual firing
                 Launcher.LaunchShell();
 
                 //clear expended launchers from the list
                 if (Launcher.fireworkShots == 0)
                 {
+                    //remove empty launcher from list
                     FireworkLaunchers.Remove(Launcher);
+                    //add one more round to the burst to substitute missing hsot
+                    TempBurst += 1;
                 }
                 //continue to update the lead vector while firing
                 LeadVector = KCS.TargetLead(Target, part.parent, 100f);
@@ -114,7 +116,6 @@ namespace KerbalCombatSystems
 
         private void FindFireworks(Part Root)
         {
-            Debug.Log($"[KCS]: finding firework modules");
             //run through all child parts of the controllers parent for fireworks modules
             List<Part> FireworkLauncherParts = Root.FindChildParts<Part>(true).ToList();
             //check the parent itself
@@ -122,14 +123,12 @@ namespace KerbalCombatSystems
             //spawn empty modules list to add to
             FireworkLaunchers = new List<ModulePartFirework>();
 
-            Debug.Log($"[KCS]: parts searched " + FireworkLauncherParts.Count());
 
             foreach (Part CurrentPart in FireworkLauncherParts)
             {
                 //check for the firework launchers module and add it to the list
                 if (CurrentPart.GetComponent<ModulePartFirework>() != null)
                 {
-                    Debug.Log($"[KCS]: adding firework module");
                     FireworkLaunchers.Add(CurrentPart.GetComponent<ModulePartFirework>());
                     //set outbound velocity to maximum
                     CurrentPart.GetComponent<ModulePartFirework>().shellVelocity = 100f;
