@@ -50,7 +50,7 @@ namespace KerbalCombatSystems
             }
             catch
             {
-                //notify of error but launch anyway for freefloating missiles
+                //notify of error but launch anyway for freefloating missiles 
                 Debug.Log("[KCS]: Couldn't find decoupler.");
             }
 

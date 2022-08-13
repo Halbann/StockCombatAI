@@ -12,10 +12,6 @@ namespace KerbalCombatSystems
 {
     public class ModuleRocket : PartModule
     {
-<<<<<<< Updated upstream
-        
-
-=======
         // Targetting variables.
         public bool FireStop = false;
         // KCSFlightController fc;
@@ -59,7 +55,7 @@ namespace KerbalCombatSystems
 
             //todo: skip over the aiming part if not on autopilot
             //todo: add an appropriate aim deviation check
-            //(Vector3.AngleBetween(LeadVector, part.parent.forward()) > 1)
+            //(Vector3.AngleBetween(LeadVector, part.parent.forward()) > 1) 
             if ((true || Target == null) && FireStop == false)
             {
                 FireStop = true;
@@ -107,6 +103,5 @@ namespace KerbalCombatSystems
             KCSDebug.DestroyLine(LeadLine);
             KCSDebug.DestroyLine(TargetLine);
         }
->>>>>>> Stashed changes
     }
 }

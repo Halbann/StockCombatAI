@@ -83,8 +83,6 @@ namespace KerbalCombatSystems
             return Target.transform.position + Target.GetObtVelocity() * ForwardDelta;
             
         }
-<<<<<<< Updated upstream
-=======
 
         public static List<ModuleDecouple> FindDecouplerChildren(Part Root, string type, bool ignoreTypeRequirement)
         {   
@@ -111,7 +109,6 @@ namespace KerbalCombatSystems
             
             return DecouplerList;
         }
->>>>>>> Stashed changes
     }
 
     /*public class KCSShip

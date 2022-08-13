@@ -94,7 +94,7 @@ namespace KerbalCombatSystems
             c.CheckWeapons();
             weaponList = c.weapons;
 
-            // need to sort by distance from root part so that we don't fire bumper torpedos.
+            // need to sort by distance from root part so that we don't fire bumper torpedos. 
             //weaponList.OrderBy(m => m.vessel.parts.FindIndex 
 
             // todo: replace this.

@@ -77,7 +77,7 @@ namespace KerbalCombatSystems
                 UpdateDetectionRange();
                 FindTarget();
 
-                // Engage. todo: Need to separate update of target position from main coroutine.
+                // Engage. todo: Need to separate update of target position from main coroutine. 
 
                 if (target != null)
                 {
