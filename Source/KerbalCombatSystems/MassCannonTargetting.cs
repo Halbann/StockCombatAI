@@ -12,6 +12,6 @@ namespace KerbalCombatSystems
 {
     public class ModuleMassCannon : PartModule
     {
-        
+        //todo, use mixture of firework and rocket systems here
     }
 }
