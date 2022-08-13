@@ -84,6 +84,11 @@ namespace KerbalCombatSystems
             
         }
 
+        public static void TryToggle(bool DR, ModuleAnimationGroup Animation)
+        {
+            if (DR) Animation.DeployModule(); else Animation.RetractModule();
+        }
+
         public static List<ModuleDecouple> FindDecouplerChildren(Part Root, string type, bool ignoreTypeRequirement)
         {   
             //run through all child parts of the controllers parent for decoupler modules

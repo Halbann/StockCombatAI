@@ -16,7 +16,7 @@ namespace KerbalCombatSystems
         public bool FireStop = false;
        // KCSFlightController fc;
         Vessel Target;
-        private Vector3 LeadVector;
+        public Vector3 LeadVector;
 
         // Debugging line variables.
         LineRenderer TargetLine, LeadLine;

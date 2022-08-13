@@ -16,7 +16,7 @@ namespace KerbalCombatSystems
         public bool FireStop = false;
         // KCSFlightController fc;
         Vessel Target;
-        private Vector3 LeadVector;
+        public Vector3 LeadVector;
 
         // Debugging line variables.
         LineRenderer TargetLine, LeadLine;
@@ -49,8 +49,8 @@ namespace KerbalCombatSystems
                 //recalculate LeadVector
                 LeadVector = KCS.TargetLead(Target, Decoupler.part, AvgVel);
                 // Update debug lines.
-                KCSDebug.PlotLine(new[] { part.transform.position, Target.transform.position }, TargetLine);
-                KCSDebug.PlotLine(new[] { part.transform.position, LeadVector }, LeadLine);
+                KCSDebug.PlotLine(new[] { Decoupler.part.transform.position, Target.transform.position }, TargetLine);
+                KCSDebug.PlotLine(new[] { Decoupler.part.transform.position, LeadVector }, LeadLine);
             }
 
             //todo: skip over the aiming part if not on autopilot

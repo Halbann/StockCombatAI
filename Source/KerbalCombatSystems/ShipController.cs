@@ -114,14 +114,18 @@ namespace KerbalCombatSystems
         void UpdateDetectionRange()
         {
             var sensors = vessel.FindPartModulesImplementing<ModuleObjectTracking>();
-            if (sensors.Count < 1)
-            {
-                maxDetectionRange = 1000; // visual range perhaps?
-                return;
-            }
 
             maxDetectionRange = sensors.Max(s => s.detectionRange);
-            // todo: deploy any sensors that aren't deployed
+            
+            foreach(ModuleObjectTracking Sensor in sensors)
+            {
+                //try deploy animations, not all scanners will have them 
+                try
+                {
+                    
+                    KCS.TryToggle(true, Sensor.part.FindModuleImplementing<ModuleAnimationGroup>());
+                } catch { }
+            }
         }
 
         void FindTarget()
@@ -157,63 +161,3 @@ namespace KerbalCombatSystems
 }
 
 
-//legacy bomber code
-
-/*function BombingRun {
-    Set ColAvoidSafety to False.
-    lock SteerTo to calculateCorrection().
-
-    if true {
-        set drawSteeringTarget to vecDraw( { return ship:controlPart:position. }, { return (steering:vector)*100. }, red, "", 1.0, true, 0.2, true, true).
-
-        set drawTargetPositionTarget to v(0,0,0).
-        set drawTargetPosition to vecDraw( { return ship:controlPart:position. }, { return drawTargetPositionTarget. }, magenta, "", 1.0, true, 0.2, true, true).
-
-        set drawTargetRelVelTarget to v(0,0,0).
-        set drawTargetRelVel to vecDraw( { return ship:controlPart:position. },  { return drawTargetRelVelTarget. }, green, "", 1.0, true, 0.2, true, true).
-    }
-
-    set ShipThrottle to 0.
-
-    until (enemy:position - ship:position):mag < BombReleaseRange {
-        set adjustThrottle to 0.
-        
-
-        IF vectorAngle(ship:facing:vector, steering:vector) < 5 {
-            local targetRelVel to ship:velocity:orbit - enemy:velocity:orbit.
-            local targetVec to enemy:direction:vector.
-
-            set adjustThrottle to 0.5.
-            IF (vDot(targetRelVel:normalized, targetVec:normalized) > 0.999) {
-                IF (vDot(targetRelVel, targetVec) > BombVelocity) {
-                    set adjustThrottle to 0.
-                }
-                IF (targetRelVel:MAG > BombVelocity+5) {
-                    Translate(-targetRelVel).
-                }
-            }
-        }
-        
-        set ShipThrottle to adjustThrottle.
-    }
-    
-    set ShipThrottle to 0.
-}
-
-function BomberAvoid {
-    Translate(-(ship:velocity:orbit - enemy:velocity:orbit)).
-    wait 2.
-    Translate(v(0,0,0)).
-
-    local pitchUp to angleAxis(-30, ship:facing:starVector).
-    local overshoot to pitchUp * ship:facing.
-    set SteerTo to overshoot:vector.
-
-    until vang((ship:velocity:orbit - enemy:velocity:orbit), enemy:direction:vector) > 15 {
-        if vectorAngle(ship:facing:vector, SteerTo) < 5 { set ShipThrottle to 1. }
-        else {set ShipThrottle to 0.}
-    }
-
-    set ShipThrottle to 0.
-    Set ColAvoidSafety to True.
-}*/ 
