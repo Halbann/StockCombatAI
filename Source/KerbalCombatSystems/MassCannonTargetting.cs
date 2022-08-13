@@ -13,6 +13,5 @@ namespace KerbalCombatSystems
     public class ModuleMassCannon : PartModule
     {
         
-
     }
 }

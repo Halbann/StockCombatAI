@@ -223,8 +223,10 @@ namespace KerbalCombatSystems
                         foreach (var w in weaponList)
                         {
                             string missileCode = w.weaponCode == "" ? w.weaponType : w.weaponCode;
-                            string weaponName = String.Format("{0}\n<color=#808080ff>Part Count: {1}, Mass: {2} t</color>", 
+                            string weaponName = String.Format("{0}\n<color=#808080ff>Part Count: {1}t, Mass: {2} t</color>", 
                                 missileCode, "Unknown", "Unknown");
+
+                            //todo .ToString("0.##");, how is hatbat turning the unknowns to values unless he's never pushing updates
 
                             if (GUILayout.Toggle(w == selectedWeapon, weaponName, GUI.skin.button))
                             {

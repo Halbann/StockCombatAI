@@ -25,6 +25,7 @@ namespace KerbalCombatSystems
 
                 if (nextPart == null) break;
                 if (!currentPart.isDecoupler(out Decoupler)) continue;
+                if (currentPart.GetComponent<ModuleDecouple>().isDecoupled == true) continue;
 
                 module = currentPart.GetComponent<ModuleDecouplerDesignate>();
                 if (module == null) continue;
@@ -82,6 +83,35 @@ namespace KerbalCombatSystems
             return Target.transform.position + Target.GetObtVelocity() * ForwardDelta;
             
         }
+<<<<<<< Updated upstream
+=======
+
+        public static List<ModuleDecouple> FindDecouplerChildren(Part Root, string type, bool ignoreTypeRequirement)
+        {   
+            //run through all child parts of the controllers parent for decoupler modules
+            List<Part> ChildParts = Root.FindChildParts<Part>(true).ToList();
+            //check the parent itself
+            ChildParts.Add(Root);
+            //spawn empty modules list to add to
+            List<ModuleDecouple> DecouplerList = new List<ModuleDecouple>();
+
+
+            foreach (Part CurrentPart in ChildParts)
+            {
+                ModuleDecouplerDesignate Module = CurrentPart.GetComponent<ModuleDecouplerDesignate>();
+
+                //check for decoupler modules on the part of the correct type and add to a list
+                if (CurrentPart.GetComponent<ModuleDecouple>() == null)     continue;
+                if (CurrentPart.GetComponent<ModuleDecouple>().isDecoupled == true) continue;
+                if (Module == null)                                         continue;
+                if (Module.DecouplerType != type && !ignoreTypeRequirement) continue;
+
+                DecouplerList.Add(CurrentPart.GetComponent<ModuleDecouple>());
+            }
+            
+            return DecouplerList;
+        }
+>>>>>>> Stashed changes
     }
 
     /*public class KCSShip

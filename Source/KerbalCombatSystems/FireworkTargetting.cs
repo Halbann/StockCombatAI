@@ -76,7 +76,11 @@ namespace KerbalCombatSystems
             for (int i = 0; i < RoundBurst; i++)
             {
                 //check if launchers are empty and skip if so
-                if(FireworkLaunchers.Count.Equals(0)) continue;
+                if (FireworkLaunchers.Count.Equals(0))
+                {
+                    //todo: tell the ship controller and weapons interface that this launcher is empty
+                    break;
+                }
 
                 //get end of launchers list
                 ModulePartFirework Launcher = FireworkLaunchers[FireworkLaunchers.Count-1];
@@ -89,8 +93,11 @@ namespace KerbalCombatSystems
                 {
                     FireworkLaunchers.Remove(Launcher);
                 }
+<<<<<<< Updated upstream
                 //continue to update the lead vector while firing
                 LeadVector = KCS.TargetLead(Target, part.parent, 100f);
+=======
+>>>>>>> Stashed changes
             }
 
             //delete the active module at the end.
