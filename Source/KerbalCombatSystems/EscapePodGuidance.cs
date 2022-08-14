@@ -149,6 +149,7 @@ namespace KerbalCombatSystems
                 BeginEscape();
             }
 
+            // todo: might need to use this to prevent errors: vessel.GetDeltaV()
             if (vessel.VesselDeltaV.TotalDeltaVActual == 0)
             {
                 //delete the active module at the end.
