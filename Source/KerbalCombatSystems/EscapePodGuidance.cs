@@ -21,7 +21,7 @@ namespace KerbalCombatSystems
         //universal flight controller and toggle
         KCSFlightController fc;
         private bool EngageAutopilot;
-        bool Escaped;
+        bool Escaped = false;;
 
         ModuleDecouple decoupler;
         //the ship being escaped from
@@ -101,8 +101,6 @@ namespace KerbalCombatSystems
             AIPartList = new List<Part>();
             List<ModuleShipController> AIModules;
 
-            Escaped = false;
-
             //designate ship that's being escaped from
             Parent = vessel;
 
@@ -114,7 +112,7 @@ namespace KerbalCombatSystems
             }
         }
 
-        public void FixedUpdate()
+        public void LateUpdate()
         {
             if (!HighLogic.LoadedSceneIsFlight) return;
 
@@ -126,7 +124,7 @@ namespace KerbalCombatSystems
                 fc.Drive();
             }
 
-            if (!Escaped && AIPartList != null)
+            if (!Escaped)
             {
                 CheckConnection();
             }
@@ -154,6 +152,8 @@ namespace KerbalCombatSystems
             {
                 //delete the active module at the end.
                 Destroy(fc);
+                //deactivate autopilot entirely
+                EngageAutopilot = false;
             }
 
 
