@@ -21,7 +21,7 @@ namespace KerbalCombatSystems
         //universal flight controller and toggle
         KCSFlightController fc;
         private bool EngageAutopilot;
-        bool Escaped;
+        bool Escaped = false;;
 
         ModuleDecouple decoupler;
         //the ship being escaped from
@@ -37,6 +37,9 @@ namespace KerbalCombatSystems
                   groupDisplayName = EscapeGuidanceGroupName)]
         public void BeginEscape()
         {
+            if (Escaped)
+                return;
+
             //find decoupler
             decoupler = KCS.FindDecoupler(part, "Escape Pod", false);
             Debug.Log("[KCS]: Escaping from " + Parent.GetName());
@@ -89,16 +92,14 @@ namespace KerbalCombatSystems
 
             yield break;
         }
-        
-        private void Start()
+
+        public override void OnStart(StartState state)
         {
             if (!HighLogic.LoadedSceneIsFlight) return;
 
             //create the appropriate lists
             AIPartList = new List<Part>();
             List<ModuleShipController> AIModules;
-
-            Escaped = false;
 
             //designate ship that's being escaped from
             Parent = vessel;
@@ -109,10 +110,9 @@ namespace KerbalCombatSystems
             {
                 AIPartList.Add(ModuleShipController.part);
             }
-
         }
 
-        private void FixedUpdate()
+        public void LateUpdate()
         {
             if (!HighLogic.LoadedSceneIsFlight) return;
 
@@ -147,10 +147,13 @@ namespace KerbalCombatSystems
                 BeginEscape();
             }
 
+            // todo: might need to use this to prevent errors: vessel.GetDeltaV()
             if (vessel.VesselDeltaV.TotalDeltaVActual == 0)
             {
                 //delete the active module at the end.
                 Destroy(fc);
+                //deactivate autopilot entirely
+                EngageAutopilot = false;
             }
 
 

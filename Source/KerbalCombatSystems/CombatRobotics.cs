@@ -20,7 +20,7 @@ namespace KerbalCombatSystems
         public ModuleRoboticController.SequenceDirectionOptions Forward { get; private set; }
         public ModuleRoboticController.SequenceLoopOptions Once { get; private set; }
 
-        public virtual void Start()
+        public override void OnStart(StartState state)
         {
             KAL = part.FindModuleImplementing<ModuleRoboticController>();
             KAL.SetLength(1);

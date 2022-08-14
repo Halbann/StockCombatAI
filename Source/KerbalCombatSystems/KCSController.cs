@@ -202,7 +202,7 @@ namespace KerbalCombatSystems
                     }
                     if (GUILayout.Button(controller.side.ToString()))
                     {
-                        controller.ToggleSide();
+
                     }
                     GUILayout.EndHorizontal();
                 }
@@ -229,9 +229,6 @@ namespace KerbalCombatSystems
 
                     if (GUILayout.Toggle(w == selectedWeapon, weaponName, GUI.skin.button))
                     {
-                        //selectedWeapon = selectedWeapon != w ? w : null;
-                        selectedWeapon = w;
-                    }
                 }
             }
             GUILayout.EndScrollView();

@@ -83,11 +83,11 @@ namespace KerbalCombatSystems
                 // Check health.
 
                 CheckStatus();
-                if (!alive)
-                {
+                
+                if (!alive) { 
                     controllerRunning = false;
                     yield break;
-                };
+                }
 
                 // Find target.
 
@@ -133,7 +133,6 @@ namespace KerbalCombatSystems
             bool propulsion = vessel.FindPartModulesImplementing<ModuleEngines>().FindAll(e => e.EngineIgnited && e.isOperational).Count > 0;
             bool weapons = vessel.FindPartModulesImplementing<ModuleWeaponController>().Count > 0;
             bool control = vessel.maxControlLevel != Vessel.ControlLevel.NONE;
-
             bool dead = (!propulsion && !weapons) || !control;
 
             alive = !dead;

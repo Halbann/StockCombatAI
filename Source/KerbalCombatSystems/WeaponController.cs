@@ -1,5 +1,6 @@
 ﻿using KSP.UI.Screens;
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -19,6 +20,7 @@ namespace KerbalCombatSystems
         const string FireworkGroupName = "Firework Settings";
         const string MCGroupName = "Mass Cannon Settings";
         const string BombGroupName = "Bomb Settings";
+
 
         // Generic weapon fields.
 
@@ -132,7 +134,8 @@ namespace KerbalCombatSystems
               )]
         public float BombSafeDistance = 200f;
 
-        //Firework Fields
+
+        // Firework fields.
 
         [KSPField(isPersistant = true,
               guiActive = true,
@@ -177,7 +180,8 @@ namespace KerbalCombatSystems
             )]
         public bool FWUseAsCIWS = false;
 
-        //mass cannon fields
+
+        // Mass cannon fields.
 
         [KSPField(isPersistant = true,
               guiActive = true,
@@ -213,6 +217,7 @@ namespace KerbalCombatSystems
         // Generic weapon variables.
 
         public Vessel target;
+        public float mass;
 
         [KSPField(isPersistant = true)]
         public string weaponType;
@@ -278,6 +283,12 @@ namespace KerbalCombatSystems
                 target = vessel.targetObject.GetVessel();
             }
 
+            // Delete after above is uncommented.
+            if (target == null && vessel.targetObject != null)
+            {
+                target = vessel.targetObject.GetVessel();
+            }
+
             Debug.Log($"[KCS]: " + vessel.GetName() + " firing " + weaponType);
 
             string moduleName;
@@ -307,13 +318,12 @@ namespace KerbalCombatSystems
             part.AddModule(moduleName);
         }
 
-        public void Start()
+        public override void OnStart(StartState state)
         {
             UpdateWeaponCodeUI();
 
             if (types.IndexOf(weaponType) == -1)
             {
-                //weaponType = part.baseVariant.Name;
                 weaponType = part.variants.SelectedVariant.Name;
             }
 
@@ -323,6 +333,26 @@ namespace KerbalCombatSystems
             }
 
             UpdateUI();
+
+            String[] massTypes = {"Missile", "Rocket", "Bomb"};
+            if (HighLogic.LoadedSceneIsFlight && massTypes.Contains(weaponType)) 
+                CalculateMass();
+        }
+
+        private float CalculateMass()
+        {
+            var decoupler = KCS.FindDecoupler(part, "Weapon", true); // todo: set to false later
+            float totalMass = 0;
+            var parts = decoupler.part.FindChildParts<Part>(true);
+
+            foreach (Part part in parts)
+            {
+                if (part.partInfo.category == PartCategories.Coupling) break;
+                totalMass = totalMass + part.mass + part.GetResourceMass();
+            }
+
+            mass = (float)Math.Round(totalMass, 2);
+            return totalMass;
         }
 
         private void OnDestroy()
