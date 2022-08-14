@@ -84,9 +84,20 @@ namespace KerbalCombatSystems
             
         }
 
-        public static void TryToggle(bool DR, ModuleAnimationGroup Animation)
+        public static void TryToggle(bool Direction, ModuleAnimationGroup Animation)
         {
-            if (DR) Animation.DeployModule(); else Animation.RetractModule();
+            if (Direction && Animation.isDeployed == false)
+            {
+                //try deploy if not already
+                Animation.DeployModule();
+            }
+            else if(!Direction && Animation.isDeployed == true)
+            {
+                //try retract if not already
+                Animation.RetractModule();
+            }
+
+            //do nothing otherwise
         }
 
         public static List<ModuleDecouple> FindDecouplerChildren(Part Root, string type, bool ignoreTypeRequirement)

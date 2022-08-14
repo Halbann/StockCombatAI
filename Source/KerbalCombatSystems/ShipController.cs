@@ -28,6 +28,7 @@ namespace KerbalCombatSystems
         float maxDetectionRange;
         public float initialMass;
         public Side side;
+        private bool DeployedSensors;
 
         [KSPEvent(guiActive = true,
                   guiActiveEditor = false,
@@ -117,15 +118,26 @@ namespace KerbalCombatSystems
 
             maxDetectionRange = sensors.Max(s => s.detectionRange);
             
-            foreach(ModuleObjectTracking Sensor in sensors)
+
+            if(!DeployedSensors) //&& AI is enabled
             {
-                //try deploy animations, not all scanners will have them 
-                try
+                foreach (ModuleObjectTracking Sensor in sensors)
                 {
-                    
-                    KCS.TryToggle(true, Sensor.part.FindModuleImplementing<ModuleAnimationGroup>());
-                } catch { }
+                    //try deploy animations, not all scanners will have them 
+                    try { KCS.TryToggle(true, Sensor.part.FindModuleImplementing<ModuleAnimationGroup>()); } catch { }
+                }
+                DeployedSensors = true;
             }
+
+            /*if (DeployedSensors) //&& AI is disabled
+            {
+                foreach (ModuleObjectTracking Sensor in sensors)
+                {
+                    //try deploy animations, not all scanners will have them 
+                    try { KCS.TryToggle(true, Sensor.part.FindModuleImplementing<ModuleAnimationGroup>()); } catch { }
+                }
+                DeployedSensors = true;
+            }*/
         }
 
         void FindTarget()
