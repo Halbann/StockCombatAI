@@ -59,7 +59,7 @@ namespace KerbalCombatSystems
 
             //todo: add an appropriate aim deviation check
             //(Vector3.AngleBetween(LeadVector, part.parent.forward()) > 1) 
-            if ((true || Target == null) && FireStop == false)
+            if ((false || Target == null) && FireStop == false)
             {
                 FireStop = true;
                 //once aligned correctly start the firing sequence

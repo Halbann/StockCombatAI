@@ -145,8 +145,8 @@ namespace KerbalCombatSystems
 
             maxDetectionRange = sensors.Max(s => s.detectionRange);
             
-
-            if(!DeployedSensors) //&& AI is enabled
+            //if the sensors aren't deployed and the AI is running
+            if(!DeployedSensors && controllerRunning)
             {
                 foreach (ModuleObjectTracking Sensor in sensors)
                 {
@@ -156,7 +156,8 @@ namespace KerbalCombatSystems
                 DeployedSensors = true;
             }
 
-            /*if (DeployedSensors) //&& AI is disabled
+            //if the sensors are deployed and the AI isn't runnning
+            if (DeployedSensors && !controllerRunning)
             {
                 foreach (ModuleObjectTracking Sensor in sensors)
                 {
@@ -164,7 +165,7 @@ namespace KerbalCombatSystems
                     try { KCS.TryToggle(true, Sensor.part.FindModuleImplementing<ModuleAnimationGroup>()); } catch { }
                 }
                 DeployedSensors = true;
-            }*/
+            }
         }
 
         void FindTarget()
