@@ -27,7 +27,12 @@ namespace KerbalCombatSystems
         float fireInterval;
         float maxDetectionRange;
         public float initialMass;
+
+        [KSPField(isPersistant = true)]
         public Side side;
+
+        [KSPField(isPersistant = true)]
+        public bool alive = true;
 
         [KSPEvent(guiActive = true,
                   guiActiveEditor = false,
@@ -72,6 +77,14 @@ namespace KerbalCombatSystems
         {
             while (true)
             {
+                // Check health.
+
+                CheckStatus();
+                if (!alive) { 
+                    controllerRunning = false;
+                    yield break;
+                };
+
                 // Find target.
 
                 UpdateDetectionRange();
@@ -91,9 +104,11 @@ namespace KerbalCombatSystems
 
                         if (weapons.Count > 0)
                         {
-                            var missileIndex = UnityEngine.Random.Range(0, weapons.Count - 1);
-                            weapons[missileIndex].target = target;
-                            weapons[missileIndex].Fire();
+                            float targetMass = (float)target.totalMass;
+                            float e = 5.0f; // ratio of missile mass to mass it can destroy
+                            var weapon = weapons.OrderBy(w => Mathf.Abs(targetMass - (w.mass * e))).First();
+                            weapon.target = target;
+                            weapon.Fire();
 
                             yield return null;
                             CheckWeapons();
@@ -107,6 +122,18 @@ namespace KerbalCombatSystems
 
                 yield return new WaitForSeconds(updateInterval);
             } 
+        }
+
+        public bool CheckStatus()
+        {
+            bool propulsion = vessel.FindPartModulesImplementing<ModuleEngines>().FindAll(e => e.EngineIgnited && e.isOperational).Count > 0;
+            bool weapons = vessel.FindPartModulesImplementing<ModuleWeaponController>().Count > 0;
+            bool control = vessel.maxControlLevel != Vessel.ControlLevel.NONE;
+            
+            bool dead = (!propulsion && !weapons) || !control;
+
+            alive = !dead;
+            return alive;
         }
 
         void UpdateDetectionRange()
@@ -126,8 +153,8 @@ namespace KerbalCombatSystems
         {
             var ships = controller.ships.FindAll(
                 s => KCS.VesselDistance(s.vessel, vessel) < maxDetectionRange
-                && s.side != side);
-            //ships.Remove(ships.Find(s => s.vessel == vessel));
+                && s.side != side
+                && s.alive);
 
             if (ships.Count < 1) return;
 

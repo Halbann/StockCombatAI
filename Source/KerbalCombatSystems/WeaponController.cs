@@ -1,5 +1,6 @@
 ﻿using KSP.UI.Screens;
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -213,6 +214,7 @@ namespace KerbalCombatSystems
         // Generic weapon variables.
 
         public Vessel target;
+        public float mass;
 
         [KSPField(isPersistant = true)]
         public string weaponType;
@@ -309,13 +311,12 @@ namespace KerbalCombatSystems
             part.AddModule(moduleName);
         }
 
-        public void Start()
+        public override void OnStart(StartState state)
         {
             UpdateWeaponCodeUI();
 
             if (types.IndexOf(weaponType) == -1)
             {
-                //weaponType = part.baseVariant.Name;
                 weaponType = part.variants.SelectedVariant.Name;
             }
 
@@ -325,6 +326,26 @@ namespace KerbalCombatSystems
             }
 
             UpdateUI();
+
+            String[] massTypes = {"Missile", "Rocket", "Bomb"};
+            if (HighLogic.LoadedSceneIsFlight && massTypes.Contains(weaponType)) 
+                CalculateMass();
+        }
+
+        private float CalculateMass()
+        {
+            var decoupler = KCS.FindDecoupler(part, "Weapon", true); // todo: set to false later
+            float totalMass = 0;
+            var parts = decoupler.part.FindChildParts<Part>(true);
+
+            foreach (Part part in parts)
+            {
+                if (part.partInfo.category == PartCategories.Coupling) break;
+                totalMass = totalMass + part.mass + part.GetResourceMass();
+            }
+
+            mass = (float)Math.Round(totalMass, 2);
+            return totalMass;
         }
 
         private void OnDestroy()

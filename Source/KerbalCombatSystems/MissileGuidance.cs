@@ -79,6 +79,7 @@ namespace KerbalCombatSystems
             while (!lineOfSight)
             {
                 yield return new WaitForSeconds(0.5f);
+                if (target == null) yield break;
                 targetRay.origin = vessel.ReferenceTransform.position;
                 targetRay.direction = target.transform.position - vessel.transform.position;
                 lineOfSight = !KCS.RayIntersectsVessel(firer, targetRay);

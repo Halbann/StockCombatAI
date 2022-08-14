@@ -184,8 +184,8 @@ namespace KerbalCombatSystems
                         foreach (var controller in ships)
                         {
                             v = controller.vessel;
-                            string craftName = String.Format("{0}\n<color=#808080ff>Part Count: {1}, Mass: {2} t</color>", 
-                                v.GetDisplayName(), v.parts.Count, Math.Round(v.GetTotalMass(), 1));
+                            string craftName = String.Format("{0}\n<color=#808080ff>Part Count: {1}, Mass: {2} t\nAlive: {3}</color>", 
+                                v.GetDisplayName(), v.parts.Count, Math.Round(v.GetTotalMass(), 1), controller.alive);
 
                             string AI = String.Format("<color={0}>AI</color>", controller.controllerRunning ? "#07D207" : "#FFFFFF");
 
@@ -222,9 +222,9 @@ namespace KerbalCombatSystems
                     {
                         foreach (var w in weaponList)
                         {
-                            string missileCode = w.weaponCode == "" ? w.weaponType : w.weaponCode;
-                            string weaponName = String.Format("{0}\n<color=#808080ff>Part Count: {1}, Mass: {2} t</color>", 
-                                missileCode, "Unknown", "Unknown");
+                            string code = w.weaponCode == "" ? w.weaponType : w.weaponCode;
+                            string weaponName = String.Format("{0}\n<color=#808080ff>Type: {1}, Mass: {2} t</color>", 
+                                code, w.weaponType, w.mass);
 
                             if (GUILayout.Toggle(w == selectedWeapon, weaponName, GUI.skin.button))
                             {

@@ -37,6 +37,9 @@ namespace KerbalCombatSystems
                   groupDisplayName = EscapeGuidanceGroupName)]
         public void BeginEscape()
         {
+            if (Escaped)
+                return;
+
             //find decoupler
             decoupler = KCS.FindDecoupler(part, "Escape Pod", false);
             Debug.Log("[KCS]: Escaping from " + Parent.GetName());
@@ -89,8 +92,8 @@ namespace KerbalCombatSystems
 
             yield break;
         }
-        
-        private void Start()
+
+        public override void OnStart(StartState state)
         {
             if (!HighLogic.LoadedSceneIsFlight) return;
 
@@ -109,12 +112,12 @@ namespace KerbalCombatSystems
             {
                 AIPartList.Add(ModuleShipController.part);
             }
-
         }
 
-        private void FixedUpdate()
+        public void FixedUpdate()
         {
             if (!HighLogic.LoadedSceneIsFlight) return;
+            if (AIPartList == null) return;
 
             if (EngageAutopilot) 
             {
