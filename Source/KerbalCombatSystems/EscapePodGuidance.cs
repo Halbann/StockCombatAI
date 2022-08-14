@@ -117,7 +117,6 @@ namespace KerbalCombatSystems
         public void FixedUpdate()
         {
             if (!HighLogic.LoadedSceneIsFlight) return;
-            if (AIPartList == null) return;
 
             if (EngageAutopilot) 
             {
@@ -127,7 +126,7 @@ namespace KerbalCombatSystems
                 fc.Drive();
             }
 
-            if (!Escaped)
+            if (!Escaped && AIPartList != null)
             {
                 CheckConnection();
             }

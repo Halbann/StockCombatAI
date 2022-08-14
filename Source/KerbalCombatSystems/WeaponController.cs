@@ -21,6 +21,7 @@ namespace KerbalCombatSystems
         const string MCGroupName = "Mass Cannon Settings";
         const string BombGroupName = "Bomb Settings";
 
+
         // Generic weapon fields.
 
         [KSPField(isPersistant = true,
@@ -133,7 +134,8 @@ namespace KerbalCombatSystems
               )]
         public float BombSafeDistance = 200f;
 
-        //Firework Fields
+
+        // Firework fields.
 
         [KSPField(isPersistant = true,
               guiActive = true,
@@ -178,7 +180,8 @@ namespace KerbalCombatSystems
             )]
         public bool FWUseAsCIWS = false;
 
-        //mass cannon fields
+
+        // Mass cannon fields.
 
         [KSPField(isPersistant = true,
               guiActive = true,
@@ -281,6 +284,12 @@ namespace KerbalCombatSystems
                 if (vessel.targetObject == null) return;
                 target = vessel.targetObject.GetVessel();
             }*/
+
+            // Delete after above is uncommented.
+            if (target == null && vessel.targetObject != null)
+            {
+                target = vessel.targetObject.GetVessel();
+            }
 
             Debug.Log($"[KCS]: " + vessel.GetName() + " firing " + weaponType);
 
