@@ -84,7 +84,7 @@ namespace KerbalCombatSystems
             KCSDebug.DestroyLine(TargetLine);
         }
 
-        public void Update()
+        public void LateUpdate()
         {
             if (Target != null)
             {
@@ -95,7 +95,6 @@ namespace KerbalCombatSystems
                 KCSDebug.PlotLine(new[] { part.transform.position, LeadVector }, LeadLine);
             }
 
-            //todo: skip over the aiming part if not on autopilot
             //todo: add an appropriate aim deviation check
             //(Vector3.AngleBetween(LeadVector, part.parent.forward()) > 1)
             if ((true || Target == null) && FireStop == false)

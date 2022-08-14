@@ -50,7 +50,7 @@ namespace KerbalCombatSystems
             }
             catch
             {
-                //notify of error but launch anyway for freefloating missiles 
+                //notify of error but launch anyway for freefloating missiles
                 Debug.Log("[KCS]: Couldn't find decoupler.");
             }
 
@@ -79,6 +79,7 @@ namespace KerbalCombatSystems
             while (!lineOfSight)
             {
                 yield return new WaitForSeconds(0.5f);
+                if (target == null) yield break;
                 targetRay.origin = vessel.ReferenceTransform.position;
                 targetRay.direction = target.transform.position - vessel.transform.position;
                 lineOfSight = !KCS.RayIntersectsVessel(firer, targetRay);
@@ -126,8 +127,8 @@ namespace KerbalCombatSystems
             fc.Drive();
 
             // Update debug lines.
-            KCSDebug.PlotLine(new[]{ vessel.transform.position, target.transform.position }, targetLine);
-            KCSDebug.PlotLine(new[]{ vessel.transform.position, vessel.transform.position + (relVelNrm * 50) }, rvLine);
+            KCSDebug.PlotLine(new[] { vessel.transform.position, target.transform.position }, targetLine);
+            KCSDebug.PlotLine(new[] { vessel.transform.position, vessel.transform.position + (relVelNrm * 50) }, rvLine);
         }
 
         public void Start()

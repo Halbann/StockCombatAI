@@ -32,10 +32,6 @@ namespace KerbalCombatSystems
             PassiveTrigger();
         }
 
-        //these buttons are just for debugging
-        [KSPEvent(guiActive = true,
-                  guiActiveEditor = false,
-                  guiName = "Trigger Combat Mode")]
         public void CombatTrigger()
         {
             Debug.Log("[KCS]: Extending KAL-500 Position");
@@ -44,10 +40,6 @@ namespace KerbalCombatSystems
             KAL.SequencePlay();
         }
 
-        //these buttons are just for debugging
-        [KSPEvent(guiActive = true,
-                  guiActiveEditor = false,
-                  guiName = "Trigger Passive Mode")]
         public void PassiveTrigger()
         {
             Debug.Log("[KCS]: Resetting KAL-500 Position");
