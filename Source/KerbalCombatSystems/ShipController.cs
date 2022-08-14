@@ -34,6 +34,9 @@ namespace KerbalCombatSystems
         [KSPField(isPersistant = true)]
         public bool alive = true;
 
+        [KSPField(isPersistant = true)]
+        private bool DeployedSensors;
+
         [KSPEvent(guiActive = true,
                   guiActiveEditor = false,
                   guiName = "Toggle AI",
@@ -80,17 +83,18 @@ namespace KerbalCombatSystems
                 // Check health.
 
                 CheckStatus();
+                
                 if (!alive) { 
                     controllerRunning = false;
                     yield break;
-                };
+                }
 
                 // Find target.
 
                 UpdateDetectionRange();
                 FindTarget();
 
-                // Engage. todo: Need to separate update of target position from main coroutine.
+                // Engage. todo: Need to separate update of target position from main coroutine. 
 
                 if (target != null)
                 {
@@ -129,7 +133,6 @@ namespace KerbalCombatSystems
             bool propulsion = vessel.FindPartModulesImplementing<ModuleEngines>().FindAll(e => e.EngineIgnited && e.isOperational).Count > 0;
             bool weapons = vessel.FindPartModulesImplementing<ModuleWeaponController>().Count > 0;
             bool control = vessel.maxControlLevel != Vessel.ControlLevel.NONE;
-            
             bool dead = (!propulsion && !weapons) || !control;
 
             alive = !dead;
@@ -139,14 +142,29 @@ namespace KerbalCombatSystems
         void UpdateDetectionRange()
         {
             var sensors = vessel.FindPartModulesImplementing<ModuleObjectTracking>();
-            if (sensors.Count < 1)
-            {
-                maxDetectionRange = 1000; // visual range perhaps?
-                return;
-            }
 
             maxDetectionRange = sensors.Max(s => s.detectionRange);
-            // todo: deploy any sensors that aren't deployed
+            
+
+            if(!DeployedSensors) //&& AI is enabled
+            {
+                foreach (ModuleObjectTracking Sensor in sensors)
+                {
+                    //try deploy animations, not all scanners will have them 
+                    try { KCS.TryToggle(true, Sensor.part.FindModuleImplementing<ModuleAnimationGroup>()); } catch { }
+                }
+                DeployedSensors = true;
+            }
+
+            /*if (DeployedSensors) //&& AI is disabled
+            {
+                foreach (ModuleObjectTracking Sensor in sensors)
+                {
+                    //try deploy animations, not all scanners will have them 
+                    try { KCS.TryToggle(true, Sensor.part.FindModuleImplementing<ModuleAnimationGroup>()); } catch { }
+                }
+                DeployedSensors = true;
+            }*/
         }
 
         void FindTarget()
@@ -160,6 +178,7 @@ namespace KerbalCombatSystems
 
             target = ships.OrderBy(s => KCS.VesselDistance(s.vessel, vessel)).First().vessel;
         }
+
 
         public void FixedUpdate()
         {
@@ -179,3 +198,5 @@ namespace KerbalCombatSystems
         }
     }
 }
+
+

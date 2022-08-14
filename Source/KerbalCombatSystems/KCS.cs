@@ -25,6 +25,7 @@ namespace KerbalCombatSystems
 
                 if (nextPart == null) break;
                 if (!currentPart.isDecoupler(out Decoupler)) continue;
+                if (currentPart.GetComponent<ModuleDecouple>().isDecoupled == true) continue;
 
                 module = currentPart.GetComponent<ModuleDecouplerDesignate>();
                 if (module == null) continue;
@@ -83,6 +84,22 @@ namespace KerbalCombatSystems
             
         }
 
+        public static void TryToggle(bool Direction, ModuleAnimationGroup Animation)
+        {
+            if (Direction && Animation.isDeployed == false)
+            {
+                //try deploy if not already
+                Animation.DeployModule();
+            }
+            else if(!Direction && Animation.isDeployed == true)
+            {
+                //try retract if not already
+                Animation.RetractModule();
+            }
+
+            //do nothing otherwise
+        }
+
         public static List<ModuleDecouple> FindDecouplerChildren(Part Root, string type, bool ignoreTypeRequirement)
         {   
             //run through all child parts of the controllers parent for decoupler modules
@@ -99,6 +116,7 @@ namespace KerbalCombatSystems
 
                 //check for decoupler modules on the part of the correct type and add to a list
                 if (CurrentPart.GetComponent<ModuleDecouple>() == null)     continue;
+                if (CurrentPart.GetComponent<ModuleDecouple>().isDecoupled == true) continue;
                 if (Module == null)                                         continue;
                 if (Module.DecouplerType != type && !ignoreTypeRequirement) continue;
 

@@ -16,7 +16,7 @@ namespace KerbalCombatSystems
         public bool FireStop = false;
        // KCSFlightController fc;
         Vessel Target;
-        private Vector3 LeadVector;
+        public Vector3 LeadVector;
 
         // Debugging line variables.
         LineRenderer TargetLine, LeadLine;
@@ -50,7 +50,11 @@ namespace KerbalCombatSystems
             for (int i = 0; i < TempBurst; i++)
             {
                 //check if launchers are empty and skip if so
-                if(FireworkLaunchers.Count.Equals(0)) continue;
+                if (FireworkLaunchers.Count.Equals(0))
+                {
+                    //todo: tell the ship controller and weapons interface that this launcher is empty
+                    break;
+                }
 
                 yield return new WaitForSeconds(BurstSpacing);
                 //get end of launchers list
@@ -66,7 +70,6 @@ namespace KerbalCombatSystems
                     //add one more round to the burst to substitute missing hsot
                     TempBurst += 1;
                 }
-                Debug.Log("Burst" + TempBurst);
             }
 
             //wait a frame
@@ -81,7 +84,7 @@ namespace KerbalCombatSystems
             KCSDebug.DestroyLine(TargetLine);
         }
 
-        public void Update()
+        public void LateUpdate()
         {
             if (Target != null)
             {
@@ -92,7 +95,6 @@ namespace KerbalCombatSystems
                 KCSDebug.PlotLine(new[] { part.transform.position, LeadVector }, LeadLine);
             }
 
-            //todo: skip over the aiming part if not on autopilot
             //todo: add an appropriate aim deviation check
             //(Vector3.AngleBetween(LeadVector, part.parent.forward()) > 1)
             if ((true || Target == null) && FireStop == false)

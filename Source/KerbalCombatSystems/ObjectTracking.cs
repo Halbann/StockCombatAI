@@ -21,7 +21,7 @@ namespace KerbalCombatSystems
               groupName = objectTrackingGroupName,
               groupDisplayName = objectTrackingGroupName),
               UI_Label(scene = UI_Scene.All)]
-        public float detectionRange = 5000;
+        public float detectionRange = 0f;
 
         public override string GetInfo()
         {

@@ -277,13 +277,11 @@ namespace KerbalCombatSystems
                   groupDisplayName = weaponGroupName)]
         public void Fire()
         {
-            //disabling at least for testing and at most until target null launch sequences
-            /*
             if (target == null)
             {
                 if (vessel.targetObject == null) return;
                 target = vessel.targetObject.GetVessel();
-            }*/
+            }
 
             // Delete after above is uncommented.
             if (target == null && vessel.targetObject != null)

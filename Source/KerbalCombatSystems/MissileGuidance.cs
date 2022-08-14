@@ -127,8 +127,8 @@ namespace KerbalCombatSystems
             fc.Drive();
 
             // Update debug lines.
-            KCSDebug.PlotLine(new[]{ vessel.transform.position, target.transform.position }, targetLine);
-            KCSDebug.PlotLine(new[]{ vessel.transform.position, vessel.transform.position + (relVelNrm * 50) }, rvLine);
+            KCSDebug.PlotLine(new[] { vessel.transform.position, target.transform.position }, targetLine);
+            KCSDebug.PlotLine(new[] { vessel.transform.position, vessel.transform.position + (relVelNrm * 50) }, rvLine);
         }
 
         public void Start()

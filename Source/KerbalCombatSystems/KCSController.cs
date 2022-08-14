@@ -25,7 +25,7 @@ namespace KerbalCombatSystems
         private Vector2 scrollPosition;
         GUIStyle buttonStyle;
 
-        private string[] modes = { "Weapons", "Ships" }; 
+        private string[] modes = { "Weapons", "Ships" };
         private string mode = "Weapons";
 
         public List<ModuleShipController> ships;
@@ -82,11 +82,12 @@ namespace KerbalCombatSystems
                 //ships.Add(new KCSShip(v, v.GetTotalMass())); // todo: Should update mass instead
             }
         }
-        
+
         private void UpdateWeaponList()
         {
             var c = FlightGlobals.ActiveVessel.FindPartModuleImplementing<ModuleShipController>();
-            if (c == null) { 
+            if (c == null)
+            {
                 weaponList = new List<ModuleWeaponController>();
                 return;
             };
@@ -143,30 +144,30 @@ namespace KerbalCombatSystems
 
             GUILayout.BeginVertical();
 
-                GUILayout.BeginHorizontal();
+            GUILayout.BeginHorizontal();
 
-                    foreach (var m in modes)
-                    {
-                        if (GUILayout.Toggle(mode == m, m, buttonStyle))
-                        {
-                            mode = m;
-                        }
-                    }
-
-                GUILayout.EndHorizontal();
-
-                switch (mode)
+            foreach (var m in modes)
+            {
+                if (GUILayout.Toggle(mode == m, m, buttonStyle))
                 {
-                    case "Ships":
-                        ShipsGUI();
-                        break;
-                    case "Weapons":
-                        WeaponsGUI();
-                        break;
-                    default:
-                        GUILayout.Label("Something went wrong...");
-                        break;
+                    mode = m;
                 }
+            }
+
+            GUILayout.EndHorizontal();
+
+            switch (mode)
+            {
+                case "Ships":
+                    ShipsGUI();
+                    break;
+                case "Weapons":
+                    WeaponsGUI();
+                    break;
+                default:
+                    GUILayout.Label("Something went wrong...");
+                    break;
+            }
 
             GUILayout.EndVertical();
             GUI.DragWindow(new Rect(0, 0, 10000, 500));
@@ -175,38 +176,38 @@ namespace KerbalCombatSystems
         private void ShipsGUI()
         {
             GUILayout.BeginVertical(boxStyle);
-                scrollViewHeight = Mathf.Max(Mathf.Min(15 * 30, 30 * ships.Count), 5 * 30);
-                scrollPosition = GUILayout.BeginScrollView(scrollPosition, false, true, GUILayout.Height(scrollViewHeight), GUILayout.Width(windowWidth));
-                    if (ships.Count > 0)
+            scrollViewHeight = Mathf.Max(Mathf.Min(15 * 30, 30 * ships.Count), 5 * 30);
+            scrollPosition = GUILayout.BeginScrollView(scrollPosition, false, true, GUILayout.Height(scrollViewHeight), GUILayout.Width(windowWidth));
+            if (ships.Count > 0)
+            {
+                Vessel v;
+
+                foreach (var controller in ships)
+                {
+                    v = controller.vessel;
+                    string craftName = String.Format("{0}\n<color=#808080ff>Part Count: {1}, Mass: {2} t\nAlive: {3}</color>",
+                        v.GetDisplayName(), v.parts.Count, Math.Round(v.GetTotalMass(), 1), controller.alive);
+
+                    string AI = String.Format("<color={0}>AI</color>", controller.controllerRunning ? "#07D207" : "#FFFFFF");
+
+                    GUILayout.BeginHorizontal();
+                    if (GUILayout.Button(craftName))
                     {
-                        Vessel v;
-
-                        foreach (var controller in ships)
-                        {
-                            v = controller.vessel;
-                            string craftName = String.Format("{0}\n<color=#808080ff>Part Count: {1}, Mass: {2} t\nAlive: {3}</color>", 
-                                v.GetDisplayName(), v.parts.Count, Math.Round(v.GetTotalMass(), 1), controller.alive);
-
-                            string AI = String.Format("<color={0}>AI</color>", controller.controllerRunning ? "#07D207" : "#FFFFFF");
-
-                            GUILayout.BeginHorizontal();
-                            if (GUILayout.Button(craftName))
-                            {
-                                FlightGlobals.ForceSetActiveVessel(v);
-                                UpdateWeaponList();
-                            }
-                            if (GUILayout.Button(AI))
-                            {
-                                controller.ToggleAI();
-                            }
-                            if (GUILayout.Button(controller.side.ToString()))
-                            {
-                                controller.ToggleSide();
-                            }
-                            GUILayout.EndHorizontal();
-                        }
+                        FlightGlobals.ForceSetActiveVessel(v);
+                        UpdateWeaponList();
                     }
-                GUILayout.EndScrollView();
+                    if (GUILayout.Button(AI))
+                    {
+                        controller.ToggleAI();
+                    }
+                    if (GUILayout.Button(controller.side.ToString()))
+                    {
+
+                    }
+                    GUILayout.EndHorizontal();
+                }
+            }
+            GUILayout.EndScrollView();
             GUILayout.EndVertical();
 
             if (GUILayout.Button("Update List")) UpdateShipList();
@@ -216,24 +217,21 @@ namespace KerbalCombatSystems
         private void WeaponsGUI()
         {
             GUILayout.BeginVertical(boxStyle);
-                scrollViewHeight = Mathf.Max(Mathf.Min(15 * 30, 30 * weaponList.Count), 5 * 30);
-                scrollPosition = GUILayout.BeginScrollView(scrollPosition, false, true, GUILayout.Height(scrollViewHeight), GUILayout.Width(windowWidth));
-                    if (weaponList.Count > 0)
-                    {
-                        foreach (var w in weaponList)
-                        {
-                            string code = w.weaponCode == "" ? w.weaponType : w.weaponCode;
-                            string weaponName = String.Format("{0}\n<color=#808080ff>Type: {1}, Mass: {2} t</color>", 
-                                code, w.weaponType, w.mass);
+            scrollViewHeight = Mathf.Max(Mathf.Min(15 * 30, 30 * weaponList.Count), 5 * 30);
+            scrollPosition = GUILayout.BeginScrollView(scrollPosition, false, true, GUILayout.Height(scrollViewHeight), GUILayout.Width(windowWidth));
+            if (weaponList.Count > 0)
+            {
+                foreach (var w in weaponList)
+                {
+                    string code = w.weaponCode == "" ? w.weaponType : w.weaponCode;
+                    string weaponName = String.Format("{0}\n<color=#808080ff>Type: {1}, Mass: {2} t</color>",
+                        code, w.weaponType, w.mass);
 
-                            if (GUILayout.Toggle(w == selectedWeapon, weaponName, GUI.skin.button))
-                            {
-                                //selectedWeapon = selectedWeapon != w ? w : null;
-                                selectedWeapon = w;
-                            }
-                        }
-                    }
-                GUILayout.EndScrollView();
+                    if (GUILayout.Toggle(w == selectedWeapon, weaponName, GUI.skin.button))
+                    {
+                }
+            }
+            GUILayout.EndScrollView();
             GUILayout.EndVertical();
 
             if (GUILayout.Button("Update List")) UpdateWeaponList();
