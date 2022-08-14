@@ -21,7 +21,7 @@ namespace KerbalCombatSystems
         //universal flight controller and toggle
         KCSFlightController fc;
         private bool EngageAutopilot;
-        bool Escaped = false;;
+        bool Escaped = false;
 
         ModuleDecouple decoupler;
         //the ship being escaped from
@@ -37,9 +37,6 @@ namespace KerbalCombatSystems
                   groupDisplayName = EscapeGuidanceGroupName)]
         public void BeginEscape()
         {
-            if (Escaped)
-                return;
-
             //find decoupler
             decoupler = KCS.FindDecoupler(part, "Escape Pod", false);
             Debug.Log("[KCS]: Escaping from " + Parent.GetName());

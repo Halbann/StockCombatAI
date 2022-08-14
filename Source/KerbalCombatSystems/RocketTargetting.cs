@@ -17,11 +17,7 @@ namespace KerbalCombatSystems
         // KCSFlightController fc;
         Vessel Target;
         public Vector3 LeadVector;
-        
-        // KCSFlightController fc;
-        Vessel Target;
-        private Vector3 LeadVector;
-
+       
         // Debugging line variables.
         LineRenderer TargetLine, LeadLine;
         
@@ -29,8 +25,6 @@ namespace KerbalCombatSystems
         private List<ModuleDecouple> RocketBases;
         ModuleDecouple Decoupler;
         
-        //list of valid launcher modules with ammo
-        private List<ModuleDecouple> RocketBases;
         
 
         public void Start()
@@ -72,8 +66,6 @@ namespace KerbalCombatSystems
                 StartCoroutine(FireRocket());
             }
             
-            //get list of fireworks
-            RocketBases = KCS.FindDecouplerChildren(part.parent, "Weapon", false);
         }
 
         private IEnumerator FireRocket()
@@ -109,11 +101,6 @@ namespace KerbalCombatSystems
             return 5;
         }
         
-            yield return null;
-            //delete the active module at the end.
-            part.RemoveModule(part.GetComponent<ModuleRocket>());
-        }
-
         public void OnDestroy()
         {
             KCSDebug.DestroyLine(LeadLine);
