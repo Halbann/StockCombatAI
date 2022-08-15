@@ -55,8 +55,6 @@ namespace KerbalCombatSystems
                 KCSDebug.PlotLine(new[] { Decoupler.part.transform.position, LeadVector }, LeadLine);
             }
 
-            if(Target == null) { Debug.Log("no target"); }
-
             //todo: add an appropriate aim deviation check
             //(Vector3.AngleBetween(LeadVector, part.parent.forward()) > 1) 
             if ((false || Target == null) && FireStop == false)
@@ -98,7 +96,7 @@ namespace KerbalCombatSystems
 
             //calculate 
 
-            return 5;
+            return 55;
         }
         
         public void OnDestroy()
