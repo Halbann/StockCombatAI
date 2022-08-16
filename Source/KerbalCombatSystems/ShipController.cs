@@ -36,6 +36,7 @@ namespace KerbalCombatSystems
 
         [KSPField(isPersistant = true)]
         private bool DeployedSensors;
+        
 
         [KSPEvent(guiActive = true,
                   guiActiveEditor = false,
@@ -86,6 +87,7 @@ namespace KerbalCombatSystems
                 
                 if (!alive) { 
                     controllerRunning = false;
+                    FireEscapePods();
                     yield break;
                 }
 
@@ -126,6 +128,17 @@ namespace KerbalCombatSystems
 
                 yield return new WaitForSeconds(updateInterval);
             } 
+        }
+
+        private void FireEscapePods()
+        {
+            //function to fire escape pods when the ship is dead but still holds AI units
+            List<ModuleEscapePodGuidance> PodList = vessel.FindPartModulesImplementing<ModuleEscapePodGuidance>();
+            //trigger the escape start method in every found controller
+            foreach (ModuleEscapePodGuidance EscapePod in PodList)
+            {
+                EscapePod.BeginEscape();
+            }
         }
 
         public bool CheckStatus()
