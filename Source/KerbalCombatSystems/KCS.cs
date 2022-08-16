@@ -84,6 +84,23 @@ namespace KerbalCombatSystems
             
         }
 
+        /*
+        public static Vector3 GetAwayVector(Part WeaponPart)
+        {
+            //function to return a part vector that points away from its parent, used for weapon based aiming on ships
+            Vector3 TrueVector = WeaponPart.transform.up;
+            //get vector pointing towards parent from child
+            Vector3 targetDir = WeaponPart.parent.transform.position + WeaponPart.transform.position;
+
+            //if the up vector of the part points towards the parent then the part is backwards and we reverse the vector
+            if (Vector3.Angle(targetDir, TrueVector) < 90f)
+            {
+                TrueVector = -TrueVector;
+            }
+
+            return TrueVector;
+        }*/
+
         public static void TryToggle(bool Direction, ModuleAnimationGroup Animation)
         {
             if (Direction && Animation.isDeployed == false)

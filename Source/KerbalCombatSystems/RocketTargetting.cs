@@ -19,7 +19,7 @@ namespace KerbalCombatSystems
         public Vector3 LeadVector;
        
         // Debugging line variables.
-        LineRenderer TargetLine, LeadLine;
+        LineRenderer TargetLine, LeadLine, AimLine;
         
         //rocket decoupler variables
         private List<ModuleDecouple> RocketBases;
@@ -34,7 +34,8 @@ namespace KerbalCombatSystems
             // initialise debug line renderer
             TargetLine = KCSDebug.CreateLine(Color.magenta);
             LeadLine = KCSDebug.CreateLine(Color.green);
-            
+            AimLine = KCSDebug.CreateLine(Color.cyan);
+
             //find a decoupler associated with the weapon
             RocketBases = KCS.FindDecouplerChildren(part.parent, "Weapon", false);
             Decoupler = RocketBases[RocketBases.Count() - 1];
@@ -44,6 +45,10 @@ namespace KerbalCombatSystems
 
         public void LateUpdate()
         {
+            //get where the weapon is currently pointing
+            Vector3 AimVector = part.parent.parent.transform.position + part.parent.transform.position;
+            AimVector = AimVector.normalized * 15f;
+
             if (Target != null)
             {
                 //recalculate Average Velocity over distance
@@ -53,14 +58,14 @@ namespace KerbalCombatSystems
                 // Update debug lines.
                 KCSDebug.PlotLine(new[] { Decoupler.part.transform.position, Target.transform.position }, TargetLine);
                 KCSDebug.PlotLine(new[] { Decoupler.part.transform.position, LeadVector }, LeadLine);
+                KCSDebug.PlotLine(new[] { Decoupler.part.transform.position, AimVector }, AimLine);
             }
 
-            //todo: add an appropriate aim deviation check
-            //(Vector3.AngleBetween(LeadVector, part.parent.forward()) > 1) 
-            if ((false || Target == null) && FireStop == false)
+
+            //once aligned correctly start the firing sequence
+            if (((Vector3.Angle(AimVector, LeadVector) < 0.5f) || Target == null) && FireStop == false)
             {
                 FireStop = true;
-                //once aligned correctly start the firing sequence
                 StartCoroutine(FireRocket());
             }
             
@@ -103,6 +108,7 @@ namespace KerbalCombatSystems
         {
             KCSDebug.DestroyLine(LeadLine);
             KCSDebug.DestroyLine(TargetLine);
+            KCSDebug.DestroyLine(AimLine);
         }
     }
 }

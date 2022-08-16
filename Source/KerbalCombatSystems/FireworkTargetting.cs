@@ -19,7 +19,7 @@ namespace KerbalCombatSystems
         public Vector3 LeadVector;
 
         // Debugging line variables.
-        LineRenderer TargetLine, LeadLine;
+        LineRenderer TargetLine, LeadLine, AimLine;
 
         /// stored settings
         private int RoundBurst;
@@ -37,6 +37,7 @@ namespace KerbalCombatSystems
             // initialise debug line renderer
             TargetLine = KCSDebug.CreateLine(Color.magenta);
             LeadLine = KCSDebug.CreateLine(Color.green);
+            AimLine = KCSDebug.CreateLine(Color.cyan);
 
             //get list of fireworks
             FindFireworks(part.parent);
@@ -82,10 +83,16 @@ namespace KerbalCombatSystems
         {
             KCSDebug.DestroyLine(LeadLine);
             KCSDebug.DestroyLine(TargetLine);
+            KCSDebug.DestroyLine(AimLine);
         }
 
         public void LateUpdate()
         {
+            //get where the weapon is currently pointing
+            //todo: firework model vectors are incredibly cursed, need to get where it is pointing.
+            Vector3 AimVector = FireworkLaunchers[0].part.transform.up;
+            AimVector = AimVector.normalized * 15f;
+
             if (Target != null)
             {
                 //recalculate LeadVector
@@ -93,17 +100,17 @@ namespace KerbalCombatSystems
                 // Update debug lines.
                 KCSDebug.PlotLine(new[] { part.transform.position, Target.transform.position }, TargetLine);
                 KCSDebug.PlotLine(new[] { part.transform.position, LeadVector }, LeadLine);
+                KCSDebug.PlotLine(new[] { FireworkLaunchers[0].part.transform.position, AimVector }, AimLine);
             }
 
-            //todo: add an appropriate aim deviation check
-            //(Vector3.AngleBetween(LeadVector, part.parent.forward()) > 1)
-            if ((true || Target == null) && FireStop == false)
+            if (((Vector3.Angle(AimVector, LeadVector) < 0.5f) || Target == null) && FireStop == false)
             {
                 FireStop = true;
-                //once aligned correctly start the firing sequence
                 StartCoroutine(FireShells());
             }
         }
+
+
 
         private void FindFireworks(Part Root)
         {
