@@ -79,27 +79,31 @@ namespace KerbalCombatSystems
 
             float ForwardDelta = 2f * c / (Mathf.Sqrt(desc) - b);
 
+
+            Vector3 TrueVector = Target.transform.position + RelVel * ForwardDelta;
+            TrueVector = TrueVector.normalized * 15f;
             //return the firing solution
-            return Target.transform.position + RelVel * ForwardDelta;
+            return TrueVector;
             
         }
 
-        /*
+        
         public static Vector3 GetAwayVector(Part WeaponPart)
         {
             //function to return a part vector that points away from its parent, used for weapon based aiming on ships
-            Vector3 TrueVector = WeaponPart.transform.up;
+            Vector3 TrueVector = WeaponPart.transform.up + WeaponPart.transform.position;
+            TrueVector = TrueVector.normalized * 15f;
             //get vector pointing towards parent from child
             Vector3 targetDir = WeaponPart.parent.transform.position + WeaponPart.transform.position;
 
             //if the up vector of the part points towards the parent then the part is backwards and we reverse the vector
-            if (Vector3.Angle(targetDir, TrueVector) < 90f)
+            if (Vector3.Angle(targetDir, TrueVector) > 90f)
             {
                 TrueVector = -TrueVector;
             }
 
             return TrueVector;
-        }*/
+        }
 
         public static void TryToggle(bool Direction, ModuleAnimationGroup Animation)
         {

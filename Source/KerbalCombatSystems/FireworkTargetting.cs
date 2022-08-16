@@ -90,17 +90,20 @@ namespace KerbalCombatSystems
         {
             //get where the weapon is currently pointing
             //todo: firework model vectors are incredibly cursed, need to get where it is pointing.
-            Vector3 AimVector = FireworkLaunchers[0].part.transform.up;
-            AimVector = AimVector.normalized * 15f;
+            Vector3 origin = FireworkLaunchers[0].part.transform.position;
+            /* Vector3 AimVector = FireworkLaunchers[0].part.transform.up;
+             AimVector = AimVector.normalized * 15f;*/
+
+            Vector3 AimVector = KCS.GetAwayVector(FireworkLaunchers[0].part);
 
             if (Target != null)
             {
                 //recalculate LeadVector
-                LeadVector = KCS.TargetLead(Target, part.parent, 100f);
+                LeadVector = KCS.TargetLead(Target, FireworkLaunchers[0].part.parent, 100f);
                 // Update debug lines.
-                KCSDebug.PlotLine(new[] { part.transform.position, Target.transform.position }, TargetLine);
-                KCSDebug.PlotLine(new[] { part.transform.position, LeadVector }, LeadLine);
-                KCSDebug.PlotLine(new[] { FireworkLaunchers[0].part.transform.position, AimVector }, AimLine);
+                KCSDebug.PlotLine(new[] { origin, Target.transform.position.normalized * 15f }, TargetLine);
+                KCSDebug.PlotLine(new[] { origin, LeadVector }, LeadLine);
+                KCSDebug.PlotLine(new[] { origin, AimVector }, AimLine);
             }
 
             if (((Vector3.Angle(AimVector, LeadVector) < 0.5f) || Target == null) && FireStop == false)

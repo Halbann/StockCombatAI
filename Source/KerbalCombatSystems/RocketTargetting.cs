@@ -46,8 +46,8 @@ namespace KerbalCombatSystems
         public void LateUpdate()
         {
             //get where the weapon is currently pointing
-            Vector3 AimVector = part.parent.parent.transform.position + part.parent.transform.position;
-            AimVector = AimVector.normalized * 15f;
+            Vector3 AimVector = KCS.GetAwayVector(Decoupler.part);
+
 
             if (Target != null)
             {
@@ -56,7 +56,7 @@ namespace KerbalCombatSystems
                 //recalculate LeadVector
                 LeadVector = KCS.TargetLead(Target, Decoupler.part, AvgVel);
                 // Update debug lines.
-                KCSDebug.PlotLine(new[] { Decoupler.part.transform.position, Target.transform.position }, TargetLine);
+                KCSDebug.PlotLine(new[] { Decoupler.part.transform.position, Target.transform.position.normalized * 15f }, TargetLine);
                 KCSDebug.PlotLine(new[] { Decoupler.part.transform.position, LeadVector }, LeadLine);
                 KCSDebug.PlotLine(new[] { Decoupler.part.transform.position, AimVector }, AimLine);
             }
