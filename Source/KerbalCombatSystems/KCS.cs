@@ -80,7 +80,7 @@ namespace KerbalCombatSystems
             float ForwardDelta = 2f * c / (Mathf.Sqrt(desc) - b);
 
             //return the firing solution
-            return Target.transform.position + Target.GetObtVelocity() * ForwardDelta;
+            return Target.transform.position + RelVel * ForwardDelta;
             
         }
 
