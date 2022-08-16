@@ -222,7 +222,7 @@ namespace KerbalCombatSystems
         [KSPField(isPersistant = true)]
         public string weaponType;
 
-        string[] types = { "Missile", "Rocket", "Firework", "Bomb", "MassCannon" }; 
+        string[] types = { "Missile", "Rocket", "Firework", "Bomb", "Mass Cannon" }; 
 
 
         // Set persistent weapon code in editor and flight.
@@ -304,7 +304,7 @@ namespace KerbalCombatSystems
                 case "Firework":
                     moduleName = "ModuleFirework";
                     break;
-                case "MassCannon":
+                case "Mass Cannon":
                     moduleName = "ModuleMassCannon";
                     break;
                 case "Bomb":
