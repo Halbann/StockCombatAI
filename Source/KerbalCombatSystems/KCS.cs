@@ -81,7 +81,6 @@ namespace KerbalCombatSystems
 
 
             Vector3 TrueVector = Target.transform.position + RelVel * ForwardDelta;
-            TrueVector = TrueVector.normalized * 15f;
             //return the firing solution
             return TrueVector;
             

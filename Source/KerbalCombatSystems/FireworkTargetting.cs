@@ -89,24 +89,26 @@ namespace KerbalCombatSystems
         public void LateUpdate()
         {
             //get where the weapon is currently pointing
-            //todo: firework model vectors are incredibly cursed, need to get where it is pointing.
             Vector3 origin = FireworkLaunchers[0].part.transform.position;
-            /* Vector3 AimVector = FireworkLaunchers[0].part.transform.up;
-             AimVector = AimVector.normalized * 15f;*/
-
-            Vector3 AimVector = KCS.GetAwayVector(FireworkLaunchers[0].part);
+            //depreciated, get away is redundant for non-symmetrical firework part
+            //Vector3 AimVector = KCS.GetAwayVector(FireworkLaunchers[0].part);
+            Vector3 AimVector = FireworkLaunchers[0].part.transform.position + FireworkLaunchers[0].part.transform.up;
+            //AimVector = AimVector.normalized * 15f;
 
             if (Target != null)
             {
                 //recalculate LeadVector
-                LeadVector = KCS.TargetLead(Target, FireworkLaunchers[0].part.parent, 100f);
+                LeadVector = KCS.TargetLead(Target, FireworkLaunchers[0].part, 100f);
                 // Update debug lines.
-                KCSDebug.PlotLine(new[] { origin, Target.transform.position.normalized * 15f }, TargetLine);
+                KCSDebug.PlotLine(new[] { origin, Target.transform.position }, TargetLine);
                 KCSDebug.PlotLine(new[] { origin, LeadVector }, LeadLine);
                 KCSDebug.PlotLine(new[] { origin, AimVector }, AimLine);
+
+                KCSFlightController fc = part.gameObject.AddComponent<KCSFlightController>();
+                fc.attitude = LeadVector;
             }
 
-            if (((Vector3.Angle(AimVector, LeadVector) < 0.5f) || Target == null) && FireStop == false)
+            if (((Vector3.Angle(AimVector, LeadVector) < 1f) || Target == null) && FireStop == false)
             {
                 FireStop = true;
                 StartCoroutine(FireShells());
