@@ -14,7 +14,7 @@ namespace KerbalCombatSystems
     {
         // Firework Targetting variables.
         public bool FireStop = false;
-       // KCSFlightController fc;
+       
         Vessel Target;
         public Vector3 LeadVector;
 
@@ -88,27 +88,22 @@ namespace KerbalCombatSystems
 
         public void LateUpdate()
         {
+            Part FiringPart = FireworkLaunchers[0].part;
+            Vector3 origin = FiringPart.transform.position;
             //get where the weapon is currently pointing
-            Vector3 origin = FireworkLaunchers[0].part.transform.position;
-            //depreciated, get away is redundant for non-symmetrical firework part
-            //Vector3 AimVector = KCS.GetAwayVector(FireworkLaunchers[0].part);
-            Vector3 AimVector = FireworkLaunchers[0].part.transform.position + FireworkLaunchers[0].part.transform.up;
-            //AimVector = AimVector.normalized * 15f;
+            Vector3 AimVector = KCS.GetAwayVector(FiringPart);
 
             if (Target != null)
             {
                 //recalculate LeadVector
-                LeadVector = KCS.TargetLead(Target, FireworkLaunchers[0].part, 100f);
+                LeadVector = KCS.TargetLead(Target, FiringPart, 100f);
                 // Update debug lines.
                 KCSDebug.PlotLine(new[] { origin, Target.transform.position }, TargetLine);
                 KCSDebug.PlotLine(new[] { origin, LeadVector }, LeadLine);
                 KCSDebug.PlotLine(new[] { origin, AimVector }, AimLine);
-
-                KCSFlightController fc = part.gameObject.AddComponent<KCSFlightController>();
-                fc.attitude = LeadVector;
             }
 
-            if (((Vector3.Angle(AimVector, LeadVector) < 1f) || Target == null) && FireStop == false)
+            if (((Vector3.Angle(AimVector, LeadVector) < 10f) || Target == null) && FireStop == false)
             {
                 FireStop = true;
                 StartCoroutine(FireShells());

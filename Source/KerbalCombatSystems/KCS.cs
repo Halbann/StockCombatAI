@@ -81,17 +81,18 @@ namespace KerbalCombatSystems
 
 
             Vector3 TrueVector = Target.transform.position + RelVel * ForwardDelta;
+            //create vector pointing in appropriate direction
+            Vector3 PointVector = TrueVector - Firer.transform.position;
             //return the firing solution
-            return TrueVector;
-            
+            return PointVector;
         }
 
         
         public static Vector3 GetAwayVector(Part WeaponPart)
         {
             //function to return a part vector that points away from its parent, used for weapon based aiming on ships
-            Vector3 TrueVector = WeaponPart.transform.up + WeaponPart.transform.position;
-            TrueVector = TrueVector.normalized * 15f;
+            Vector3 TrueVector = WeaponPart.transform.up.normalized * 15f + WeaponPart.transform.position;
+            //TrueVector = TrueVector.normalized * 15f;
             //get vector pointing towards parent from child
             Vector3 targetDir = WeaponPart.parent.transform.position + WeaponPart.transform.position;
 
