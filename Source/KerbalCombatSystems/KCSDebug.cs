@@ -39,7 +39,12 @@ namespace KerbalCombatSystems
             //create a material for the line with its unique colour
             Material LineMaterial = new Material(Shader.Find("Standard"));
             LineMaterial.color = LineColour;
+
+            //todo: make lines emissive for better visibility
+            LineMaterial.EnableKeyword("_Emission");
+            LineMaterial.SetColor("_Emission", LineColour);
             Line.material = LineMaterial;
+
             //make it a point
             Line.startWidth = 0.5f;
             Line.endWidth = 0f;

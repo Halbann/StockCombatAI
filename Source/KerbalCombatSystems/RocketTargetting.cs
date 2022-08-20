@@ -62,9 +62,8 @@ namespace KerbalCombatSystems
                 KCSDebug.PlotLine(new[] { Origin, AimVector }, AimLine);
             }
 
-
             //once aligned correctly start the firing sequence
-            if (((Vector3.Angle(Origin - AimVector, Origin - LeadVector) < 0.5f) || Target == null) && FireStop == false)
+            if (((Vector3.Angle(Origin - AimVector, Origin - LeadVector) < 1f) || Target == null) && FireStop == false)
             {
                 FireStop = true;
                 StartCoroutine(FireRocket());
