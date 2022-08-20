@@ -14,7 +14,6 @@ namespace KerbalCombatSystems
     {
         // Targetting variables.
         public bool FireStop = false;
-        // KCSFlightController fc;
         Vessel Target;
         public Vector3 LeadVector;
        
@@ -32,9 +31,9 @@ namespace KerbalCombatSystems
             Target = part.FindModuleImplementing<ModuleWeaponController>().target;
 
             // initialise debug line renderer
-            TargetLine = KCSDebug.CreateLine(Color.magenta);
-            LeadLine = KCSDebug.CreateLine(Color.green);
-            AimLine = KCSDebug.CreateLine(Color.cyan);
+            TargetLine = KCSDebug.CreateLine(new Color(209f / 255f, 77f / 255f, 81f / 255f, 1f)); 
+            LeadLine = KCSDebug.CreateLine(new Color(167f / 255f, 103f / 255f, 104f / 255f, 1f));
+            AimLine = KCSDebug.CreateLine(new Color(232f / 255f, 167f / 255f, 169f / 255f, 1f));
 
             //find a decoupler associated with the weapon
             RocketBases = KCS.FindDecouplerChildren(part.parent, "Weapon", false);
@@ -47,7 +46,8 @@ namespace KerbalCombatSystems
         {
             //get where the weapon is currently pointing
             Vector3 AimVector = KCS.GetAwayVector(Decoupler.part);
-
+            //get the aiming part
+            Vector3 Origin = Decoupler.part.transform.position;
 
             if (Target != null)
             {
@@ -55,20 +55,20 @@ namespace KerbalCombatSystems
                 float AvgVel = RocketVelocity(Target, Decoupler.part);
                 //recalculate LeadVector
                 LeadVector = KCS.TargetLead(Target, Decoupler.part, AvgVel);
+
                 // Update debug lines.
-                KCSDebug.PlotLine(new[] { Decoupler.part.transform.position, Target.transform.position.normalized * 15f }, TargetLine);
-                KCSDebug.PlotLine(new[] { Decoupler.part.transform.position, LeadVector }, LeadLine);
-                KCSDebug.PlotLine(new[] { Decoupler.part.transform.position, AimVector }, AimLine);
+                KCSDebug.PlotLine(new[] { Origin, Target.transform.position }, TargetLine);
+                KCSDebug.PlotLine(new[] { Origin, LeadVector }, LeadLine);
+                KCSDebug.PlotLine(new[] { Origin, AimVector }, AimLine);
             }
 
 
             //once aligned correctly start the firing sequence
-            if (((Vector3.Angle(AimVector, LeadVector) < 0.5f) || Target == null) && FireStop == false)
+            if (((Vector3.Angle(Origin - AimVector, Origin - LeadVector) < 0.5f) || Target == null) && FireStop == false)
             {
                 FireStop = true;
                 StartCoroutine(FireRocket());
             }
-            
         }
 
         private IEnumerator FireRocket()

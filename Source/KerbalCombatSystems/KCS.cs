@@ -81,10 +81,8 @@ namespace KerbalCombatSystems
 
 
             Vector3 TrueVector = Target.transform.position + RelVel * ForwardDelta;
-            //create vector pointing in appropriate direction
-            Vector3 PointVector = TrueVector - Firer.transform.position;
             //return the firing solution
-            return PointVector;
+            return TrueVector;
         }
 
         
