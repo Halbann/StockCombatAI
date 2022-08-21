@@ -9,9 +9,10 @@ namespace KerbalCombatSystems
 {
     class KCSFlightController : MonoBehaviour
     {
-        public Vector3 attitude;
+        public Vector3 attitude = Vector3.zero;
         private bool facingDesiredRotation;
         public float throttle;
+        public float throttleActual;
         private float throttleLerped;
         public float throttleLerpRate = 0.05f;
         public float alignmentToleranceforBurn = 5;
@@ -29,7 +30,7 @@ namespace KerbalCombatSystems
             targetVectorLine = KCSDebug.CreateLine(Color.red);
         }
 
-        private void OnDestroy()
+        internal void OnDestroy()
         {
             KCSDebug.DestroyLine(currentVectorLine);
             KCSDebug.DestroyLine(targetVectorLine);
@@ -44,14 +45,15 @@ namespace KerbalCombatSystems
 
         private void UpdateThrottle(Vessel v)
         {
+            //if (throttle == 0 && throttleLerped == 0) return;
             if (v == null) return;
             var af = Vector3.Angle(v.ReferenceTransform.up, attitude); 
 
             facingDesiredRotation = af < alignmentToleranceforBurn;
-            throttle = facingDesiredRotation ? throttle : 0;
+            throttleActual = facingDesiredRotation ? throttle : 0;
 
             // Move actual throttle towards throttle target gradually.
-            throttleLerped = Mathf.MoveTowards(throttleLerped, throttle, 1 * Time.fixedDeltaTime);
+            throttleLerped = Mathf.MoveTowards(throttleLerped, throttleActual, 1 * Time.fixedDeltaTime);
 
             v.ctrlState.mainThrottle = throttleLerped;
             if (FlightGlobals.ActiveVessel != null && v == FlightGlobals.ActiveVessel)
@@ -60,6 +62,7 @@ namespace KerbalCombatSystems
 
         void UpdateSAS(Vessel v)
         {
+            if (attitude == Vector3.zero) return;
             if (v == null) return;
 
             // SAS must be turned off. Don't know why.

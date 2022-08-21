@@ -44,17 +44,17 @@ namespace KerbalCombatSystems
         [KSPField(isPersistant = true,
                guiActive = true,
                guiActiveEditor = true,
-               guiName = "Preferred Target Mass",
-               guiUnits = "t",
+               guiName = "Target Mass Ratio",
+               guiUnits = "x",
                groupName = weaponGroupName,
                groupDisplayName = weaponGroupName),
                UI_FloatRange(
-                   minValue = 0f,
-                   maxValue = 1000f,
-                   stepIncrement = 0.01f,
+                   minValue = 1f,
+                   maxValue = 10f,
+                   stepIncrement = 0.1f,
                    scene = UI_Scene.All
                )]
-        public float TMassPreference = 50f;
+        public float targetMassRatio = 5f;
 
 
         // Missile fields.
@@ -342,6 +342,8 @@ namespace KerbalCombatSystems
         private float CalculateMass()
         {
             var decoupler = KCS.FindDecoupler(part, "Weapon", true); // todo: set to false later
+            if (decoupler == null) return 1.0f; // temp fix
+
             float totalMass = 0;
             var parts = decoupler.part.FindChildParts<Part>(true);
 

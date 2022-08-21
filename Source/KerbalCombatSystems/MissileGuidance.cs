@@ -7,6 +7,7 @@ using KSP.UI.Screens;
 using UnityEngine;
 using System.IO;
 using System.Collections;
+using static KerbalCombatSystems.KCS;
 
 namespace KerbalCombatSystems
 {
@@ -110,7 +111,7 @@ namespace KerbalCombatSystems
             relVelNrm = relVel.normalized;
             relVelmag = relVel.magnitude;
 
-            correctionRatio = Mathf.Max((relVelmag / KCS.GetMaxAcceleration(vessel)) * 1.33f, 0.1f);
+            correctionRatio = Mathf.Max((relVelmag / GetMaxAcceleration(vessel)) * 1.33f, 0.1f);
             correction = Vector3.LerpUnclamped(relVelNrm, targetVectorNormal, 1 + correctionRatio);
 
             drift = Vector3.Dot(targetVectorNormal, relVelNrm) > 0.999999
@@ -122,7 +123,10 @@ namespace KerbalCombatSystems
             fc.throttle = drift ? 0 : 1;
 
             if (targetVector.magnitude < 10)
+            {
                 engageAutopilot = false;
+                OnDestroy();
+            }
 
             fc.Drive();
 
@@ -149,7 +153,7 @@ namespace KerbalCombatSystems
         {
             KCSDebug.DestroyLine(rvLine);
             KCSDebug.DestroyLine(targetLine);
+            Destroy(fc);
         }
-
     }
 }

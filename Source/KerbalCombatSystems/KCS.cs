@@ -144,6 +144,16 @@ namespace KerbalCombatSystems
             
             return DecouplerList;
         }
+
+        public static Vector3 FromTo(Vessel v1, Vessel v2)
+        {
+             return v2.transform.position - v1.transform.position;
+        }
+
+        public static Vector3 RelVel(Vessel v1, Vessel v2)
+        {
+            return v1.GetObtVelocity() - v2.GetObtVelocity();
+        }
     }
 
     /*public class KCSShip
