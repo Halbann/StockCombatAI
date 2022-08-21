@@ -14,12 +14,11 @@ namespace KerbalCombatSystems
     {
         // Firework Targetting variables.
         public bool FireStop = false;
-       // KCSFlightController fc;
         Vessel Target;
         public Vector3 LeadVector;
 
         // Debugging line variables.
-        LineRenderer TargetLine, LeadLine;
+        LineRenderer TargetLine, LeadLine, AimLine;
 
         /// stored settings
         private int RoundBurst;
@@ -35,12 +34,12 @@ namespace KerbalCombatSystems
             BurstSpacing = part.FindModuleImplementing<ModuleWeaponController>().FWBurstSpacing;
 
             // initialise debug line renderer
-            TargetLine = KCSDebug.CreateLine(Color.magenta);
-            LeadLine = KCSDebug.CreateLine(Color.green);
+            TargetLine = KCSDebug.CreateLine(new Color(135f / 255f, 160f / 255f, 70f / 255f, 1f));
+            LeadLine = KCSDebug.CreateLine(new Color(131f / 255f, 143f / 255f, 99f / 255f, 1f));
+            AimLine = KCSDebug.CreateLine(new Color(196f / 255f, 208f / 255f, 164f / 255f, 1f));
 
             //get list of fireworks
             FindFireworks(part.parent);
-
         }
 
         private IEnumerator FireShells()
@@ -82,28 +81,37 @@ namespace KerbalCombatSystems
         {
             KCSDebug.DestroyLine(LeadLine);
             KCSDebug.DestroyLine(TargetLine);
+            KCSDebug.DestroyLine(AimLine);
         }
 
         public void LateUpdate()
         {
+            Part FiringPart = FireworkLaunchers[0].part;
+            //get where the weapon is currently pointing
+            Vector3 AimVector = KCS.GetAwayVector(FiringPart);
+            //get weapon position
+            Vector3 Origin = FiringPart.transform.position;
+
             if (Target != null)
             {
                 //recalculate LeadVector
-                LeadVector = KCS.TargetLead(Target, part.parent, 100f);
+                LeadVector = KCS.TargetLead(Target, FiringPart, 100f);
+
                 // Update debug lines.
-                KCSDebug.PlotLine(new[] { part.transform.position, Target.transform.position }, TargetLine);
-                KCSDebug.PlotLine(new[] { part.transform.position, LeadVector }, LeadLine);
+                KCSDebug.PlotLine(new[] { Origin, Target.transform.position }, TargetLine);
+                KCSDebug.PlotLine(new[] { Origin, LeadVector }, LeadLine);
+                KCSDebug.PlotLine(new[] { Origin, AimVector }, AimLine);
             }
 
-            //todo: add an appropriate aim deviation check
-            //(Vector3.AngleBetween(LeadVector, part.parent.forward()) > 1)
-            if ((true || Target == null) && FireStop == false)
+            //once aligned correctly start the firing sequence
+            if (((Vector3.Angle(Origin - AimVector, Origin - LeadVector) < 1f) || Target == null) && FireStop == false)
             {
                 FireStop = true;
-                //once aligned correctly start the firing sequence
                 StartCoroutine(FireShells());
             }
         }
+
+
 
         private void FindFireworks(Part Root)
         {

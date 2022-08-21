@@ -46,6 +46,7 @@ namespace KerbalCombatSystems
 
         [KSPField(isPersistant = true)]
         private bool DeployedSensors;
+        
 
         [KSPField(isPersistant = true,
             guiActive = true,
@@ -121,7 +122,11 @@ namespace KerbalCombatSystems
             while (true)
             {
                 CheckStatus();
-                if (!alive) StopAI();
+                if (!alive) {
+                  StopAI();
+                  FireEscapePods();
+                }
+                
                 yield return new WaitForSeconds(updateInterval);
             }
         }
@@ -473,6 +478,17 @@ namespace KerbalCombatSystems
             return weapons.FindAll(w => targetRange > w.MinMaxRange.x && targetRange < w.MinMaxRange.y);
         }
 
+        private void FireEscapePods()
+        {
+            //function to fire escape pods when the ship is dead but still holds AI units
+            List<ModuleEscapePodGuidance> PodList = vessel.FindPartModulesImplementing<ModuleEscapePodGuidance>();
+            //trigger the escape start method in every found controller
+            foreach (ModuleEscapePodGuidance EscapePod in PodList)
+            {
+                EscapePod.BeginEscape();
+            }
+        }
+
         public bool CheckStatus()
         {
             hasPropulsion = vessel.FindPartModulesImplementing<ModuleEngines>().FindAll(e => e.EngineIgnited && e.isOperational).Count > 0;
@@ -488,6 +504,7 @@ namespace KerbalCombatSystems
         void UpdateDetectionRange()
         {
             var sensors = vessel.FindPartModulesImplementing<ModuleObjectTracking>();
+
             if (sensors.Count < 1)
             {
                 maxDetectionRange = 1000;
@@ -497,7 +514,8 @@ namespace KerbalCombatSystems
                 maxDetectionRange = sensors.Max(s => s.detectionRange);
             }
 
-            if(!DeployedSensors) //&& AI is enabled
+            //if the sensors aren't deployed and the AI is running
+            if(!DeployedSensors && controllerRunning)
             {
                 foreach (ModuleObjectTracking Sensor in sensors)
                 {
@@ -509,7 +527,8 @@ namespace KerbalCombatSystems
                 DeployedSensors = true;
             }
 
-            /*if (DeployedSensors) //&& AI is disabled
+            //if the sensors are deployed and the AI isn't runnning
+            if (DeployedSensors && !controllerRunning)
             {
                 foreach (ModuleObjectTracking Sensor in sensors)
                 {
@@ -517,7 +536,7 @@ namespace KerbalCombatSystems
                     try { KCS.TryToggle(true, Sensor.part.FindModuleImplementing<ModuleAnimationGroup>()); } catch { }
                 }
                 DeployedSensors = true;
-            }*/
+            }
         }
 
         void FindTarget()

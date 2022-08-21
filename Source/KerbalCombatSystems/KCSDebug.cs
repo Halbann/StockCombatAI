@@ -39,7 +39,10 @@ namespace KerbalCombatSystems
             //create a material for the line with its unique colour
             Material LineMaterial = new Material(Shader.Find("Standard"));
             LineMaterial.color = LineColour;
+            LineMaterial.shader = Shader.Find("Unlit/Color");
+            //apply the material to the line renderer
             Line.material = LineMaterial;
+
             //make it a point
             Line.startWidth = 0.5f;
             Line.endWidth = 0f;
