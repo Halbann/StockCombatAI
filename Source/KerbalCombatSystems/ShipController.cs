@@ -123,8 +123,9 @@ namespace KerbalCombatSystems
             {
                 CheckStatus();
                 if (!alive) {
-                  StopAI();
-                  FireEscapePods();
+                    StopAI();
+                    FireEscapePods();
+                    yield break;
                 }
                 
                 yield return new WaitForSeconds(updateInterval);
