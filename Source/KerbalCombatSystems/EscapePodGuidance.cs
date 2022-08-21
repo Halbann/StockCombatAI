@@ -130,7 +130,7 @@ namespace KerbalCombatSystems
         //method to check for the existence of any ship ai
         private void CheckConnection()
         {
-            foreach (Part AIPart in AIPartList)
+            /*foreach (Part AIPart in AIPartList)
             {
                 //if part does not exist / on the same ship
                 if (AIPart.vessel == vessel) continue;
@@ -151,7 +151,7 @@ namespace KerbalCombatSystems
                 Destroy(fc);
                 //deactivate autopilot entirely
                 EngageAutopilot = false;
-            }
+            }*/
 
 
         }

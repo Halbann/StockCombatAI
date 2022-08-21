@@ -17,7 +17,7 @@ namespace KerbalCombatSystems
         private static bool addedAppLauncherButton = false;
         private static bool guiEnabled = false;
 
-        private int windowWidth = 300;
+        private int windowWidth = 350;
         private int windowHeight = 700;
         private Rect windowRect;
         private GUIStyle boxStyle;
@@ -25,8 +25,8 @@ namespace KerbalCombatSystems
         private Vector2 scrollPosition;
         GUIStyle buttonStyle;
 
-        private string[] modes = { "Weapons", "Ships" };
-        private string mode = "Weapons";
+        private string[] modes = { "Ships", "Weapons" };
+        private string mode = "Ships";
 
         public List<ModuleShipController> ships;
 
@@ -38,7 +38,7 @@ namespace KerbalCombatSystems
         {
             // Setup GUI. 
 
-            windowRect = new Rect((Screen.width / 2) - (windowWidth / 2), (Screen.height / 2) - (windowHeight / 2), 0, 0);
+            windowRect = new Rect((Screen.width * 0.85f) - (windowWidth / 2), (Screen.height / 2) - (windowHeight / 2), 0, 0);
             guiEnabled = false;
 
             AddToolbarButton();
@@ -176,7 +176,7 @@ namespace KerbalCombatSystems
         private void ShipsGUI()
         {
             GUILayout.BeginVertical(boxStyle);
-            scrollViewHeight = Mathf.Max(Mathf.Min(15 * 30, 30 * ships.Count), 5 * 30);
+            scrollViewHeight = Mathf.Max(Mathf.Min(5 * 45, 45 * ships.Count), 5 * 45);
             scrollPosition = GUILayout.BeginScrollView(scrollPosition, false, true, GUILayout.Height(scrollViewHeight), GUILayout.Width(windowWidth));
             if (ships.Count > 0)
             {
@@ -185,25 +185,30 @@ namespace KerbalCombatSystems
                 foreach (var controller in ships)
                 {
                     v = controller.vessel;
-                    string craftName = String.Format("{0}\n<color=#808080ff>Part Count: {1}, Mass: {2} t\nAlive: {3}</color>",
-                        v.GetDisplayName(), v.parts.Count, Math.Round(v.GetTotalMass(), 1), controller.alive);
+                    string targetName = controller.target == null ? "None" : controller.target.vesselName;
+                    string craftName = String.Format("{0}\n<color=#808080ff>Part Count: {1}, Mass: {2} t\nAlive: {3}, Target: {4}\nState: {5}</color>",
+                        v.GetDisplayName(), v.parts.Count, Math.Round(v.GetTotalMass(), 1), controller.alive, targetName, controller.state);
 
                     string AI = String.Format("<color={0}>AI</color>", controller.controllerRunning ? "#07D207" : "#FFFFFF");
 
                     GUILayout.BeginHorizontal();
-                    if (GUILayout.Button(craftName))
+                    if (GUILayout.Button(craftName, GUILayout.Width(windowWidth * 0.8f)))
                     {
                         FlightGlobals.ForceSetActiveVessel(v);
                         UpdateWeaponList();
                     }
+
+                    GUILayout.BeginVertical();
                     if (GUILayout.Button(AI))
                     {
                         controller.ToggleAI();
                     }
-                    if (GUILayout.Button(controller.side.ToString()))
+                    if (GUILayout.Button(String.Format("<color={1}>{0}</color>", controller.side, controller.side == Side.A ? "#0AACE3" : "#E30A0A")))
                     {
                         controller.ToggleSide();
                     }
+                    GUILayout.EndVertical();
+
                     GUILayout.EndHorizontal();
                 }
             }
@@ -267,6 +272,8 @@ namespace KerbalCombatSystems
             }
             else
             {
+                UpdateShipList();
+                UpdateWeaponList();
                 EnableGui();
             }
         }

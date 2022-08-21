@@ -44,7 +44,7 @@ namespace KerbalCombatSystems
 
         public void LateUpdate()
         {
-            if (Target != null)
+            /*if (Target != null)
             {
                 //recalculate Average Velocity over distance
                 float AvgVel = RocketVelocity(Target, Decoupler.part);
@@ -64,7 +64,7 @@ namespace KerbalCombatSystems
                 FireStop = true;
                 //once aligned correctly start the firing sequence
                 StartCoroutine(FireRocket());
-            }
+            }*/
             
         }
 
