@@ -44,6 +44,7 @@ namespace KerbalCombatSystems
 
         public void LateUpdate()
         {
+            /*
             //get where the weapon is currently pointing
             Vector3 AimVector = KCS.GetAwayVector(Decoupler.part);
             //get the aiming part
@@ -68,6 +69,7 @@ namespace KerbalCombatSystems
                 FireStop = true;
                 StartCoroutine(FireRocket());
             }
+            */
         }
 
         private IEnumerator FireRocket()

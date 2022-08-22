@@ -37,6 +37,7 @@ namespace KerbalCombatSystems
         private float lastUpdate;
         private double minSafeAltitude;
         public string state = "Init";
+        private ModuleWeaponController currentProjectile;
 
         [KSPField(isPersistant = true)]
         public Side side;
@@ -46,7 +47,6 @@ namespace KerbalCombatSystems
 
         [KSPField(isPersistant = true)]
         private bool DeployedSensors;
-        
 
         [KSPField(isPersistant = true,
             guiActive = true,
@@ -206,10 +206,31 @@ namespace KerbalCombatSystems
                     fc.throttle = 0;
                 }
             }
-            else if (false) // Able to use a projectile weapon (range, ammo)
+            else if (target != null && CanFireProjectile(target))
             {
                 // Aim at target using current projectile weapon.
 
+                //  in range with a projectile weapon that has ammo (get one)
+                //  update weapon controller every frame for 5 seconds
+                // get attitude from update
+
+                state = "Firing Projectile";
+                fc.throttle = 0;
+                currentProjectile.target = target;
+
+                // Temporarily disabled.
+                if (currentProjectile.weaponType == "Rocket")
+                {
+                    yield return new WaitForSeconds(updateInterval);
+                    yield break;
+                }
+
+                while ((Time.time - lastUpdate < updateInterval) && target != null && currentProjectile.canFire)
+                {
+                    fc.attitude = currentProjectile.Aim();
+
+                    yield return new WaitForFixedUpdate();
+                }
             }
             else if (false) // Needs to start evading an incoming missile.
             {
@@ -425,7 +446,7 @@ namespace KerbalCombatSystems
 
                 if (weapons.Count > 0)
                 {
-                    var weapon = GetPreferredWeapon(target, GetAvailableWeapons(target));
+                    var weapon = GetPreferredWeapon(target, GetAvailableMissiles(target));
 
                     if (weapon != null)
                     {
@@ -473,10 +494,23 @@ namespace KerbalCombatSystems
             return weapons.OrderBy(w => Mathf.Abs(targetMass - (w.mass * w.targetMassRatio))).First();
         }
 
-        private List<ModuleWeaponController> GetAvailableWeapons(Vessel target)
+        private List<ModuleWeaponController> GetAvailableMissiles(Vessel target)
         {
             float targetRange = FromTo(vessel, target).magnitude;
-            return weapons.FindAll(w => targetRange > w.MinMaxRange.x && targetRange < w.MinMaxRange.y);
+            return weapons.FindAll(w => w.weaponType == "Missile" && targetRange > w.MinMaxRange.x && targetRange < w.MinMaxRange.y);
+        }
+
+        private bool CanFireProjectile(Vessel target)
+        {
+            float targetRange = FromTo(vessel, target).magnitude;
+            List<ModuleWeaponController> available = weapons.FindAll(w => ModuleWeaponController.projectileTypes.Contains(w.weaponType));
+            available = available.FindAll(w => targetRange > w.MinMaxRange.x && targetRange < w.MinMaxRange.y);
+            available = available.FindAll(w => w.canFire);
+
+            if (available.Count < 1) return false;
+            currentProjectile = available.First();
+
+            return true;
         }
 
         private void FireEscapePods()

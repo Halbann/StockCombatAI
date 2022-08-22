@@ -11,7 +11,7 @@ using static KerbalCombatSystems.KCS;
 
 namespace KerbalCombatSystems
 {
-    public class ModuleMissile : PartModule
+    public class ModuleMissile : ModuleWeapon
     {
         // Missile guidance variables.
 
@@ -28,6 +28,7 @@ namespace KerbalCombatSystems
         Vessel target;
         Vessel firer;
         ModuleDecouple decoupler;
+        ModuleWeaponController controller;
 
         // Debugging line variables.
 
@@ -135,12 +136,16 @@ namespace KerbalCombatSystems
             KCSDebug.PlotLine(new[] { vessel.transform.position, vessel.transform.position + (relVelNrm * 50) }, rvLine);
         }
 
-        public void Start()
+        public override void Setup()
         {
-            target = part.FindModuleImplementing<ModuleWeaponController>().target;
-            terminalVelocity = part.FindModuleImplementing<ModuleWeaponController>().terminalVelocity;
+            controller = part.FindModuleImplementing<ModuleWeaponController>();
+            target = controller.target;
+            terminalVelocity = controller.terminalVelocity;
             firer = vessel;
+        }
 
+        public override void Fire()
+        {
             StartCoroutine(Launch());
         }
 
