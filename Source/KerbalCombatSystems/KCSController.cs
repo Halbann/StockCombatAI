@@ -1,5 +1,6 @@
 ﻿using KSP.UI.Screens;
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -29,6 +30,7 @@ namespace KerbalCombatSystems
         private string mode = "Ships";
 
         public List<ModuleShipController> ships;
+        private float lastUpdateTime;
 
         List<ModuleWeaponController> weaponList;
         ModuleWeaponController selectedWeapon;
@@ -63,12 +65,30 @@ namespace KerbalCombatSystems
 
         private void VesselEventUpdate(Vessel v)
         {
-            if (guiEnabled)
-                UpdateShipList();
+            if (Time.time - lastUpdateTime < 5)
+            {
+                lastUpdateTime = Time.time;
+                return;
+            }
+
+            lastUpdateTime = Time.time;
+            StartCoroutine(UpdateShipListCountdown());
+        }
+
+        private IEnumerator UpdateShipListCountdown()
+        {
+            while (Time.time - lastUpdateTime < 5)
+            {
+                yield return new WaitForSecondsRealtime(5);
+            }
+            
+            UpdateShipList();
         }
 
         private void UpdateShipList()
         {
+            Debug.Log("[KCS]: Updated ship list.");
+
             var loadedVessels = FlightGlobals.VesselsLoaded;
             ships = new List<ModuleShipController>();
             //ships = new List<KCSShip>();

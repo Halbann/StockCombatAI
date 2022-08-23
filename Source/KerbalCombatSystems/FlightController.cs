@@ -14,7 +14,7 @@ namespace KerbalCombatSystems
         public float throttle;
         public float throttleActual;
         private float throttleLerped;
-        public float throttleLerpRate = 0.05f;
+        public float throttleLerpRate = 1;
         public float alignmentToleranceforBurn = 5;
 
         private Vessel controllingVessel;
@@ -53,7 +53,7 @@ namespace KerbalCombatSystems
             throttleActual = facingDesiredRotation ? throttle : 0;
 
             // Move actual throttle towards throttle target gradually.
-            throttleLerped = Mathf.MoveTowards(throttleLerped, throttleActual, 1 * Time.fixedDeltaTime);
+            throttleLerped = Mathf.MoveTowards(throttleLerped, throttleActual, throttleLerpRate * Time.fixedDeltaTime);
 
             v.ctrlState.mainThrottle = throttleLerped;
             if (FlightGlobals.ActiveVessel != null && v == FlightGlobals.ActiveVessel)

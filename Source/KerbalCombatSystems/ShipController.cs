@@ -63,6 +63,20 @@ namespace KerbalCombatSystems
             )]
         public float manoeuvringSpeed = 100f;
 
+        [KSPField(isPersistant = true,
+            guiActive = true,
+            guiActiveEditor = true,
+            guiName = "Firing Speed",
+            guiUnits = "m/s",
+            groupName = shipControllerGroupName,
+            groupDisplayName = shipControllerGroupName),
+            UI_FloatRange(
+                minValue = 1f,
+                maxValue = 100f,
+                stepIncrement = 10f,
+                scene = UI_Scene.All
+            )]
+        public float firingSpeed = 20f;
 
         #region Controller State & Start/Update
 
@@ -105,6 +119,8 @@ namespace KerbalCombatSystems
             if (HighLogic.LoadedSceneIsFlight)
             {
                 fc = part.gameObject.AddComponent<KCSFlightController>();
+                fc.alignmentToleranceforBurn = 7.5f;
+                fc.throttleLerpRate = 3;
                 controller = FindObjectOfType<KCSController>();
             }
         }
@@ -225,7 +241,7 @@ namespace KerbalCombatSystems
                     yield break;
                 }
 
-                while ((Time.time - lastUpdate < updateInterval) && target != null && currentProjectile.canFire)
+                while (UnderTimeLimit() && target != null && currentProjectile.canFire)
                 {
                     fc.attitude = currentProjectile.Aim();
 
@@ -334,6 +350,7 @@ namespace KerbalCombatSystems
                 float minRange = currentWeapon.MinMaxRange.x;
                 float maxRange = currentWeapon.MinMaxRange.y;
                 float currentRange = VesselDistance(vessel, target);
+                bool complete = false;
 
                 if (currentRange < minRange)
                 {
@@ -344,25 +361,31 @@ namespace KerbalCombatSystems
 
                     fc.throttle = 1;
 
-                    while ((Time.time - lastUpdate < updateInterval) && target != null)
+                    while (UnderTimeLimit() && target != null && !complete)
                     {
                         prograde = vessel.GetObtVelocity().normalized;
                         fc.attitude = prograde * (targetIsPrograde ? -1 : 1);
                         fc.throttle = Vector3.Dot(RelVel(vessel, target), fc.attitude) < manoeuvringSpeed ? 1 : 0;
+                        complete = FromTo(vessel, target).magnitude > minRange;
 
                         yield return new WaitForFixedUpdate();
                     }
                 }
                 else if (currentRange > maxRange)
                 {
-                    Vector3 relVel, targetVec;
+                    Vector3 relVel, targetVec, rotatedVector;
                     float angle;
                     float maxAcceleration = GetMaxAcceleration(vessel);
 
-                    while ((Time.time - lastUpdate < updateInterval) && target != null)
+                    while (UnderTimeLimit() && target != null && !complete)
                     {
                         relVel = RelVel(vessel, target);
+
                         targetVec = FromTo(vessel, target).normalized;
+                        rotatedVector = Vector3.ProjectOnPlane(relVel, targetVec).normalized;
+                        targetVec = (target.transform.position + (rotatedVector * minRange)) - vessel.transform.position;
+                        targetVec = targetVec.normalized;
+
                         angle = Vector3.Angle(relVel.normalized, targetVec);
 
                         if (relVel.magnitude < maxAcceleration * 2)
@@ -385,6 +408,7 @@ namespace KerbalCombatSystems
                         }
 
                         fc.throttle = Vector3.Dot(RelVel(vessel, target), fc.attitude) < manoeuvringSpeed ? 1 : 0;
+                        complete = FromTo(vessel, target).magnitude < maxRange;
 
                         yield return new WaitForFixedUpdate();
                     }
@@ -394,15 +418,18 @@ namespace KerbalCombatSystems
                     Vector3 relVel = RelVel(vessel, target);
                     float maxAcceleration = GetMaxAcceleration(vessel);
 
-                    if (relVel.magnitude > 5 * GetMaxAcceleration(vessel))
+                    //if (relVel.magnitude > 5 * GetMaxAcceleration(vessel))
+                    if (relVel.magnitude > firingSpeed)
                     {
                         state = "Manoeuvring (Kill Velocity)";
 
-                        while ((Time.time - lastUpdate < updateInterval) && target != null)
+                        while (UnderTimeLimit() && target != null && !complete)
                         {
                             relVel = RelVel(vessel, target);
                             fc.attitude = relVel.normalized * -1;
-                            fc.throttle = relVel.magnitude > maxAcceleration ? 1 : 0;
+                            //complete = relVel.magnitude < maxAcceleration;
+                            complete = relVel.magnitude < firingSpeed / 2;
+                            fc.throttle = !complete ? 1 : 0;
 
                             yield return new WaitForFixedUpdate();
                         }
@@ -414,7 +441,7 @@ namespace KerbalCombatSystems
                         fc.throttle = 0;
                         fc.attitude = FromTo(vessel, target).normalized;
 
-                        while ((Time.time - lastUpdate < updateInterval) && target != null)
+                        while (UnderTimeLimit() && target != null)
                         {
                             fc.attitude = FromTo(vessel, target).normalized;
 
@@ -502,6 +529,8 @@ namespace KerbalCombatSystems
 
         private bool CanFireProjectile(Vessel target)
         {
+            if (RelVel(vessel, target).magnitude > firingSpeed) return false;
+
             float targetRange = FromTo(vessel, target).magnitude;
             List<ModuleWeaponController> available = weapons.FindAll(w => ModuleWeaponController.projectileTypes.Contains(w.weaponType));
             available = available.FindAll(w => targetRange > w.MinMaxRange.x && targetRange < w.MinMaxRange.y);
@@ -527,7 +556,7 @@ namespace KerbalCombatSystems
         public bool CheckStatus()
         {
             hasPropulsion = vessel.FindPartModulesImplementing<ModuleEngines>().FindAll(e => e.EngineIgnited && e.isOperational).Count > 0;
-            hasWeapons = vessel.FindPartModulesImplementing<ModuleWeaponController>().Count > 0;
+            hasWeapons = vessel.FindPartModulesImplementing<ModuleWeaponController>().FindAll(w => w.canFire).Count > 0;
             //bool control = vessel.maxControlLevel != Vessel.ControlLevel.NONE && vessel.angularVelocity.magnitude < 20;
             bool control = vessel.isCommandable && vessel.angularVelocity.magnitude < 20;
             bool dead = (!hasPropulsion && !hasWeapons) || !control;
@@ -617,6 +646,11 @@ namespace KerbalCombatSystems
             double maxTerrainHeight = pqs.radiusMax - pqs.radius;
             minSafeAltitude = Math.Max(maxTerrainHeight, body.atmosphereDepth);
             return o.PeA < minSafeAltitude;
+        }
+
+        private bool UnderTimeLimit()
+        {
+            return Time.time - lastUpdate < updateInterval;
         }
 
         #endregion
