@@ -16,10 +16,16 @@ namespace KerbalCombatSystems
         private float throttleLerped;
         public float throttleLerpRate = 1;
         public float alignmentToleranceforBurn = 5;
+
         private Vector3 attitudeLerped;
         private float error;
         private float angleLerp;
         private float lerpRate;
+
+        public float RCSActual;
+        private float RCSLerped;
+        public float RCSLerpRate = 2;
+        public Vector3 RCSVector = new Vector3 (0f,0f,0f);
 
         private Vessel controllingVessel;
 
@@ -46,6 +52,7 @@ namespace KerbalCombatSystems
 
             UpdateSAS(controllingVessel);
             UpdateThrottle(controllingVessel);
+            UpdateRCS(controllingVessel);
             // todo: implement own PID as alternative.
         }
 
@@ -63,6 +70,20 @@ namespace KerbalCombatSystems
             v.ctrlState.mainThrottle = throttleLerped;
             if (FlightGlobals.ActiveVessel != null && v == FlightGlobals.ActiveVessel)
                 FlightInputHandler.state.mainThrottle = throttleLerped; //so that the on-screen throttle gauge reflects the autopilot throttle
+        }
+
+        void UpdateRCS (Vessel v)
+        {
+            if (v == null) return;
+
+            RCSActual = 0;
+            RCSLerped = Mathf.MoveTowards(RCSLerped, RCSActual, RCSLerpRate * Time.fixedDeltaTime);
+
+            // Move actual translation towards translation target gradually.
+            
+            v.ctrlState.X = RCSVector.x * RCSLerped;
+            v.ctrlState.Y = RCSVector.y * RCSLerped;
+            v.ctrlState.Z = RCSVector.z * RCSLerped;
         }
 
         void UpdateSAS(Vessel v)

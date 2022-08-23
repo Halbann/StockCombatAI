@@ -123,6 +123,8 @@ namespace KerbalCombatSystems
             //fc.alignmentToleranceforBurn = relVelmag > 50 ? 5 : 20;
             fc.throttle = drift ? 0 : 1;
 
+            fc.RCSVector = targetVector;
+
             if (targetVector.magnitude < 10)
             {
                 engageAutopilot = false;
