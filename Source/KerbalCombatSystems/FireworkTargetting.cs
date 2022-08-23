@@ -98,6 +98,10 @@ namespace KerbalCombatSystems
                 ModulePartFirework Launcher = FireworkLaunchers.Last();
                 Launcher.LaunchShell();
 
+                // Destroy FX controller to prevent lag from bursts. Trails still work.
+                var fx = Launcher.fxController;
+                Destroy(fx);
+
                 //clear expended launchers from the list
                 if (Launcher.fireworkShots < 1)
                 {
