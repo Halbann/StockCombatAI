@@ -52,26 +52,27 @@ namespace KerbalCombatSystems
         public override Vector3 Aim()
         {
             FiringPart = FireworkLaunchers[0].part;
-            AimVector = GetAwayVector(FiringPart);
-            Origin = FiringPart.transform.position;
+            //AimVector = GetAwayVector(FiringPart);
+            AimVector = FiringPart.transform.up;
 
             if (Target != null)
             {
                 LeadVector = TargetLead(Target, FiringPart, 100f);
 
                 // Update debug lines.
+                Origin = FiringPart.transform.position;
                 KCSDebug.PlotLine(new[] { Origin, Target.transform.position }, TargetLine);
-                KCSDebug.PlotLine(new[] { Origin, LeadVector }, LeadLine);
-                KCSDebug.PlotLine(new[] { Origin, AimVector }, AimLine);
+                KCSDebug.PlotLine(new[] { Origin, Origin + (LeadVector * 15)}, LeadLine);
+                KCSDebug.PlotLine(new[] { Origin, Origin + (AimVector * 15)}, AimLine);
             }
 
             //once aligned correctly start the firing sequence
-            if (!firing && ((Vector3.Angle(Origin - AimVector, Origin - LeadVector) < 1f) || Target == null))
+            if (!firing && ((Vector3.Angle(AimVector, LeadVector) < 1f) || Target == null))
             {
                 Fire();
             }
 
-            return LeadVector.normalized;
+            return LeadVector;
         }
 
         public override void Fire()
