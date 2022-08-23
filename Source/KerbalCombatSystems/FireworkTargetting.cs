@@ -51,6 +51,7 @@ namespace KerbalCombatSystems
 
         public override Vector3 Aim()
         {
+<<<<<<< Updated upstream
             FiringPart = FireworkLaunchers[0].part;
             //AimVector = GetAwayVector(FiringPart);
             AimVector = FiringPart.transform.up;
@@ -59,6 +60,17 @@ namespace KerbalCombatSystems
             if (Target != null)
             {
                 LeadVector = TargetLead(Target, FiringPart, 100f).normalized;
+=======
+            //if there is a ship target run the appropriate aiming angle calculations
+            if (Target != null)
+            {
+                //get the firework launcher to aim with and where it is currently facing
+                FiringPart = FireworkLaunchers[0].part;
+                AimVector = GetAwayVector(FiringPart);
+                Origin = FiringPart.transform.position;
+
+                LeadVector = TargetLead(Target, FiringPart, 100f);
+>>>>>>> Stashed changes
 
                 // Update debug lines.
                 //KCSDebug.PlotLine(new[] { Origin, Target.transform.position }, TargetLine);
@@ -120,15 +132,16 @@ namespace KerbalCombatSystems
             childParts.Add(part.parent);
 
             FireworkLaunchers = new List<ModulePartFirework>();
-            ModulePartFirework firework;
+            ModulePartFirework Firework;
 
             foreach (Part CurrentPart in childParts)
             {
-                firework = CurrentPart.GetComponent<ModulePartFirework>();
-                if (firework == null) continue;
+                Firework = CurrentPart.GetComponent<ModulePartFirework>();
+                if (Firework == null) continue;
 
-                FireworkLaunchers.Add(firework);
-                firework.shellVelocity = 100f;
+                FireworkLaunchers.Add(Firework);
+                Firework.variationOnShellDirection = false;
+                Firework.shellVelocity = 100f;
             }
         }
 

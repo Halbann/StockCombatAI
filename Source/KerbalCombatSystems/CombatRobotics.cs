@@ -45,7 +45,7 @@ namespace KerbalCombatSystems
             Debug.Log("[KCS]: Resetting KAL-500 Position");
             //trigger robotics to start of sequence(trigger Passive)
             KAL.SetDirection(Forward);
-            //Reverse doens't work as advertised so setting as forward then reversing
+            //Reverse doesn't work as advertised so setting as forward then reversing
             KAL.ToggleDirection();
             KAL.SequencePlay();
         }

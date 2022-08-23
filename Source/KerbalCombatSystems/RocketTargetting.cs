@@ -7,57 +7,65 @@ using KSP.UI.Screens;
 using UnityEngine;
 using System.IO;
 using System.Collections;
+using static KerbalCombatSystems.KCS;
+
 
 namespace KerbalCombatSystems
 {
-    public class ModuleRocket : PartModule
+    public class ModuleRocket : ModuleWeapon
     {
         // Targetting variables.
-        public bool FireStop = false;
+        public bool Firing = false;
         Vessel Target;
         public Vector3 LeadVector;
-       
+        private float AvgVel = 100f; //rough first guess
+
         // Debugging line variables.
         LineRenderer TargetLine, LeadLine, AimLine;
-        
+
         //rocket decoupler variables
         private List<ModuleDecouple> RocketBases;
         ModuleDecouple Decoupler;
-        
-        
 
-        public void Start()
+        Vector3 AimVector;
+        Vector3 Origin;
+
+
+
+        public override void Setup()
         {
             /*
             Target = part.FindModuleImplementing<ModuleWeaponController>().target;
 
             // initialise debug line renderer
-            TargetLine = KCSDebug.CreateLine(new Color(209f / 255f, 77f / 255f, 81f / 255f, 1f)); 
+            TargetLine = KCSDebug.CreateLine(new Color(209f / 255f, 77f / 255f, 81f / 255f, 1f));
             LeadLine = KCSDebug.CreateLine(new Color(167f / 255f, 103f / 255f, 104f / 255f, 1f));
             AimLine = KCSDebug.CreateLine(new Color(232f / 255f, 167f / 255f, 169f / 255f, 1f));
 
             //find a decoupler associated with the weapon
-            RocketBases = KCS.FindDecouplerChildren(part.parent, "Weapon", false);
+            RocketBases = FindDecouplerChildren(part.parent, "Weapon", false);
             Decoupler = RocketBases[RocketBases.Count() - 1];
+<<<<<<< Updated upstream
             */
 
 
+=======
+>>>>>>> Stashed changes
         }
 
-        public void LateUpdate()
+        public override Vector3 Aim()
         {
-            /*
-            //get where the weapon is currently pointing
-            Vector3 AimVector = KCS.GetAwayVector(Decoupler.part);
-            //get the aiming part
-            Vector3 Origin = Decoupler.part.transform.position;
-
+            //if there is a ship target run the appropriate aiming angle calculations
             if (Target != null)
             {
-                //recalculate Average Velocity over distance
-                float AvgVel = RocketVelocity(Target, Decoupler.part);
-                //recalculate LeadVector
-                LeadVector = KCS.TargetLead(Target, Decoupler.part, AvgVel);
+                //get where the weapon is currently pointing
+                Origin = Decoupler.part.transform.position;
+                AimVector = GetAwayVector(Decoupler.part);
+
+                //recalculate LeadVector due to change in average rocket velocity
+                LeadVector = TargetLead(Target, Decoupler.part, AvgVel);
+                //recalculate Average Velocity over distance due to lead recalculation
+                AvgVel = RocketVelocity(LeadVector, Decoupler.part);
 
                 // Update debug lines.
                 KCSDebug.PlotLine(new[] { Origin, Target.transform.position }, TargetLine);
@@ -66,12 +74,18 @@ namespace KerbalCombatSystems
             }
 
             //once aligned correctly start the firing sequence
-            if (((Vector3.Angle(Origin - AimVector, Origin - LeadVector) < 1f) || Target == null) && FireStop == false)
+            if (((Vector3.Angle(Origin - AimVector, Origin - LeadVector) < 1f) || Target == null) && !Firing)
             {
-                FireStop = true;
-                StartCoroutine(FireRocket());
+                Fire();
             }
-            */
+
+            return LeadVector.normalized;
+        }
+
+        public override void Fire()
+        {
+            Firing = true;
+            StartCoroutine(FireRocket());
         }
 
         private IEnumerator FireRocket()
@@ -90,23 +104,56 @@ namespace KerbalCombatSystems
                 Module.Activate();
                 Module.throttleLocked = true;
             }
-            
+
             //wait a frame before decoupling to ensure engine activation(may not be required)
             yield return null;
             Decoupler.Decouple();
-            //delete the active module at the end.
-            part.RemoveModule(part.GetComponent<ModuleRocket>());
+
+            Firing = false;
         }
 
-        private float RocketVelocity(Vessel Target, Part RocketBase)
+        private float RocketVelocity(Vector3 TargetPos, Part RocketBase)
         {
-            //get distance
+            //get distance expected to travel
+            float FlightDistance = Vector3.Distance(TargetPos, RocketBase.transform.position);
+            //get child parts for weight and thrust
+            List<Part> RocketPartList = RocketBase.FindChildParts<Part>(true).ToList();
+            //get child engines
+            List<Part> RocketEngineList = RocketBase.FindChildParts<Part>(true).ToList();
+
+            //run through all child parts of the decoupler
+            foreach (Part CurrentPart in RocketPartList)
+            {
+                if (CurrentPart.GetComponent<ModuleEngines>() != null)
+                {
+                    ModuleEngines Engine = CurrentPart.GetComponent<ModuleEngines>();
+                    Debug.Log("thrust: " + Engine.maxThrust + "/nisp: " + Engine.realIsp);
+                }
+
+                foreach (PartResource resource in part.Resources)
+                {
+                    Debug.Log(resource + " quantity: " + resource.amount);
+                }
+
+
+                if (CurrentPart.GetComponent<ModuleEngines>() != null)
+                {
+
+                }
+
+                CurrentPart.GetResourceMass();
+            }
+
 
             //calculate 
-
+            /*Need to get average velocity in a given distance. To benefit the engines are always running on full.
+            Knowing fuel mass, engine isp, and capped thrust the total vessel mass over time can be got(hopefully without iteration)
+            Knowing mass over time we can then get twr and from that the acceleration
+            I really want to avoid second by second iterative because that's not very accurate 
+            Once you yet the average velocity then that gets passed to the lead vector, the lead distance changes the given distance and so that repeats until fire*/
             return 55;
         }
-        
+
         public void OnDestroy()
         {
             /*
@@ -115,5 +162,6 @@ namespace KerbalCombatSystems
             KCSDebug.DestroyLine(AimLine);
             */
         }
+        
     }
 }

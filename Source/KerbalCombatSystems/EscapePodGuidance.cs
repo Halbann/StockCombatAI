@@ -7,6 +7,7 @@ using KSP.UI.Screens;
 using UnityEngine;
 using System.IO;
 using System.Collections;
+using static KerbalCombatSystems.KCS;
 
 namespace KerbalCombatSystems
 {
@@ -21,9 +22,9 @@ namespace KerbalCombatSystems
         //universal flight controller and toggle
         KCSFlightController fc;
         private bool EngageAutopilot;
-        bool Escaped = false;
+        private bool Escaped = false;
 
-        ModuleDecouple decoupler;
+        ModuleDecouple Decoupler;
         //the ship being escaped from
         private Vessel Parent;
         //target burn direction
@@ -38,17 +39,19 @@ namespace KerbalCombatSystems
         public void BeginEscape()
         {
             //find decoupler
-            decoupler = KCS.FindDecoupler(part, "Escape Pod", false);
+            Decoupler = FindDecoupler(part, "Escape Pod", false);
             Debug.Log("[KCS]: Escaping from " + Parent.GetName());
             StartCoroutine(RunEscapeSequence());
         }
  
         private IEnumerator RunEscapeSequence()
         {
+            //todo: pull all crew, infighting should equalize
+
             // try to pop decoupler
             try
             {
-                decoupler.Decouple();
+                Decoupler.Decouple();
             }
             catch
             {
@@ -57,6 +60,15 @@ namespace KerbalCombatSystems
             }
 
             yield return null; // wait a frame
+
+            //get a list of onboard control points once seperated and control from the first found
+            List<ModuleCommand> ProbeCores = vessel.FindPartModulesImplementing<ModuleCommand>();
+            if (ProbeCores.Count != 0)
+            {
+                ModuleCommand ProbeCore = ProbeCores[0];
+                ProbeCore.ChangeControlPoint();
+            }
+
 
             if (vessel.GetObtVelocity().magnitude > vessel.VesselDeltaV.TotalDeltaVActual/2f)
             {
@@ -96,14 +108,14 @@ namespace KerbalCombatSystems
 
             //create the appropriate lists
             AIPartList = new List<Part>();
-            List<ModuleShipController> AIModules;
+            List<ModuleShipController> AIModulesList;
 
             //designate ship that's being escaped from
             Parent = vessel;
 
             //find ai parts and add to list
-            AIModules = vessel.FindPartModulesImplementing<ModuleShipController>();
-            foreach (var ModuleShipController in AIModules)
+            AIModulesList = vessel.FindPartModulesImplementing<ModuleShipController>();
+            foreach (var ModuleShipController in AIModulesList)
             {
                 AIPartList.Add(ModuleShipController.part);
             }
@@ -119,6 +131,7 @@ namespace KerbalCombatSystems
                 fc.alignmentToleranceforBurn = 20;
                 fc.throttle = 1;
                 fc.Drive();
+                FuelCheck();
             }
 
             if (!Escaped)
@@ -127,25 +140,29 @@ namespace KerbalCombatSystems
             }
         }
 
-        //method to check for the existence of any ship ai
+        //method to check for the existence of any ship ai onboard
         private void CheckConnection()
         {
-            /*
             foreach (Part AIPart in AIPartList)
             {
+                //if part itself is destroyed
+                if (AIPart == null) continue;
                 //if part does not exist / on the same ship
                 if (AIPart.vessel == vessel) continue;
                 AIPartList.Remove(AIPart);
             }
             
             //if the part list is now empty begin the escape sequence
-            if (AIPartList.Count().Equals(0)) 
+            if (AIPartList.Count == 0) 
             {
                 Escaped = true;
                 BeginEscape();
             }
+        }
 
-            // todo: might need to use this to prevent errors: vessel.GetDeltaV()
+        //method to disable the autopilot once out of fuel
+        private void FuelCheck()
+        {
             if (vessel.VesselDeltaV.TotalDeltaVActual == 0)
             {
                 //delete the active module at the end.
@@ -153,8 +170,6 @@ namespace KerbalCombatSystems
                 //deactivate autopilot entirely
                 EngageAutopilot = false;
             }
-            */
-
         }
     }
 }
