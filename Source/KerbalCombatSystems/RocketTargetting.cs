@@ -28,6 +28,7 @@ namespace KerbalCombatSystems
 
         public void Start()
         {
+            /*
             Target = part.FindModuleImplementing<ModuleWeaponController>().target;
 
             // initialise debug line renderer
@@ -38,6 +39,7 @@ namespace KerbalCombatSystems
             //find a decoupler associated with the weapon
             RocketBases = KCS.FindDecouplerChildren(part.parent, "Weapon", false);
             Decoupler = RocketBases[RocketBases.Count() - 1];
+            */
 
 
         }
@@ -107,9 +109,11 @@ namespace KerbalCombatSystems
         
         public void OnDestroy()
         {
+            /*
             KCSDebug.DestroyLine(LeadLine);
             KCSDebug.DestroyLine(TargetLine);
             KCSDebug.DestroyLine(AimLine);
+            */
         }
     }
 }

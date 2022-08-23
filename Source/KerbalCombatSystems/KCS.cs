@@ -79,7 +79,7 @@ namespace KerbalCombatSystems
             float ForwardDelta = 2f * c / (Mathf.Sqrt(desc) - b);
 
             Vector3 leadPosition = Target.transform.position + RelVel * ForwardDelta;
-            return (leadPosition - Firer.transform.position).normalized;
+            return leadPosition - Firer.transform.position;
         }
 
         
