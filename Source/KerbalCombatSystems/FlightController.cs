@@ -14,8 +14,12 @@ namespace KerbalCombatSystems
         public float throttle;
         public float throttleActual;
         private float throttleLerped;
-        public float throttleLerpRate = 0.05f;
+        public float throttleLerpRate = 1;
         public float alignmentToleranceforBurn = 5;
+        private Vector3 attitudeLerped;
+        private float error;
+        private float angleLerp;
+        private float lerpRate;
 
         private Vessel controllingVessel;
 
@@ -38,6 +42,8 @@ namespace KerbalCombatSystems
 
         public void Drive()
         {
+            error = Vector3.Angle(controllingVessel.ReferenceTransform.up, attitude); 
+
             UpdateSAS(controllingVessel);
             UpdateThrottle(controllingVessel);
             // todo: implement own PID as alternative.
@@ -47,13 +53,12 @@ namespace KerbalCombatSystems
         {
             //if (throttle == 0 && throttleLerped == 0) return;
             if (v == null) return;
-            var af = Vector3.Angle(v.ReferenceTransform.up, attitude); 
 
-            facingDesiredRotation = af < alignmentToleranceforBurn;
+            facingDesiredRotation = error < alignmentToleranceforBurn;
             throttleActual = facingDesiredRotation ? throttle : 0;
 
             // Move actual throttle towards throttle target gradually.
-            throttleLerped = Mathf.MoveTowards(throttleLerped, throttleActual, 1 * Time.fixedDeltaTime);
+            throttleLerped = Mathf.MoveTowards(throttleLerped, throttleActual, throttleLerpRate * Time.fixedDeltaTime);
 
             v.ctrlState.mainThrottle = throttleLerped;
             if (FlightGlobals.ActiveVessel != null && v == FlightGlobals.ActiveVessel)
@@ -78,12 +83,17 @@ namespace KerbalCombatSystems
                 ap.SetMode(VesselAutopilot.AutopilotMode.Normal);
             }
 
-            ap.SAS.SetTargetOrientation(attitude, false);
+            // Lerp attitude while burning to reduce instability.
+            angleLerp = Mathf.InverseLerp(0, 10, error);
+            lerpRate = Mathf.Lerp(1, 10, angleLerp);
+            attitudeLerped = Vector3.Lerp(attitudeLerped, attitude, lerpRate * Time.deltaTime);
+
+            ap.SAS.SetTargetOrientation(throttleLerped > 0 ? attitudeLerped : attitude, false);
 
             // Update debug lines.
             Vector3 origin = v.ReferenceTransform.position;
             KCSDebug.PlotLine(new[]{ origin, origin + v.ReferenceTransform.up * 50}, currentVectorLine);
-            KCSDebug.PlotLine(new[]{ origin, origin + attitude * 50}, targetVectorLine);
+            KCSDebug.PlotLine(new[]{ origin, origin + attitudeLerped * 50}, targetVectorLine);
         }
     }
 }

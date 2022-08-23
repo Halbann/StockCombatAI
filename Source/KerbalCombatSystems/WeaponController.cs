@@ -12,8 +12,6 @@ namespace KerbalCombatSystems
 {
     public class ModuleWeaponController : PartModule
     {
-        // User parameters changed via UI.
-
         const string weaponGroupName = "Weapon Settings";
         const string missileGroupName = "Missile Guidance";
         const string rocketGroupName = "Rocket Settings";
@@ -21,8 +19,24 @@ namespace KerbalCombatSystems
         const string MCGroupName = "Mass Cannon Settings";
         const string BombGroupName = "Bomb Settings";
 
+        // Generic weapon variables.
 
-        // Generic weapon fields.
+        public Vessel target;
+        public float mass;
+
+        [KSPField(isPersistant = true)]
+        public bool canFire = true;
+
+        [KSPField(isPersistant = true)]
+        public string weaponType;
+
+        public static string[] types = { "Missile", "Rocket", "Firework", "Bomb", "MassCannon" };
+        public static string[] massTypes = { "Missile", "Rocket", "Bomb" };
+        public static string[] projectileTypes = { "Rocket", "Firework" };
+
+        ModuleWeapon typeModule;
+
+        #region Generic weapon fields
 
         [KSPField(isPersistant = true,
             guiActive = true,
@@ -56,8 +70,9 @@ namespace KerbalCombatSystems
                )]
         public float targetMassRatio = 5f;
 
+        #endregion
 
-        // Missile fields.
+        #region Missile fields
 
         [KSPField(isPersistant = true,
               guiActive = true,
@@ -100,9 +115,9 @@ namespace KerbalCombatSystems
         )]
         public bool MatchTargetVelocity = true;
 
-        // Rocket fields.
+        #endregion
 
-        // Bomb fields.
+        #region Bomb fields
 
         [KSPField(isPersistant = true,
               guiActive = true,
@@ -134,8 +149,9 @@ namespace KerbalCombatSystems
               )]
         public float BombSafeDistance = 200f;
 
+        #endregion
 
-        // Firework fields.
+        #region Firework fields
 
         [KSPField(isPersistant = true,
               guiActive = true,
@@ -180,6 +196,9 @@ namespace KerbalCombatSystems
             )]
         public bool FWUseAsCIWS = false;
 
+        #endregion
+
+        #region Mass Cannon fields
 
         // Mass cannon fields.
 
@@ -212,18 +231,10 @@ namespace KerbalCombatSystems
                   scene = UI_Scene.All
               )]
         public float MCFireTime = 1f;
-        
 
-        // Generic weapon variables.
+        #endregion
 
-        public Vessel target;
-        public float mass;
-
-        [KSPField(isPersistant = true)]
-        public string weaponType;
-
-        string[] types = { "Missile", "Rocket", "Firework", "Bomb", "Mass Cannon" }; 
-
+        #region Weapon Code
 
         // Set persistent weapon code in editor and flight.
 
@@ -268,99 +279,9 @@ namespace KerbalCombatSystems
             UpdateWeaponCodeUI();
         }
 
-        // 'Fire' button.
+        #endregion
 
-        [KSPEvent(guiActive = true,
-                  guiActiveEditor = false,
-                  guiName = "Fire",
-                  groupName = weaponGroupName,
-                  groupDisplayName = weaponGroupName)]
-        public void Fire()
-        {
-            if (target == null)
-            {
-                if (vessel.targetObject == null) return;
-                target = vessel.targetObject.GetVessel();
-            }
-
-            // Delete after above is uncommented.
-            if (target == null && vessel.targetObject != null)
-            {
-                target = vessel.targetObject.GetVessel();
-            }
-
-            Debug.Log($"[KCS]: " + vessel.GetName() + " firing " + weaponType);
-
-            string moduleName;
-            
-            switch (weaponType)
-            {
-                case "Missile":
-                    moduleName = "ModuleMissile";
-                    break;
-                case "Rocket":
-                    moduleName = "ModuleRocket";
-                    break;
-                case "Firework":
-                    moduleName = "ModuleFirework";
-                    break;
-                case "Mass Cannon":
-                    moduleName = "ModuleMassCannon";
-                    break;
-                case "Bomb":
-                    moduleName = "ModuleBomb";
-                    break;
-                default:
-                    Debug.Log($"[KCS]: Couldn't find a module for {weaponType}.");
-                    return;
-            }
-
-            part.AddModule(moduleName);
-        }
-
-        public override void OnStart(StartState state)
-        {
-            UpdateWeaponCodeUI();
-
-            if (types.IndexOf(weaponType) == -1)
-            {
-                weaponType = part.variants.SelectedVariant.Name;
-            }
-
-            if (HighLogic.LoadedSceneIsEditor)
-            {
-                GameEvents.onEditorVariantApplied.Add(OnVariantApplied);
-            }
-
-            UpdateUI();
-
-            String[] massTypes = {"Missile", "Rocket", "Bomb"};
-            if (HighLogic.LoadedSceneIsFlight && massTypes.Contains(weaponType)) 
-                CalculateMass();
-        }
-
-        private float CalculateMass()
-        {
-            var decoupler = KCS.FindDecoupler(part, "Weapon", true); // todo: set to false later
-            if (decoupler == null) return 1.0f; // temp fix
-
-            float totalMass = 0;
-            var parts = decoupler.part.FindChildParts<Part>(true);
-
-            foreach (Part part in parts)
-            {
-                if (part.partInfo.category == PartCategories.Coupling) break;
-                totalMass = totalMass + part.mass + part.GetResourceMass();
-            }
-
-            mass = (float)Math.Round(totalMass, 2);
-            return totalMass;
-        }
-
-        private void OnDestroy()
-        {
-            GameEvents.onEditorVariantApplied.Remove(OnVariantApplied);
-        }
+        #region Type Switching
 
         private void OnVariantApplied(Part appliedPart, PartVariant variant)
         {
@@ -369,6 +290,7 @@ namespace KerbalCombatSystems
             weaponType = variant.Name;
             UpdateUI();
         }
+
         private void UpdateUI()
         {
             //Missile Fields
@@ -412,5 +334,114 @@ namespace KerbalCombatSystems
             }
             window.Dispose();
         }
+
+        private void OnDestroy()
+        {
+            GameEvents.onEditorVariantApplied.Remove(OnVariantApplied);
+        }
+
+        #endregion
+
+        public override void OnStart(StartState state)
+        {
+            UpdateWeaponCodeUI();
+
+            if (types.IndexOf(weaponType) == -1)
+                weaponType = part.variants.SelectedVariant.Name;
+
+            if (HighLogic.LoadedSceneIsEditor)
+                GameEvents.onEditorVariantApplied.Add(OnVariantApplied);
+
+            UpdateUI();
+
+            if (HighLogic.LoadedSceneIsFlight && massTypes.Contains(weaponType)) 
+                CalculateMass();
+        }
+
+        private float CalculateMass()
+        {
+            var decoupler = KCS.FindDecoupler(part, "Weapon", true); // todo: set to false later
+            if (decoupler == null) return 1.0f; // temp fix
+
+            float totalMass = 0;
+            var parts = decoupler.part.FindChildParts<Part>(true);
+
+            foreach (Part part in parts)
+            {
+                if (part.partInfo.category == PartCategories.Coupling) break;
+                totalMass = totalMass + part.mass + part.GetResourceMass();
+            }
+
+            mass = (float)Math.Round(totalMass, 2);
+            return totalMass;
+        }
+
+        public void Setup()
+        {
+            Debug.Log($"[KCS]: " + vessel.GetName() + " initialising " + weaponType);
+
+            string moduleName;
+            switch (weaponType)
+            {
+                case "Missile":
+                    moduleName = "ModuleMissile";
+                    break;
+                case "Rocket":
+                    moduleName = "ModuleRocket";
+                    break;
+                case "Firework":
+                    moduleName = "ModuleFirework";
+                    break;
+                case "MassCannon":
+                    moduleName = "ModuleMassCannon";
+                    break;
+                case "Bomb":
+                    moduleName = "ModuleBomb";
+                    break;
+                default:
+                    Debug.Log($"[KCS]: Couldn't find a module for {weaponType}.");
+                    return;
+            }
+
+            if (part.GetComponent(moduleName) == null)
+                typeModule = (ModuleWeapon)part.AddModule(moduleName);
+
+            typeModule.Setup();
+        }
+
+        public Vector3 Aim()
+        {
+            if (typeModule == null)
+                Setup();
+
+            return typeModule.Aim();
+        }
+
+        // 'Fire' button.
+
+        [KSPEvent(guiActive = true,
+                  guiActiveEditor = false,
+                  guiName = "Fire",
+                  groupName = weaponGroupName,
+                  groupDisplayName = weaponGroupName)]
+        public void Fire()
+        {
+            if (typeModule == null)
+                Setup();
+
+            typeModule.Fire();
+        }
+    }
+
+    public class ModuleWeapon : PartModule
+    {
+        virtual public void Fire() {}
+
+        virtual public Vector3 Aim()
+        {
+            return Vector3.zero;
+        }
+
+        virtual public void Setup() {}
     }
 }

@@ -69,7 +69,6 @@ namespace KerbalCombatSystems
             Vector3 RelPos = Target.transform.position - Firer.transform.position;
             Vector3 RelVel = Target.GetObtVelocity() - Firer.vessel.GetObtVelocity();
 
-
             // Quadratic equation coefficients a*t^2 + b*t + c = 0
             float a = Vector3.Dot(RelVel, RelVel) - TravelVelocity * TravelVelocity;
             float b = 2f * Vector3.Dot(RelVel, RelPos);
@@ -79,10 +78,8 @@ namespace KerbalCombatSystems
 
             float ForwardDelta = 2f * c / (Mathf.Sqrt(desc) - b);
 
-
-            Vector3 TrueVector = Target.transform.position + RelVel * ForwardDelta;
-            //return the firing solution
-            return TrueVector;
+            Vector3 leadPosition = Target.transform.position + RelVel * ForwardDelta;
+            return leadPosition - Firer.transform.position;
         }
 
         

@@ -28,6 +28,7 @@ namespace KerbalCombatSystems
 
         public void Start()
         {
+            /*
             Target = part.FindModuleImplementing<ModuleWeaponController>().target;
 
             // initialise debug line renderer
@@ -38,12 +39,14 @@ namespace KerbalCombatSystems
             //find a decoupler associated with the weapon
             RocketBases = KCS.FindDecouplerChildren(part.parent, "Weapon", false);
             Decoupler = RocketBases[RocketBases.Count() - 1];
+            */
 
 
         }
 
         public void LateUpdate()
         {
+            /*
             //get where the weapon is currently pointing
             Vector3 AimVector = KCS.GetAwayVector(Decoupler.part);
             //get the aiming part
@@ -68,6 +71,7 @@ namespace KerbalCombatSystems
                 FireStop = true;
                 StartCoroutine(FireRocket());
             }
+            */
         }
 
         private IEnumerator FireRocket()
@@ -105,9 +109,11 @@ namespace KerbalCombatSystems
         
         public void OnDestroy()
         {
+            /*
             KCSDebug.DestroyLine(LeadLine);
             KCSDebug.DestroyLine(TargetLine);
             KCSDebug.DestroyLine(AimLine);
+            */
         }
     }
 }
