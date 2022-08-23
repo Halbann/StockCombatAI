@@ -56,12 +56,12 @@ namespace KerbalCombatSystems
             {
                 //get the firework launcher to aim with and where it is currently facing
                 FiringPart = FireworkLaunchers[0].part;
-                AimVector = GetAwayVector(FiringPart);
-                Origin = FiringPart.transform.position;
-
-                LeadVector = TargetLead(Target, FiringPart, 100f);
+                //AimVector = GetAwayVector(FiringPart);
+                AimVector = FiringPart.transform.up;
+                LeadVector = TargetLead(Target, FiringPart, 100f).normalized;
 
                 // Update debug lines.
+                Origin = FiringPart.transform.position;
                 //KCSDebug.PlotLine(new[] { Origin, Target.transform.position }, TargetLine);
                 //KCSDebug.PlotLine(new[] { Origin, Origin + (LeadVector * 15)}, LeadLine);
                 KCSDebug.PlotLine(new[] { Origin, Origin + (AimVector * 15)}, AimLine);
