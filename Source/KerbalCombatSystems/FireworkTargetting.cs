@@ -39,7 +39,7 @@ namespace KerbalCombatSystems
 
             // initialise debug line renderer
             //TargetLine = KCSDebug.CreateLine(new Color(135f / 255f, 160f / 255f, 70f / 255f, 1f));
-            //LeadLine = KCSDebug.CreateLine(new Color(131f / 255f, 143f / 255f, 99f / 255f, 1f));
+            LeadLine = KCSDebug.CreateLine(new Color(131f / 255f, 143f / 255f, 99f / 255f, 1f));
             AimLine = KCSDebug.CreateLine(new Color(196f / 255f, 208f / 255f, 164f / 255f, 1f));
 
             //get list of fireworks
@@ -51,16 +51,6 @@ namespace KerbalCombatSystems
 
         public override Vector3 Aim()
         {
-<<<<<<< Updated upstream
-            FiringPart = FireworkLaunchers[0].part;
-            //AimVector = GetAwayVector(FiringPart);
-            AimVector = FiringPart.transform.up;
-            Origin = FiringPart.transform.position;
-
-            if (Target != null)
-            {
-                LeadVector = TargetLead(Target, FiringPart, 100f).normalized;
-=======
             //if there is a ship target run the appropriate aiming angle calculations
             if (Target != null)
             {
@@ -70,11 +60,10 @@ namespace KerbalCombatSystems
                 Origin = FiringPart.transform.position;
 
                 LeadVector = TargetLead(Target, FiringPart, 100f);
->>>>>>> Stashed changes
 
                 // Update debug lines.
                 //KCSDebug.PlotLine(new[] { Origin, Target.transform.position }, TargetLine);
-                //KCSDebug.PlotLine(new[] { Origin, Origin + (LeadVector * 15)}, LeadLine);
+                KCSDebug.PlotLine(new[] { Origin, Origin + (LeadVector * 15)}, LeadLine);
                 KCSDebug.PlotLine(new[] { Origin, Origin + (AimVector * 15)}, AimLine);
             }
 
@@ -147,8 +136,8 @@ namespace KerbalCombatSystems
 
         public void OnDestroy()
         {
-            //KCSDebug.DestroyLine(LeadLine);
             //KCSDebug.DestroyLine(TargetLine);
+            KCSDebug.DestroyLine(LeadLine);
             KCSDebug.DestroyLine(AimLine);
         }
 
