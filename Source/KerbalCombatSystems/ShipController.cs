@@ -97,6 +97,7 @@ namespace KerbalCombatSystems
             CheckWeapons();
             shipControllerCoroutine = StartCoroutine(ShipController());
             controllerRunning = true;
+
         }
 
         public void StopAI()
@@ -185,6 +186,8 @@ namespace KerbalCombatSystems
             // Movement.
             if (hasPropulsion && !hasWeapons && CheckWithdraw())
             {
+                //starts changing to passive robotics while withdrawing
+                RunRobotics(false);
 
                 state = "Withdrawing";
 
@@ -460,6 +463,23 @@ namespace KerbalCombatSystems
             {
                 weaponsMinRange = weapons.Min(w => w.MinMaxRange.x);
                 weaponsMaxRange = weapons.Max(w => w.MinMaxRange.y);
+            }
+        }
+
+        public void RunRobotics(bool Combat)
+        {
+            //generate list of KAL500 parts, could change in flight
+            List<ModuleCombatRobotics> RoboticControllers = vessel.FindPartModulesImplementing<ModuleCombatRobotics>();
+            
+            if (Combat)
+            {
+                foreach (ModuleCombatRobotics Controller in RoboticControllers)
+                { Controller.CombatTrigger(); }
+            }
+            else
+            {
+                foreach (ModuleCombatRobotics Controller in RoboticControllers)
+                { Controller.PassiveTrigger(); }
             }
         }
 

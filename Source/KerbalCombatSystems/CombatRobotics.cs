@@ -26,10 +26,6 @@ namespace KerbalCombatSystems
             KAL.SetLength(1);
             KAL.SetLoopMode(Once);
             KAL.ToggleControllerEnabled(true);
-
-            if (!HighLogic.LoadedSceneIsFlight) return;
-            //reset the combat robotics on load
-            PassiveTrigger();
         }
 
         public void CombatTrigger()
