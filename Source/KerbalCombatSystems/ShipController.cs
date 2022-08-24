@@ -38,6 +38,7 @@ namespace KerbalCombatSystems
         private double minSafeAltitude;
         public string state = "Init";
         private ModuleWeaponController currentProjectile;
+        private bool roboticsDeployed;
 
         [KSPField(isPersistant = true)]
         public Side side;
@@ -186,10 +187,10 @@ namespace KerbalCombatSystems
             // Movement.
             if (hasPropulsion && !hasWeapons && CheckWithdraw())
             {
-                //starts changing to passive robotics while withdrawing
-                RunRobotics(false);
-
                 state = "Withdrawing";
+
+                // Switch to passive robotics while withdrawing.
+                UpdateRobotics(false);
 
                 // Withdraw sequence. Locks behaviour while burning 200 m/s of delta-v either north or south.
 
@@ -336,6 +337,9 @@ namespace KerbalCombatSystems
 
                  */
 
+                // Deploy combat robotics.
+                UpdateRobotics(true);
+
                 ModuleWeaponController currentWeapon = GetPreferredWeapon(target, weapons);
                 float minRange = currentWeapon.MinMaxRange.x;
                 float maxRange = currentWeapon.MinMaxRange.y;
@@ -423,6 +427,10 @@ namespace KerbalCombatSystems
 
                 fc.throttle = 0;
                 fc.attitude = Vector3.zero;
+
+                // Switch to passive robotics.
+                UpdateRobotics(false);
+
                 yield return new WaitForSeconds(updateInterval);
             }
         }
@@ -463,23 +471,6 @@ namespace KerbalCombatSystems
             {
                 weaponsMinRange = weapons.Min(w => w.MinMaxRange.x);
                 weaponsMaxRange = weapons.Max(w => w.MinMaxRange.y);
-            }
-        }
-
-        public void RunRobotics(bool Combat)
-        {
-            //generate list of KAL500 parts, could change in flight
-            List<ModuleCombatRobotics> RoboticControllers = vessel.FindPartModulesImplementing<ModuleCombatRobotics>();
-            
-            if (Combat)
-            {
-                foreach (ModuleCombatRobotics Controller in RoboticControllers)
-                { Controller.CombatTrigger(); }
-            }
-            else
-            {
-                foreach (ModuleCombatRobotics Controller in RoboticControllers)
-                { Controller.PassiveTrigger(); }
             }
         }
 
@@ -665,6 +656,21 @@ namespace KerbalCombatSystems
             Vector3 rotatedVector = Vector3.ProjectOnPlane(relVel, FromTo(vessel, target).normalized).normalized;
             Vector3 toClosestApproach = (target.transform.position + (rotatedVector * minRange)) - vessel.transform.position;
             return toClosestApproach;
+        }
+
+        public void UpdateRobotics(bool deploy)
+        {
+            if (deploy == roboticsDeployed) return;
+
+            //generate list of KAL500 parts, could change in flight
+            List<ModuleCombatRobotics> RoboticControllers = vessel.FindPartModulesImplementing<ModuleCombatRobotics>();
+            
+            if (deploy)
+                RoboticControllers.ForEach(rc => rc.CombatTrigger());
+            else
+                RoboticControllers.ForEach(rc => rc.PassiveTrigger());
+
+            roboticsDeployed = deploy;
         }
 
         #endregion
