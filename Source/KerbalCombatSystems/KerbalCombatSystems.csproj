@@ -83,17 +83,17 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="MassCannonTargetting.cs" />
+    <Compile Include="MassCannonTargeting.cs" />
     <Compile Include="BombGuidance.cs" />
-    <Compile Include="RocketTargetting.cs" />
+    <Compile Include="RocketTargeting.cs" />
     <Compile Include="FlightController.cs" />
     <Compile Include="CombatRobotics.cs" />
     <Compile Include="DecouplerDesignator.cs" />
-    <Compile Include="EscapePodGuidance.cs" />
-    <Compile Include="KCS.cs" />
-    <Compile Include="KCSDebug.cs" />
-    <Compile Include="KCSController.cs" />
-    <Compile Include="FireworkTargetting.cs" />
+    <Compile Include="EscapePod.cs" />
+    <Compile Include="Utils.cs" />
+    <Compile Include="Debug.cs" />
+    <Compile Include="MainController.cs" />
+    <Compile Include="FireworkTargeting.cs" />
     <Compile Include="MissileGuidance.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="ObjectTracking.cs" />
