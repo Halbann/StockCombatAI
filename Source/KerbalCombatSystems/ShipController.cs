@@ -126,6 +126,8 @@ namespace KerbalCombatSystems
 
         public override void OnStart(StartState state)
         {
+            UpdateAttachment();
+
             if (HighLogic.LoadedSceneIsFlight)
             {
                 fc = part.gameObject.AddComponent<KCSFlightController>();
@@ -146,6 +148,10 @@ namespace KerbalCombatSystems
                 }
 
                 maxAngularAcceleration = AngularAcceleration(availableTorque, vessel.MOI);
+            }
+            else if (HighLogic.LoadedSceneIsEditor)
+            {
+                part.OnEditorAttach += UpdateAttachment;
             }
         }
         private void FixedUpdate()
@@ -768,6 +774,19 @@ namespace KerbalCombatSystems
         }
 
         #endregion
+
+        private void UpdateAttachment()
+        {
+            Transform mediumBolts = part.FindModelTransform("MediumBolts");
+            Transform mediumCap = part.FindModelTransform("MediumCap");
+
+            if (mediumBolts == null) return;
+
+            bool topAttached = part.attachNodes[1].attachedPart != null;
+
+            mediumCap.gameObject.SetActive(!topAttached);
+            mediumBolts.gameObject.SetActive(topAttached);
+        }
     }
 }
 
