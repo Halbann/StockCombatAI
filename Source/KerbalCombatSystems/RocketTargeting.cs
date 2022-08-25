@@ -24,7 +24,7 @@ namespace KerbalCombatSystems
         Vector3 AimVector;
 
         // Debugging line variables.
-        LineRenderer TargetLine, LeadLine, AimLine;
+        LineRenderer AimLine;
 
         // Rocket decoupler variables
         private List<ModuleDecouple> RocketBases;
@@ -37,8 +37,6 @@ namespace KerbalCombatSystems
             Target = part.FindModuleImplementing<ModuleWeaponController>().target;
 
             // initialise debug line renderer
-            //TargetLine = KCSDebug.CreateLine(new Color(209f / 255f, 77f / 255f, 81f / 255f, 1f));
-            //LeadLine = KCSDebug.CreateLine(new Color(167f / 255f, 103f / 255f, 104f / 255f, 1f));
             AimLine = KCSDebug.CreateLine(new Color(232f / 255f, 167f / 255f, 169f / 255f, 1f));
 
             //find a decoupler associated with the weapon
@@ -61,8 +59,6 @@ namespace KerbalCombatSystems
                 AvgVel = RocketVelocity(LeadVector, Decoupler.part);
 
                 // Update debug lines.
-                //KCSDebug.PlotLine(new[] { Origin, Target.transform.position }, TargetLine);
-                //KCSDebug.PlotLine(new[] { Origin, LeadVector }, LeadLine);
                 KCSDebug.PlotLine(new[] { Origin, AimVector }, AimLine);
             }
 
@@ -149,8 +145,6 @@ namespace KerbalCombatSystems
 
         public void OnDestroy()
         {
-            //KCSDebug.DestroyLine(TargetLine);
-            //KCSDebug.DestroyLine(LeadLine);
             KCSDebug.DestroyLine(AimLine);
         }
         
