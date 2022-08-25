@@ -151,12 +151,18 @@ namespace KerbalCombatSystems
             }
             else if (HighLogic.LoadedSceneIsEditor)
             {
-                part.OnEditorAttach += UpdateAttachment;
+                GameEvents.onEditorPartEvent.Add(UpdateAttachment);
             }
         }
+
         private void FixedUpdate()
         {
             if (controllerRunning) fc.Drive();
+        }
+
+        public void OnDestroy()
+        {
+            GameEvents.onEditorPartEvent.Remove(UpdateAttachment);
         }
 
         #endregion
@@ -775,18 +781,40 @@ namespace KerbalCombatSystems
 
         #endregion
 
+        #region Part Appearance
+
+        Part editorChild;
+
         private void UpdateAttachment()
         {
-            Transform mediumBolts = part.FindModelTransform("MediumBolts");
-            Transform mediumCap = part.FindModelTransform("MediumCap");
+            Transform mediumCapTop = part.FindModelTransform("MediumCapTop");
+            Transform mediumBoltsTop = part.FindModelTransform("MediumBoltsTop");
+            Transform mediumCapBottom = part.FindModelTransform("MediumCapBottom");
+            Transform mediumBoltsBottom = part.FindModelTransform("MediumBoltsBottom");
 
-            if (mediumBolts == null) return;
+            if (mediumCapTop == null) return;
 
             bool topAttached = part.attachNodes[1].attachedPart != null;
+            bool bottomAttached = part.attachNodes[0].attachedPart != null || !topAttached;
 
-            mediumCap.gameObject.SetActive(!topAttached);
-            mediumBolts.gameObject.SetActive(topAttached);
+            mediumCapTop.gameObject.SetActive(!topAttached);
+            mediumBoltsTop.gameObject.SetActive(topAttached);
+
+            mediumCapBottom.gameObject.SetActive(!bottomAttached);
+            mediumBoltsBottom.gameObject.SetActive(bottomAttached);
         }
+
+        private void UpdateAttachment(ConstructionEventType data0, Part data1)
+        {
+            if (part != data1 && data1.parent != part && data1 != editorChild) return;
+            if (data1.parent == part)
+            {
+                editorChild = data1;
+            }
+            UpdateAttachment();
+        }
+
+        #endregion
     }
 }
 
