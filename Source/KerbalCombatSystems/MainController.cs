@@ -206,11 +206,25 @@ namespace KerbalCombatSystems
                 {
                     v = controller.vessel;
 
-                    string colour = v == FlightGlobals.ActiveVessel ? "#fabe32" : "#FFFFFF";
-
+                    //string colour = v == FlightGlobals.ActiveVessel ? "#fabe32" : "#FFFFFF";
+                    string colour = "#FFFFFF";
                     var activeTarget = FlightGlobals.ActiveVessel.targetObject;
-                    if (activeTarget != null)
-                        colour = v == activeTarget.GetVessel() ? "#b4ff33" : colour;
+
+                    if (!controller.alive)
+                    {
+                        colour = "#808080ff";
+                    }
+                    else if (v == FlightGlobals.ActiveVessel)
+                    {
+                        colour = "#fabe32";
+                    }
+                    else if (activeTarget != null && v == activeTarget.GetVessel())
+                    {
+                        colour = "#b4ff33";
+                    }
+
+                    //if (activeTarget != null)
+                    //    colour = v == activeTarget.GetVessel() ? "#b4ff33" : colour;
 
                     string targetName = controller.target == null ? "None" : controller.target.vesselName;
                     string craftName = String.Format("<color={6}>{0}</color>\n<color=#808080ff>Part Count: {1}, Mass: {2} t\nAlive: {3}, Target: {4}\nState: {5}</color>",

@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using KSP.UI.Screens;
 using UnityEngine;
 using System.IO;
+using System.Collections;
 
 namespace KerbalCombatSystems
 {
@@ -14,10 +15,15 @@ namespace KerbalCombatSystems
     public class KCSDebug : MonoBehaviour
     {
         public static bool ShowLines;
+        private static List<LineRenderer> lines;
+        private static List<float> times;
 
         private void Start()
         {
             ShowLines = false;
+            lines = new List<LineRenderer>();
+            times = new List<float>();
+            StartCoroutine(LineCleaner());
         }
 
         private void Update()
@@ -36,19 +42,22 @@ namespace KerbalCombatSystems
             //spawn new line
             LineRenderer Line = new GameObject().AddComponent<LineRenderer>();
             Line.useWorldSpace = true;
-            //create a material for the line with its unique colour
+
+            // Create a material for the line with its unique colour.
             Material LineMaterial = new Material(Shader.Find("Standard"));
             LineMaterial.color = LineColour;
             LineMaterial.shader = Shader.Find("Unlit/Color");
-            //apply the material to the line renderer
             Line.material = LineMaterial;
 
-            //make it a point
+            //make it come to a point
             Line.startWidth = 0.5f;
             Line.endWidth = 0f;
 
             // Don't draw until the line is first plotted.
             Line.positionCount = 0;
+
+            lines.Add(Line);
+            times.Add(Time.time);
 
             //pass the line back to be associated with a vector
             return Line;
@@ -60,6 +69,9 @@ namespace KerbalCombatSystems
             {
                 Line.positionCount = 2;
                 Line.SetPositions(Positions);
+
+                int index = lines.FindIndex(l => l == Line);
+                times[index] = Time.time;
             }
             else
             {
@@ -72,6 +84,26 @@ namespace KerbalCombatSystems
             if (line == null) return;
             if (line.gameObject == null) return;
             line.gameObject.DestroyGameObject();
+        }
+
+        private IEnumerator LineCleaner()
+        {
+            // Hide rogue lines that haven't been plotted in a while.
+
+            LineRenderer currentLine;
+
+            while (true)
+            {
+                for (int i = 0; i < lines.Count; i++)
+                {
+                    if (Time.time - times[i] < 5) continue;
+                    currentLine = lines[i];
+                    if (currentLine == null) continue;
+                    lines[i].positionCount = 0;
+                }
+
+                yield return new WaitForSeconds(5);
+            }
         }
     }
 }

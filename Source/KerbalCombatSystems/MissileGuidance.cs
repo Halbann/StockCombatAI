@@ -29,6 +29,7 @@ namespace KerbalCombatSystems
         Vessel firer;
         ModuleDecouple decoupler;
         ModuleWeaponController controller;
+        List<ModuleEngines> engines;
 
         // Debugging line variables.
 
@@ -46,22 +47,18 @@ namespace KerbalCombatSystems
             // propulsion check
 
             // try to pop decoupler
-            try
-            {
+            if (decoupler != null)
                 decoupler.Decouple();
-            }
-            catch
-            {
+            else
                 //notify of error but launch anyway for freefloating missiles
                 Debug.Log("[KCS]: Couldn't find decoupler.");
-            }
 
             // wait to try to prevent destruction of decoupler.
             // todo: could increase heat tolerance temporarily or calculate a lower throttle.
             yield return new WaitForSeconds(0.2f);
 
             // turn on engines
-            List<ModuleEngines> engines = vessel.FindPartModulesImplementing<ModuleEngines>();
+            engines = vessel.FindPartModulesImplementing<ModuleEngines>();
             foreach (ModuleEngines engine in engines)
             {
                 engine.Activate();
@@ -106,7 +103,7 @@ namespace KerbalCombatSystems
                 return;
             }
 
-            targetVector = target.transform.position - vessel.transform.position;
+            targetVector = target.transform.position - vessel.ReferenceTransform.position;
             targetVectorNormal = targetVector.normalized;
             relVel = vessel.GetObtVelocity() - target.GetObtVelocity();
             relVelNrm = relVel.normalized;
@@ -123,7 +120,7 @@ namespace KerbalCombatSystems
             //fc.alignmentToleranceforBurn = relVelmag > 50 ? 5 : 20;
             fc.throttle = drift ? 0 : 1;
 
-            if (targetVector.magnitude < 10)
+            if (targetVector.magnitude < 10 || !engines.First().isOperational)
             {
                 engageAutopilot = false;
                 OnDestroy();
@@ -132,8 +129,9 @@ namespace KerbalCombatSystems
             fc.Drive();
 
             // Update debug lines.
-            KCSDebug.PlotLine(new[] { vessel.transform.position, target.transform.position }, targetLine);
-            KCSDebug.PlotLine(new[] { vessel.transform.position, vessel.transform.position + (relVelNrm * 50) }, rvLine);
+            Vector3 origin = vessel.ReferenceTransform.position;
+            KCSDebug.PlotLine(new[] { origin, target.transform.position }, targetLine);
+            KCSDebug.PlotLine(new[] { origin, origin + (relVelNrm * 50) }, rvLine);
         }
 
         public override void Setup()

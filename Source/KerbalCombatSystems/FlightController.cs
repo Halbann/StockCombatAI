@@ -42,6 +42,12 @@ namespace KerbalCombatSystems
 
         public void Drive()
         {
+            if (controllingVessel == null)
+            {
+                Destroy(this);
+                return;
+            }
+
             error = Vector3.Angle(controllingVessel.ReferenceTransform.up, attitude); 
 
             UpdateSAS(controllingVessel);
@@ -52,7 +58,7 @@ namespace KerbalCombatSystems
         private void UpdateThrottle(Vessel v)
         {
             //if (throttle == 0 && throttleLerped == 0) return;
-            if (v == null) return;
+            //if (v == null) return;
 
             facingDesiredRotation = error < alignmentToleranceforBurn;
             throttleActual = facingDesiredRotation ? throttle : 0;
@@ -68,7 +74,7 @@ namespace KerbalCombatSystems
         void UpdateSAS(Vessel v)
         {
             if (attitude == Vector3.zero) return;
-            if (v == null) return;
+            //if (v == null) return;
 
             // SAS must be turned off. Don't know why.
             if (v.ActionGroups[KSPActionGroup.SAS])

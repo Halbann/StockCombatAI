@@ -33,7 +33,8 @@ namespace KerbalCombatSystems
 
         public static string[] types = { "Missile", "Rocket", "Firework", "Bomb", "MassCannon" };
         public static string[] massTypes = { "Missile", "Rocket", "Bomb" };
-        public static string[] projectileTypes = { "Rocket", "Firework" };
+        //public static string[] projectileTypes = { "Rocket", "Firework" };
+        public static string[] projectileTypes = { "Firework" };
 
         ModuleWeapon typeModule;
 
