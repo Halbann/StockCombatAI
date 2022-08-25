@@ -25,6 +25,7 @@ namespace KerbalCombatSystems
         private KCSFlightController fc;
         private KCSController controller;
         public Vessel target;
+        private ModuleShipController targetController;
         public List<ModuleWeaponController> weapons;
         private float weaponsMinRange;
         private float weaponsMaxRange;
@@ -39,6 +40,11 @@ namespace KerbalCombatSystems
         public string state = "Init";
         private ModuleWeaponController currentProjectile;
         private bool roboticsDeployed;
+        private List<ModuleWeaponController> incomingWeapons;
+        private List<Tuple<ModuleWeaponController, float>> shouldDodgeWeapons;
+        private float shipLength;
+        private Vector3 maxAngularAcceleration;
+        private float maxAcceleration;
 
         [KSPField(isPersistant = true)]
         public Side side;
@@ -126,6 +132,20 @@ namespace KerbalCombatSystems
                 fc.alignmentToleranceforBurn = 7.5f;
                 fc.throttleLerpRate = 3;
                 controller = FindObjectOfType<KCSController>();
+
+                Vector3 size = vessel.vesselSize;
+                shipLength = (new[] { size.x, size.y, size.z}).ToList().Max();
+
+                Vector3 availableTorque = Vector3.zero;
+                var reactionWheels = vessel.FindPartModulesImplementing<ModuleReactionWheel>();
+                foreach(var wheel in reactionWheels)
+                {
+                    Vector3 pos;
+                    wheel.GetPotentialTorque(out pos, out pos);
+                    availableTorque += pos;
+                }
+
+                maxAngularAcceleration = AngularAcceleration(availableTorque, vessel.MOI);
             }
         }
         private void FixedUpdate()
@@ -184,6 +204,8 @@ namespace KerbalCombatSystems
 
         private IEnumerator UpdateBehaviour()
         {
+            maxAcceleration = GetMaxAcceleration(vessel);
+
             // Movement.
             if (hasPropulsion && !hasWeapons && CheckWithdraw())
             {
@@ -216,14 +238,12 @@ namespace KerbalCombatSystems
             else if (target != null && CanFireProjectile(target))
             {
                 // Aim at target using current projectile weapon.
-
-                //  in range with a projectile weapon that has ammo (get one)
-                //  update weapon controller every frame for 5 seconds
-                // get attitude from update
+                // The weapon handles firing.
 
                 state = "Firing Projectile";
                 fc.throttle = 0;
                 currentProjectile.target = target;
+                currentProjectile.side = side;
 
                 // Temporarily disabled.
                 if (currentProjectile.weaponType == "Rocket")
@@ -239,9 +259,28 @@ namespace KerbalCombatSystems
                     yield return new WaitForFixedUpdate();
                 }
             }
-            else if (false) // Needs to start evading an incoming missile.
+            else if (CheckIncoming()) // Needs to start evading an incoming missile.
             {
+                state = "Dodging";
 
+                float previousTolerance = fc.alignmentToleranceforBurn;
+                fc.alignmentToleranceforBurn = 45;
+                fc.throttle = 1;
+
+                ModuleWeaponController incoming = shouldDodgeWeapons.First().Item1;
+                Vector3 incomingVector;
+                bool complete = false;
+
+                while (UnderTimeLimit() && incoming != null && !complete)
+                {
+                    incomingVector = FromTo(vessel, incoming.vessel);
+                    fc.attitude = Vector3.ProjectOnPlane(vessel.ReferenceTransform.up, incomingVector.normalized);
+
+                    yield return new WaitForFixedUpdate();
+                    complete = Vector3.Dot(RelVel(vessel, incoming.vessel), incomingVector) < 0;
+                }
+
+                fc.alignmentToleranceforBurn = previousTolerance;
             }
             else if (CheckOrbitUnsafe())
             {
@@ -345,13 +384,14 @@ namespace KerbalCombatSystems
                 float maxRange = currentWeapon.MinMaxRange.y;
                 float currentRange = VesselDistance(vessel, target);
                 bool complete = false;
-                float maxAcceleration = GetMaxAcceleration(vessel);
                 Vector3 relVel = RelVel(vessel, target);
 
                 if (currentRange < minRange)
                 {
                     state = "Manoeuvring (Away)";
                     fc.throttle = 1;
+                    float oldAlignment = fc.alignmentToleranceforBurn;
+                    fc.alignmentToleranceforBurn = 45;
 
                     while (UnderTimeLimit() && target != null && !complete)
                     {
@@ -361,6 +401,8 @@ namespace KerbalCombatSystems
 
                         yield return new WaitForFixedUpdate();
                     }
+
+                    fc.alignmentToleranceforBurn = oldAlignment;
                 }
                 else if (currentRange > maxRange && !NearIntercept(relVel, minRange, maxAcceleration))
                 {
@@ -409,13 +451,16 @@ namespace KerbalCombatSystems
                     {
                         state = "Manoeuvring (Drift)";
                         fc.throttle = 0;
+                        fc.attitude = Vector3.zero;
 
-                        while (UnderTimeLimit() && target != null)
+                        yield return new WaitForSeconds(updateInterval);
+
+                        /*while (UnderTimeLimit() && target != null)
                         {
                             fc.attitude = Vector3.ProjectOnPlane(FromTo(vessel, target).normalized, RelVel(vessel, target));
 
                             yield return new WaitForFixedUpdate();
-                        }
+                        }*/
                     }
                 }
             }
@@ -451,7 +496,9 @@ namespace KerbalCombatSystems
                     if (weapon != null)
                     {
                         weapon.target = target;
+                        weapon.side = side;
                         weapon.Fire();
+                        targetController.AddIncoming(weapon);
 
                         StartCoroutine(CheckWeaponsDelayed());
                     }
@@ -482,7 +529,7 @@ namespace KerbalCombatSystems
 
         public ModuleShipController GetNearestEnemy()
         {
-            var enemiesByDistance = controller.ships.FindAll(s => s.alive && s.side != side);
+            var enemiesByDistance = controller.ships.FindAll(s => s != null && s.alive && s.side != side);
             if (enemiesByDistance.Count < 1) return null;
             return enemiesByDistance.OrderBy(s => KCS.VesselDistance(s.vessel, vessel)).First();
         }
@@ -580,7 +627,9 @@ namespace KerbalCombatSystems
                 foreach (ModuleObjectTracking Sensor in sensors)
                 {
                     //try deploy animations, not all scanners will have them 
-                    try { KCS.TryToggle(true, Sensor.part.FindModuleImplementing<ModuleAnimationGroup>()); } catch { }
+                    var anim = Sensor.part.FindModuleImplementing<ModuleAnimationGroup>();
+                    if (anim == null) continue;
+                    TryToggle(true, Sensor.part.FindModuleImplementing<ModuleAnimationGroup>());
                 }
                 DeployedSensors = true;
             }
@@ -601,7 +650,8 @@ namespace KerbalCombatSystems
                 return;
             }
 
-            target = ships.OrderBy(s => VesselDistance(s.vessel, vessel)).First().vessel;
+            targetController = ships.OrderBy(s => VesselDistance(s.vessel, vessel)).First();
+            target = targetController.vessel;
 
             if (vessel.targetObject == null || vessel.targetObject.GetVessel() != target)
             {
@@ -671,6 +721,50 @@ namespace KerbalCombatSystems
                 RoboticControllers.ForEach(rc => rc.PassiveTrigger());
 
             roboticsDeployed = deploy;
+        }
+
+        private bool CheckIncoming()
+        {
+            if (incomingWeapons == null || incomingWeapons.Count < 1) return false;
+
+            Vector3 attitude = vessel.transform.up;
+
+            float timeToDisplace = shipLength / maxAcceleration;
+            if (float.IsInfinity(timeToDisplace)) return false;
+
+            shouldDodgeWeapons = new List<Tuple<ModuleWeaponController, float>>();
+            incomingWeapons.RemoveAll(w => w == null);
+
+            foreach(var incoming in incomingWeapons)
+            {
+                Vessel iv = incoming.vessel;
+                Vector3 incomingVector = FromTo(vessel, iv);
+                Vector3 relVel = RelVel(vessel, iv);
+
+                bool onCollisionCourse = Vector3.Dot(incomingVector.normalized, relVel.normalized) > 0.95;
+                if (!onCollisionCourse) continue;
+
+                Vector3 perpendicular = Vector3.ProjectOnPlane(attitude, incomingVector.normalized);
+                float rotDistance = Vector3.Angle(attitude, perpendicular) * Mathf.Deg2Rad;
+                float timeToRotate = Integrate(rotDistance / 2, maxAngularAcceleration.magnitude) * 2;
+                float timeToDodge = timeToRotate + timeToDisplace;
+
+                float timeToHit = incomingVector.magnitude / Vector3.Dot(relVel, incomingVector.normalized);
+
+                if (timeToHit > Mathf.Max(timeToDodge, updateInterval) * 1.5) continue;
+                shouldDodgeWeapons.Add(new Tuple<ModuleWeaponController, float>(incoming, timeToHit));
+            }
+
+            shouldDodgeWeapons.OrderBy(i => i.Item2);
+            return shouldDodgeWeapons.Count > 0;
+        }
+
+        public void AddIncoming(ModuleWeaponController wep)
+        {
+            if (incomingWeapons == null)
+                incomingWeapons = new List<ModuleWeaponController>();
+
+            incomingWeapons.Add(wep);
         }
 
         #endregion

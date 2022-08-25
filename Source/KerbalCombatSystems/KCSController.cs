@@ -205,9 +205,16 @@ namespace KerbalCombatSystems
                 foreach (var controller in ships)
                 {
                     v = controller.vessel;
+
+                    string colour = v == FlightGlobals.ActiveVessel ? "#fabe32" : "#FFFFFF";
+
+                    var activeTarget = FlightGlobals.ActiveVessel.targetObject;
+                    if (activeTarget != null)
+                        colour = v == activeTarget.GetVessel() ? "#b4ff33" : colour;
+
                     string targetName = controller.target == null ? "None" : controller.target.vesselName;
-                    string craftName = String.Format("{0}\n<color=#808080ff>Part Count: {1}, Mass: {2} t\nAlive: {3}, Target: {4}\nState: {5}</color>",
-                        v.GetDisplayName(), v.parts.Count, Math.Round(v.GetTotalMass(), 1), controller.alive, targetName, controller.state);
+                    string craftName = String.Format("<color={6}>{0}</color>\n<color=#808080ff>Part Count: {1}, Mass: {2} t\nAlive: {3}, Target: {4}\nState: {5}</color>",
+                        v.GetDisplayName(), v.parts.Count, Math.Round(v.GetTotalMass(), 1), controller.alive, targetName, controller.state, colour);
 
                     string AI = String.Format("<color={0}>AI</color>", controller.controllerRunning ? "#07D207" : "#FFFFFF");
 

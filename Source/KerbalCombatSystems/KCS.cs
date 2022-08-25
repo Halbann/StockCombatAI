@@ -151,6 +151,29 @@ namespace KerbalCombatSystems
         {
             return v1.GetObtVelocity() - v2.GetObtVelocity();
         }
+
+        public static Vector3 AngularAcceleration(Vector3 torque, Vector3 MoI)
+        {
+            return new Vector3(MoI.x.Equals(0) ? float.MaxValue : torque.x / MoI.x,
+                MoI.y.Equals(0) ? float.MaxValue : torque.y / MoI.y,
+                MoI.z.Equals(0) ? float.MaxValue : torque.z / MoI.z);
+        }
+
+        public static float Integrate(float distance, float a)
+        {
+            float v = 0;
+            float t = 0;
+            float i = 0.1f;
+
+            while (distance > 0)
+            {
+                v = v + a * i;
+                distance = distance - v * i;
+                t = t + i;
+            }
+
+            return t;
+        }
     }
 
     /*public class KCSShip

@@ -23,6 +23,7 @@ namespace KerbalCombatSystems
 
         public Vessel target;
         public float mass;
+        public Side side;
 
         [KSPField(isPersistant = true)]
         public bool canFire = true;

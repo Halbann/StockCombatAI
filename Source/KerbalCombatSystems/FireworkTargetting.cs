@@ -22,7 +22,8 @@ namespace KerbalCombatSystems
         Vector3 Origin;
 
         // Debugging line variables.
-        LineRenderer TargetLine, LeadLine, AimLine;
+        //LineRenderer TargetLine, LeadLine, AimLine;
+        LineRenderer AimLine;
 
         // stored settings
         private int RoundBurst;
@@ -55,8 +56,15 @@ namespace KerbalCombatSystems
             if (Target != null)
             {
                 //get the firework launcher to aim with and where it is currently facing
-                FiringPart = FireworkLaunchers[0].part;
-                //AimVector = GetAwayVector(FiringPart);
+                ModulePartFirework firstLauncher = FireworkLaunchers.First();
+
+                if (firstLauncher == null)
+                {
+                    controller.canFire = false;
+                    return Vector3.zero;
+                }
+
+                FiringPart = firstLauncher.part;
                 AimVector = FiringPart.transform.up;
                 LeadVector = TargetLead(Target, FiringPart, 100f).normalized;
 
@@ -97,7 +105,18 @@ namespace KerbalCombatSystems
 
                 yield return new WaitForSeconds(BurstSpacing);
                 ModulePartFirework Launcher = FireworkLaunchers.Last();
+
+                // Change firework settings.
+                Launcher.variationOnShellDirection = false;
+                float oldVel = Launcher.shellVelocity;
+                Launcher.shellVelocity = 100f;
+
+                // Launch shell.
                 Launcher.LaunchShell();
+
+                // Restore firework settings.
+                Launcher.variationOnShellDirection = true;
+                Launcher.shellVelocity = oldVel;
 
                 // Destroy FX controller to prevent lag from bursts. Trails still work.
                 var fx = Launcher.fxController;
@@ -129,8 +148,6 @@ namespace KerbalCombatSystems
                 if (Firework == null) continue;
 
                 FireworkLaunchers.Add(Firework);
-                Firework.variationOnShellDirection = false;
-                Firework.shellVelocity = 100f;
             }
         }
 

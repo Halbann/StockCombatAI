@@ -139,7 +139,7 @@ namespace KerbalCombatSystems
         public override void Setup()
         {
             controller = part.FindModuleImplementing<ModuleWeaponController>();
-            target = controller.target;
+            target = controller.target ?? vessel.targetObject.GetVessel();
             terminalVelocity = controller.terminalVelocity;
             firer = vessel;
         }

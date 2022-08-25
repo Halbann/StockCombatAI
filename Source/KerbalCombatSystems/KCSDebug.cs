@@ -46,6 +46,10 @@ namespace KerbalCombatSystems
             //make it a point
             Line.startWidth = 0.5f;
             Line.endWidth = 0f;
+
+            // Don't draw until the line is first plotted.
+            Line.positionCount = 0;
+
             //pass the line back to be associated with a vector
             return Line;
         }
