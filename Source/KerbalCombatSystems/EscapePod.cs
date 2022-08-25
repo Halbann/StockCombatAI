@@ -143,7 +143,7 @@ namespace KerbalCombatSystems
         //method to check for the existence of any ship ai onboard
         private void CheckConnection()
         {
-            foreach (Part AIPart in AIPartList)
+            /*foreach (Part AIPart in AIPartList)
             {
                 //if part itself is destroyed
                 if (AIPart == null) continue;
@@ -157,7 +157,7 @@ namespace KerbalCombatSystems
             {
                 Escaped = true;
                 BeginEscape();
-            }
+            }*/
         }
 
         //method to disable the autopilot once out of fuel
