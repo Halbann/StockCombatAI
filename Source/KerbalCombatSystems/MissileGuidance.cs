@@ -16,7 +16,7 @@ namespace KerbalCombatSystems
         // Missile guidance variables.
 
         public bool engageAutopilot = false;
-        KCSFlightController fc;
+        private KCSFlightController fc;
         private Vector3 targetVector;
         private Vector3 targetVectorNormal;
         private Vector3 relVel;
@@ -25,22 +25,23 @@ namespace KerbalCombatSystems
         private float correctionRatio;
         private Vector3 correction;
         private bool drift;
-        Vessel target;
-        Vessel firer;
-        ModuleDecouple decoupler;
-        ModuleWeaponController controller;
-        List<ModuleEngines> engines;
-        Vector3 lead;
+        private Vessel target;
+        private Vessel firer;
+        private ModuleDecouple decoupler;
+        private ModuleWeaponController controller;
+        private List<ModuleEngines> engines;
+        private float timeToHit;
+        private Vector3 lead;
+        private float terminalVelocity;
 
         // Debugging line variables.
 
         LineRenderer targetLine, rvLine, leadLine;
-        private float terminalVelocity;
 
         private IEnumerator Launch()
         {
             // find decoupler
-            decoupler = KCS.FindDecoupler(part, "Weapon", true);
+            decoupler = FindDecoupler(part, "Weapon", true);
 
             // todo:
             // electric charge check
@@ -66,8 +67,8 @@ namespace KerbalCombatSystems
             }
 
             // pulse to 5 m/s.
-            var burnTime = 0.5f;
-            var driftVelocity = 5;
+            float burnTime = 0.5f;
+            float driftVelocity = 5;
             vessel.ctrlState.mainThrottle = driftVelocity / burnTime / GetMaxAcceleration(vessel);
             yield return new WaitForSeconds(burnTime);
             vessel.ctrlState.mainThrottle = 0;
@@ -115,8 +116,8 @@ namespace KerbalCombatSystems
 
             if (relVelmag > 100)
             {
-                // Predict aim point based on missile acceleration and target velocity.
-                float timeToHit = SolveTime(targetVector.magnitude, (float)vessel.acceleration.magnitude, relVel.magnitude);
+                // Predict aim point based on missile acceleration and relative velocity.
+                timeToHit = SolveTime(targetVector.magnitude, (float)vessel.acceleration.magnitude, relVel.magnitude);
                 lead = Vector3.ProjectOnPlane(relVel * -1, targetVector.normalized) * timeToHit;
 
                 // Read target acceleration. Significantly higher hit rate but possibly unfair as it defeats dodging.
@@ -145,7 +146,6 @@ namespace KerbalCombatSystems
 
             // Update debug lines.
             Vector3 origin = vessel.ReferenceTransform.position;
-            //Vector3 targetOrigin = target.ReferenceTransform.position;
             KCSDebug.PlotLine(new[] { origin, origin + targetVector }, targetLine);
             KCSDebug.PlotLine(new[] { origin, origin + (relVelNrm * 50) }, rvLine);
             KCSDebug.PlotLine(new[] { origin, origin + lead }, leadLine);
