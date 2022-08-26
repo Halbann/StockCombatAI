@@ -159,20 +159,29 @@ namespace KerbalCombatSystems
                 MoI.z.Equals(0) ? float.MaxValue : torque.z / MoI.z);
         }
 
-        public static float Integrate(float distance, float a)
+        public static float Integrate(float d, float a, float i = 0.1f, float v = 0)
         {
-            float v = 0;
             float t = 0;
-            float i = 0.1f;
 
-            while (distance > 0)
+            while (d > 0)
             {
                 v = v + a * i;
-                distance = distance - v * i;
+                d = d - v * i;
                 t = t + i;
             }
 
             return t;
+        }
+
+        public static float SolveTime(float distance, float acceleration, float vel = 0)
+        {
+            float a = 0.5f * acceleration;
+            float b = vel;
+            float c = Mathf.Abs(distance) * -1;
+
+            float x = (-b + Mathf.Sqrt(b * b - 4 * a * c)) / (2 * a);
+
+            return x;
         }
     }
 
