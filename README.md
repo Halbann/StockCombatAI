@@ -1,6 +1,6 @@
 # KCS
-Kerbal Combat Suite (KCS) is a mod for Kerbal Space Program. Its goal is to act as the space based counterpart to BD armory but using stock warships. 
+Kerbal Combat System (KCS) is a mod for Kerbal Space Program. Its goal is to enable automated combat between stock space warships in a similar fashion to BD Armory.
 # Developers
-- Hatbat
+- Hatbat (Lawrence)
 - Spartwo
 - MiffedStarfish
