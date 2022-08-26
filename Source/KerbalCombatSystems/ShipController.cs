@@ -109,6 +109,8 @@ namespace KerbalCombatSystems
 
         public void StopAI()
         {
+            fc.throttle = 0;
+            fc.Drive();
             controllerRunning = false;
 
             if (shipControllerCoroutine != null)
@@ -600,7 +602,7 @@ namespace KerbalCombatSystems
             hasPropulsion = vessel.FindPartModulesImplementing<ModuleEngines>().FindAll(e => e.EngineIgnited && e.isOperational).Count > 0;
             hasWeapons = vessel.FindPartModulesImplementing<ModuleWeaponController>().FindAll(w => w.canFire).Count > 0;
             //bool control = vessel.maxControlLevel != Vessel.ControlLevel.NONE && vessel.angularVelocity.magnitude < 20;
-            bool control = vessel.isCommandable && vessel.angularVelocity.magnitude < 20;
+            bool control = vessel.isCommandable && vessel.angularVelocity.magnitude < 99;
             bool dead = (!hasPropulsion && !hasWeapons) || !control;
 
             alive = !dead;
@@ -758,13 +760,18 @@ namespace KerbalCombatSystems
             shouldDodgeWeapons = new List<Tuple<ModuleWeaponController, float>>();
             incomingWeapons.RemoveAll(w => w == null);
 
+            Vessel iv;
+            Vector3 incomingVector;
+            Vector3 relVel;
+            bool onCollisionCourse;
+
             foreach(var incoming in incomingWeapons)
             {
-                Vessel iv = incoming.vessel;
-                Vector3 incomingVector = FromTo(vessel, iv);
-                Vector3 relVel = RelVel(vessel, iv);
+                iv = incoming.vessel;
+                incomingVector = FromTo(vessel, iv);
+                relVel = RelVel(vessel, iv);
 
-                bool onCollisionCourse = Vector3.Dot(incomingVector.normalized, relVel.normalized) > 0.95;
+                onCollisionCourse = Vector3.Dot(incomingVector.normalized, relVel.normalized) > 0.95;
                 if (!onCollisionCourse) continue;
 
                 Vector3 perpendicular = Vector3.ProjectOnPlane(attitude, incomingVector.normalized);

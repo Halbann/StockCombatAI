@@ -30,10 +30,11 @@ namespace KerbalCombatSystems
         ModuleDecouple decoupler;
         ModuleWeaponController controller;
         List<ModuleEngines> engines;
+        Vector3 lead;
 
         // Debugging line variables.
 
-        LineRenderer targetLine, rvLine;
+        LineRenderer targetLine, rvLine, leadLine;
         private float terminalVelocity;
 
         private IEnumerator Launch()
@@ -67,7 +68,7 @@ namespace KerbalCombatSystems
             // pulse to 5 m/s.
             var burnTime = 0.5f;
             var driftVelocity = 5;
-            vessel.ctrlState.mainThrottle = driftVelocity / burnTime / KCS.GetMaxAcceleration(vessel);
+            vessel.ctrlState.mainThrottle = driftVelocity / burnTime / GetMaxAcceleration(vessel);
             yield return new WaitForSeconds(burnTime);
             vessel.ctrlState.mainThrottle = 0;
 
@@ -81,12 +82,20 @@ namespace KerbalCombatSystems
                 if (target == null) yield break;
                 targetRay.origin = vessel.ReferenceTransform.position;
                 targetRay.direction = target.transform.position - vessel.transform.position;
-                lineOfSight = !KCS.RayIntersectsVessel(firer, targetRay);
+                lineOfSight = !RayIntersectsVessel(firer, targetRay);
+            }
+
+            // Remove end cap. todo: will have to change to support cluster missiles.
+            List<ModuleDecouple> decouplers = vessel.FindPartModulesImplementing<ModuleDecouple>();
+            foreach (ModuleDecouple d in decouplers)
+            {
+                d.Decouple();
             }
 
             // initialise debug line renderer
             targetLine = KCSDebug.CreateLine(Color.magenta);
             rvLine = KCSDebug.CreateLine(Color.green);
+            leadLine = KCSDebug.CreateLine(Color.cyan);
 
             // enable autopilot
             fc = part.gameObject.AddComponent<KCSFlightController>();
@@ -97,17 +106,26 @@ namespace KerbalCombatSystems
 
         private void UpdateGuidance()
         {
-            if (target == null)
-            {
-                engageAutopilot = false;
-                return;
-            }
+            if (target == null) StopGuidance();
 
             targetVector = target.transform.position - vessel.ReferenceTransform.position;
-            targetVectorNormal = targetVector.normalized;
             relVel = vessel.GetObtVelocity() - target.GetObtVelocity();
             relVelNrm = relVel.normalized;
             relVelmag = relVel.magnitude;
+
+            if (relVelmag > 100)
+            {
+                // Predict aim point based on missile acceleration and target velocity.
+                float timeToHit = SolveTime(targetVector.magnitude, (float)vessel.acceleration.magnitude, relVel.magnitude);
+                lead = Vector3.ProjectOnPlane(relVel * -1, targetVector.normalized) * timeToHit;
+
+                // Read target acceleration. Significantly higher hit rate but possibly unfair as it defeats dodging.
+                //lead = target.acceleration.normalized * SolveDistance(timeToHit, (float)target.acceleration.magnitude, 0);
+
+                targetVector = targetVector + lead;
+            }
+
+            targetVectorNormal = targetVector.normalized;
 
             correctionRatio = Mathf.Max((relVelmag / GetMaxAcceleration(vessel)) * 1.33f, 0.1f);
             correction = Vector3.LerpUnclamped(relVelNrm, targetVectorNormal, 1 + correctionRatio);
@@ -121,17 +139,16 @@ namespace KerbalCombatSystems
             fc.throttle = drift ? 0 : 1;
 
             if (targetVector.magnitude < 10 || !engines.First().isOperational)
-            {
-                engageAutopilot = false;
-                OnDestroy();
-            }
+                StopGuidance();
 
             fc.Drive();
 
             // Update debug lines.
             Vector3 origin = vessel.ReferenceTransform.position;
-            KCSDebug.PlotLine(new[] { origin, target.transform.position }, targetLine);
+            //Vector3 targetOrigin = target.ReferenceTransform.position;
+            KCSDebug.PlotLine(new[] { origin, origin + targetVector }, targetLine);
             KCSDebug.PlotLine(new[] { origin, origin + (relVelNrm * 50) }, rvLine);
+            KCSDebug.PlotLine(new[] { origin, origin + lead }, leadLine);
         }
 
         public override void Setup()
@@ -156,7 +173,15 @@ namespace KerbalCombatSystems
         {
             KCSDebug.DestroyLine(rvLine);
             KCSDebug.DestroyLine(targetLine);
+            KCSDebug.DestroyLine(leadLine);
             Destroy(fc);
+        }
+
+        public void StopGuidance()
+        {
+            engageAutopilot = false;
+            OnDestroy();
+            return;
         }
     }
 }

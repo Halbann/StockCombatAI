@@ -75,7 +75,6 @@ namespace KerbalCombatSystems
             float c = Vector3.Dot(RelPos, RelPos);
 
             float desc = b * b - 4f * a * c;
-
             float ForwardDelta = 2f * c / (Mathf.Sqrt(desc) - b);
 
             Vector3 leadPosition = Target.transform.position + RelVel * ForwardDelta;
@@ -182,6 +181,11 @@ namespace KerbalCombatSystems
             float x = (-b + Mathf.Sqrt(b * b - 4 * a * c)) / (2 * a);
 
             return x;
+        }
+
+        public static float SolveDistance(float time, float acceleration, float vel = 0)
+        {
+            return (vel * time) + 0.5f * acceleration * Mathf.Pow(time, 2);
         }
     }
 
