@@ -143,7 +143,7 @@ namespace KerbalCombatSystems
                 CheckStatus();
                 if (!alive) {
                     StopAI();
-                    FireEscapePods();
+                    vessel.ActionGroups.SetGroup(KSPActionGroup.Abort, true);
                     yield break;
                 }
                 
@@ -522,17 +522,6 @@ namespace KerbalCombatSystems
             currentProjectile = available.First();
 
             return true;
-        }
-
-        private void FireEscapePods()
-        {
-            //function to fire escape pods when the ship is dead but still holds AI units
-            List<ModuleEscapePodGuidance> PodList = vessel.FindPartModulesImplementing<ModuleEscapePodGuidance>();
-            //trigger the escape start method in every found controller
-            foreach (ModuleEscapePodGuidance EscapePod in PodList)
-            {
-                EscapePod.BeginEscape();
-            }
         }
 
         public bool CheckStatus()

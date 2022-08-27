@@ -151,7 +151,19 @@ namespace KerbalCombatSystems
         {
             return v1.GetObtVelocity() - v2.GetObtVelocity();
         }
-    }
+
+        public static ModuleCommand FindCommand(Vessel craft)
+        {
+            //get a list of onboard control points and return the first found
+            List<ModuleCommand> CommandPoints = craft.FindPartModulesImplementing<ModuleCommand>();
+            if (CommandPoints.Count != 0)
+            {
+                return CommandPoints.First();
+            }
+            //gotta have a command point somewhere so this is just for compiling
+            return null;
+        }
+}
 
     /*public class KCSShip
     {

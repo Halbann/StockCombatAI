@@ -67,10 +67,13 @@ namespace KerbalCombatSystems
                 engine.Activate();
             }
 
+            //get an onboard probe core to control from
+            FindCommand(vessel).MakeReference();
+
             // pulse to 5 m/s.
             var burnTime = 0.5f;
             var driftVelocity = 5;
-            vessel.ctrlState.mainThrottle = driftVelocity / burnTime / KCS.GetMaxAcceleration(vessel);
+            vessel.ctrlState.mainThrottle = driftVelocity / burnTime / GetMaxAcceleration(vessel);
             yield return new WaitForSeconds(burnTime);
             vessel.ctrlState.mainThrottle = 0;
 
@@ -84,7 +87,7 @@ namespace KerbalCombatSystems
                 if (target == null) yield break;
                 targetRay.origin = vessel.ReferenceTransform.position;
                 targetRay.direction = target.transform.position - vessel.transform.position;
-                lineOfSight = !KCS.RayIntersectsVessel(firer, targetRay);
+                lineOfSight = !RayIntersectsVessel(firer, targetRay);
             }
 
             // initialise debug line renderer
@@ -123,7 +126,7 @@ namespace KerbalCombatSystems
             //fc.alignmentToleranceforBurn = relVelmag > 50 ? 5 : 20;
             fc.throttle = drift ? 0 : 1;
 
-            fc.RCSVector = targetVector;
+            fc.RCSVector = targetVector.normalized;
 
             if (targetVector.magnitude < 10)
             {
