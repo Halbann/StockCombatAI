@@ -215,39 +215,29 @@ namespace KerbalCombatSystems
             if (ships.Count > 0)
             {
                 Vessel v;
+                ModuleShipController c;
 
                 foreach (var controller in ships)
                 {
-                    v = controller.vessel;
+                    c = controller; 
+                    v = c.vessel;
 
-                    //string colour = v == FlightGlobals.ActiveVessel ? "#fabe32" : "#FFFFFF";
                     string colour = "#FFFFFF";
                     var activeTarget = FlightGlobals.ActiveVessel.targetObject;
 
-                    if (!controller.alive)
-                    {
+                    if (!c.alive)
                         colour = "#808080ff";
-                    }
                     else if (v == FlightGlobals.ActiveVessel)
-                    {
-                        //colour = "#fabe32";
                         colour = "#00b5bf";
-                    }
                     else if (activeTarget != null && v == activeTarget.GetVessel())
-                    {
                         colour = "#b4ff33";
-                    }
 
-                    //if (activeTarget != null)
-                    //    colour = v == activeTarget.GetVessel() ? "#b4ff33" : colour;
-
-                    string targetName = controller.target == null ? "None" : controller.target.vesselName;
+                    string targetName = c.target == null ? "None" : c.target.vesselName;
                     string craftName = String.Format("<color={6}>{0}</color>\n<color=#808080ff>Part Count: {1}, Mass: {2} t\nAlive: {3}, Target: {4}\nState: {5}</color>",
-                        v.GetDisplayName(), v.parts.Count, Math.Round(v.GetTotalMass(), 1), controller.alive, targetName, controller.state, colour);
-
-                    string AI = String.Format("<color={0}>AI</color>", controller.controllerRunning ? "#07D207" : "#FFFFFF");
+                        v.GetDisplayName(), v.parts.Count, Math.Round(v.GetTotalMass(), 1), c.alive, targetName, c.state, colour);
 
                     GUILayout.BeginHorizontal();
+
                     if (GUILayout.Button(craftName, GUILayout.Width(windowWidth * 0.8f)))
                     {
                         FlightGlobals.ForceSetActiveVessel(v);
@@ -255,11 +245,13 @@ namespace KerbalCombatSystems
                     }
 
                     GUILayout.BeginVertical();
-                    if (GUILayout.Button(AI))
-                        controller.ToggleAI();
 
-                    if (GUILayout.Button(String.Format("<color={1}>{0}</color>", controller.side, controller.side == Side.A ? "#0AACE3" : "#E30A0A")))
-                        controller.ToggleSide();
+                    string AI = String.Format("<color={0}>AI</color>", c.controllerRunning ? "#07D207" : "#FFFFFF");
+                    if (GUILayout.Button(AI))
+                        c.ToggleAI();
+
+                    if (GUILayout.Button(String.Format("<color={1}>{0}</color>", c.side, c.side == Side.A ? "#0AACE3" : "#E30A0A")))
+                        c.ToggleSide();
 
                     GUILayout.EndVertical();
 
