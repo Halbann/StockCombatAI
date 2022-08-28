@@ -66,10 +66,10 @@ namespace KerbalCombatSystems
             FindCommand(vessel).MakeReference();
 
             // turn on engines
-            List<ModuleEngines> engines = vessel.FindPartModulesImplementing<ModuleEngines>();
-            foreach (ModuleEngines engine in engines)
+            List<ModuleEngines> Engines = vessel.FindPartModulesImplementing<ModuleEngines>();
+            foreach (ModuleEngines Engine in Engines)
             {
-                engine.Activate();
+                Engine.Activate();
             }
 
             // enable autopilot and set target orientation to away from the vessel by default
@@ -79,6 +79,13 @@ namespace KerbalCombatSystems
             fc.alignmentToleranceforBurn = 10;
             fc.attitude = vessel.ReferenceTransform.up;
             fc.Drive();
+
+            // turn on engines
+            List<ModuleParachute> Parachutes = vessel.FindPartModulesImplementing<ModuleParachute>();
+            foreach (ModuleParachute Parachute in Parachutes)
+            {
+                Parachute.Deploy();
+            }
 
             yield return new WaitForSeconds(1f);
 
@@ -122,8 +129,6 @@ namespace KerbalCombatSystems
 
         IEnumerator EscapeRoutine()
         {
-            fc.throttle = 0;
-
             if (CheckOrbitUnsafe())
             {
                 Orbit o = vessel.orbit;
@@ -152,8 +157,6 @@ namespace KerbalCombatSystems
                 Vector3 orbitNormal = vessel.orbit.Normal(Planetarium.GetUniversalTime());
                 bool facingNorth = Vector3.Angle(vessel.ReferenceTransform.up, orbitNormal) < 90;
                 fc.attitude = orbitNormal * (facingNorth ? 1 : -1);
-
-                fc.throttle = 1;
                 fc.Drive();
             }
             

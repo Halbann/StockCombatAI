@@ -67,6 +67,13 @@ namespace KerbalCombatSystems
                 engine.Activate();
             }
 
+            // turn on rcs thrusters
+            List<ModuleRCSFX> Thrusters = vessel.FindPartModulesImplementing<ModuleRCSFX>();
+            foreach (ModuleRCSFX Thruster in Thrusters)
+            {
+                Thruster.enabled = true;
+            }
+
             //get an onboard probe core to control from
             FindCommand(vessel).MakeReference();
 

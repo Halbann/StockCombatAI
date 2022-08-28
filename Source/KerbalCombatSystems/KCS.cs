@@ -45,10 +45,19 @@ namespace KerbalCombatSystems
 
         public static float GetMaxAcceleration(Vessel v)
         {
-            List<ModuleEngines> engines = v.FindPartModulesImplementing<ModuleEngines>();
-            float thrust = engines.Sum(e => e.MaxThrustOutputVac(true));
+            List<ModuleEngines> Engines = v.FindPartModulesImplementing<ModuleEngines>();
+            float Thrust = Engines.Sum(e => e.MaxThrustOutputVac(true));
 
-            return thrust / v.GetTotalMass();
+            List<ModuleRCSFX> RCS = v.FindPartModulesImplementing<ModuleRCSFX>();
+            foreach (ModuleRCSFX Thruster in RCS)
+            {
+                if (Thruster.useThrottle == true)
+                {
+                    Thrust += Thruster.thrusterPower;
+                }
+            }
+
+            return Thrust / v.GetTotalMass();
         }
 
         public static bool RayIntersectsVessel(Vessel v, Ray r)
