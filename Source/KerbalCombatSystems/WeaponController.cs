@@ -31,12 +31,22 @@ namespace KerbalCombatSystems
         [KSPField(isPersistant = true)]
         public string weaponType;
 
+        [KSPField(isPersistant = true)]
+        public bool launched = false;
+
         public static string[] types = { "Missile", "Rocket", "Firework", "Bomb", "MassCannon" };
         public static string[] massTypes = { "Missile", "Rocket", "Bomb" };
         //public static string[] projectileTypes = { "Rocket", "Firework" };
         public static string[] projectileTypes = { "Firework" };
 
-        ModuleWeapon typeModule;
+        public ModuleWeapon typeModule;
+
+        // Interception variables.
+
+        public bool missed = false;
+        public bool isInterceptor = false;
+        internal ModuleWeaponController targetWeapon;
+        public List<ModuleWeaponController> interceptedBy = new List<ModuleWeaponController>();
 
         #region Generic weapon fields
 

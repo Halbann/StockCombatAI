@@ -30,6 +30,7 @@ namespace KerbalCombatSystems
         private string mode = "Ships";
 
         public List<ModuleShipController> ships;
+        public List<ModuleWeaponController> weaponsInFlight;
         private float lastUpdateTime;
 
         List<ModuleWeaponController> weaponList;
@@ -65,7 +66,7 @@ namespace KerbalCombatSystems
 
         private void VesselEventUpdate(Vessel v)
         {
-            if (Time.time - lastUpdateTime < 5)
+            if (Time.time - lastUpdateTime < 2)
             {
                 lastUpdateTime = Time.time;
                 return;
@@ -77,9 +78,9 @@ namespace KerbalCombatSystems
 
         private IEnumerator UpdateShipListCountdown()
         {
-            while (Time.time - lastUpdateTime < 5)
+            while (Time.time - lastUpdateTime < 2)
             {
-                yield return new WaitForSecondsRealtime(5);
+                yield return new WaitForSecondsRealtime(2);
             }
             
             UpdateShipList();
@@ -91,14 +92,22 @@ namespace KerbalCombatSystems
 
             var loadedVessels = FlightGlobals.VesselsLoaded;
             ships = new List<ModuleShipController>();
+            weaponsInFlight = new List<ModuleWeaponController>();
             //ships = new List<KCSShip>();
 
             foreach (Vessel v in loadedVessels)
             {
                 var p = v.FindPartModuleImplementing<ModuleShipController>();
-                if (p == null) continue;
+                if (p != null)
+                {
+                    ships.Add(p);   
+                    continue;
+                }
 
-                ships.Add(p);
+                var w = v.FindPartModuleImplementing<ModuleWeaponController>();
+                if (w != null && w.launched && !w.missed)
+                    weaponsInFlight.Add(w);
+
                 //ships.Add(new KCSShip(v, v.GetTotalMass())); // todo: Should update mass instead
             }
         }
@@ -127,9 +136,14 @@ namespace KerbalCombatSystems
 
         public void ToggleAIs()
         {
+            bool running = ships.FindIndex(c => c.controllerRunning) > -1;
+
             foreach (var controller in ships)
             {
-                controller.ToggleAI();
+                if (running)
+                    controller.StopAI();
+                else
+                    controller.StartAI();
             }
         }
 
@@ -216,7 +230,8 @@ namespace KerbalCombatSystems
                     }
                     else if (v == FlightGlobals.ActiveVessel)
                     {
-                        colour = "#fabe32";
+                        //colour = "#fabe32";
+                        colour = "#00b5bf";
                     }
                     else if (activeTarget != null && v == activeTarget.GetVessel())
                     {
@@ -241,13 +256,11 @@ namespace KerbalCombatSystems
 
                     GUILayout.BeginVertical();
                     if (GUILayout.Button(AI))
-                    {
                         controller.ToggleAI();
-                    }
+
                     if (GUILayout.Button(String.Format("<color={1}>{0}</color>", controller.side, controller.side == Side.A ? "#0AACE3" : "#E30A0A")))
-                    {
                         controller.ToggleSide();
-                    }
+
                     GUILayout.EndVertical();
 
                     GUILayout.EndHorizontal();

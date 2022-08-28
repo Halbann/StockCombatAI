@@ -17,6 +17,7 @@ namespace KerbalCombatSystems
         public float throttleLerpRate = 1;
         public float alignmentToleranceforBurn = 5;
         private Vector3 attitudeLerped;
+        public bool lerpAttitude = true;
         private float error;
         private float angleLerp;
         private float lerpRate;
@@ -85,16 +86,16 @@ namespace KerbalCombatSystems
 
             // The offline SAS must not be on stability assist. Normal seems to work on most probes.
             if (ap.Mode != VesselAutopilot.AutopilotMode.Normal)
-            {
                 ap.SetMode(VesselAutopilot.AutopilotMode.Normal);
-            }
 
             // Lerp attitude while burning to reduce instability.
-            angleLerp = Mathf.InverseLerp(0, 10, error);
-            lerpRate = Mathf.Lerp(1, 10, angleLerp);
-            attitudeLerped = Vector3.Lerp(attitudeLerped, attitude, lerpRate * Time.deltaTime);
+            if (lerpAttitude) {
+                angleLerp = Mathf.InverseLerp(0, 10, error);
+                lerpRate = Mathf.Lerp(1, 10, angleLerp);
+                attitudeLerped = Vector3.Lerp(attitudeLerped, attitude, lerpRate * Time.deltaTime);
+            }
 
-            ap.SAS.SetTargetOrientation(throttleLerped > 0 ? attitudeLerped : attitude, false);
+            ap.SAS.SetTargetOrientation(throttleLerped > 0 && lerpAttitude ? attitudeLerped : attitude, false);
 
             // Update debug lines.
             Vector3 origin = v.ReferenceTransform.position;

@@ -51,7 +51,7 @@ namespace KerbalCombatSystems
 
             //make it come to a point
             Line.startWidth = 0.5f;
-            Line.endWidth = 0f;
+            Line.endWidth = 0.1f;
 
             // Don't draw until the line is first plotted.
             Line.positionCount = 0;

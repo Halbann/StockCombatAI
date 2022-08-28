@@ -45,6 +45,8 @@ namespace KerbalCombatSystems
         private float shipLength;
         private Vector3 maxAngularAcceleration;
         private float maxAcceleration;
+        private List<ModuleWeaponController> interceptors;
+        private List<ModuleWeaponController> weaponsToIntercept;
 
         [KSPField(isPersistant = true)]
         public Side side;
@@ -141,6 +143,8 @@ namespace KerbalCombatSystems
                 shipLength = (new[] { size.x, size.y, size.z}).ToList().Max();
 
                 StartCoroutine(CalculateMaxAcceleration());
+
+                weaponsToIntercept = new List<ModuleWeaponController>();
             }
             else if (HighLogic.LoadedSceneIsEditor)
             {
@@ -213,6 +217,7 @@ namespace KerbalCombatSystems
 
                 UpdateDetectionRange();
                 FindTarget();
+                FindInterceptTarget();
 
                 // Missiles.
 
@@ -511,7 +516,8 @@ namespace KerbalCombatSystems
             if (Time.time - lastFired > fireInterval)
             {
                 lastFired = Time.time;
-                fireInterval = UnityEngine.Random.Range(5, 15);
+                //fireInterval = UnityEngine.Random.Range(5, 15);
+                fireInterval = 7.5f;
 
                 if (weapons.Count > 0)
                 {
@@ -524,9 +530,28 @@ namespace KerbalCombatSystems
                         weapon.Fire();
                         targetController.AddIncoming(weapon);
 
-                        StartCoroutine(CheckWeaponsDelayed());
+                        //StartCoroutine(CheckWeaponsDelayed());
+                        CheckWeapons();
                     }
                 }
+            }
+
+            if (weaponsToIntercept.Count > 0 && interceptors.Count > 0)
+            {
+                var interceptor = interceptors.First();
+                var interceptTarget = weaponsToIntercept.First();
+
+                interceptor.side = side;
+                interceptor.target = interceptTarget.vessel;
+                interceptor.isInterceptor = true;
+                interceptor.targetWeapon = interceptTarget;
+
+                interceptor.Fire();
+                interceptTarget.interceptedBy.Add(interceptor);
+
+                Debug.Log($"[KCS]: {vessel.GetDisplayName()} fired an interceptor at {weaponsToIntercept.First().vessel.GetDisplayName()}");
+
+                CheckWeapons();
             }
         }
 
@@ -543,6 +568,8 @@ namespace KerbalCombatSystems
                 weaponsMinRange = weapons.Min(w => w.MinMaxRange.x);
                 weaponsMaxRange = weapons.Max(w => w.MinMaxRange.y);
             }
+
+            interceptors = weapons.FindAll(w => w.useAsInterceptor); 
         }
 
         public IEnumerator CheckWeaponsDelayed()
@@ -684,6 +711,22 @@ namespace KerbalCombatSystems
                 if (vessel == FlightGlobals.ActiveVessel)
                     FlightGlobals.fetch.SetVesselTarget(target, true);
             }
+        }
+
+        private void FindInterceptTarget()
+        {
+            if (controller.weaponsInFlight.Count < 1) return;
+
+            weaponsToIntercept = controller.weaponsInFlight.FindAll(
+                w => 
+                w != null
+                && w.vessel != null
+                && !w.missed
+                && w.side != side
+                && VesselDistance(w.vessel, vessel) < maxDetectionRange
+                && w.interceptedBy.Count < 1);
+
+            weaponsToIntercept.OrderBy(w => VesselDistance(w.vessel, vessel));
         }
 
         public void ToggleSide()
