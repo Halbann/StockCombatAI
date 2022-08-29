@@ -17,36 +17,42 @@ namespace KerbalCombatSystems
         const string shipControllerGroupName = "Ship AI";
         public bool controllerRunning = false;
         public float updateInterval = 2.5f;
+        public float firingAngularVelocityLimit = 1; // degrees per second
 
         // Ship AI variables.
 
-        private Coroutine shipControllerCoroutine;
-        private Coroutine behaviourCoroutine;
-        private KCSFlightController fc;
         private KCSController controller;
+        private KCSFlightController fc;
+
         public Vessel target;
         private ModuleShipController targetController;
+
+        private Coroutine shipControllerCoroutine;
+        private Coroutine behaviourCoroutine;
+        public string state = "Init";
+        private float lastUpdate;
+
         public List<ModuleWeaponController> weapons;
         private float weaponsMinRange;
         private float weaponsMaxRange;
         private float lastFired;
         private float fireInterval;
+        private ModuleWeaponController currentProjectile;
+        private List<ModuleWeaponController> incomingWeapons;
+        private List<Tuple<ModuleWeaponController, float>> shouldDodgeWeapons;
+        private List<ModuleWeaponController> interceptors;
+        private List<ModuleWeaponController> weaponsToIntercept;
+
         private float maxDetectionRange;
         public float initialMass;
         private bool hasPropulsion;
         private bool hasWeapons;
-        private float lastUpdate;
-        private double minSafeAltitude;
-        public string state = "Init";
-        private ModuleWeaponController currentProjectile;
+        private float maxAcceleration;
         private bool roboticsDeployed;
-        private List<ModuleWeaponController> incomingWeapons;
-        private List<Tuple<ModuleWeaponController, float>> shouldDodgeWeapons;
         private float shipLength;
         private Vector3 maxAngularAcceleration;
-        private float maxAcceleration;
-        private List<ModuleWeaponController> interceptors;
-        private List<ModuleWeaponController> weaponsToIntercept;
+        private double minSafeAltitude;
+        private int updateCount;
 
         [KSPField(isPersistant = true)]
         public Side side;
@@ -235,6 +241,9 @@ namespace KerbalCombatSystems
         {
             maxAcceleration = GetMaxAcceleration(vessel);
 
+            updateCount++;
+            //Debug.Log($"[KCS]: Update {updateCount} for {vessel.GetDisplayName()}.");
+
             // Movement.
             if (hasPropulsion && !hasWeapons && CheckWithdraw())
             {
@@ -287,7 +296,7 @@ namespace KerbalCombatSystems
 
                 fc.alignmentToleranceforBurn = previousTolerance;
             }
-            else if (target != null && CanFireProjectile(target) && AngularVelocity(vessel, target) < 2)
+            else if (target != null && CanFireProjectile(target) && AngularVelocity(vessel, target) < firingAngularVelocityLimit)
             {
                 // Aim at target using current projectile weapon.
                 // The weapon handles firing.
@@ -307,6 +316,7 @@ namespace KerbalCombatSystems
                 while (UnderTimeLimit() && target != null && currentProjectile.canFire)
                 {
                     fc.attitude = currentProjectile.Aim();
+                    // todo: correct for relative and angular velocity while firing if firing at an accelerating target
 
                     yield return new WaitForFixedUpdate();
                 }
@@ -424,7 +434,7 @@ namespace KerbalCombatSystems
 
                     while (UnderTimeLimit() && target != null && !complete)
                     {
-                        fc.attitude = FromTo(vessel, target) * -1;
+                        fc.attitude = FromTo(vessel, target).normalized * -1;
                         fc.throttle = Vector3.Dot(RelVel(vessel, target), fc.attitude) < manoeuvringSpeed ? 1 : 0;
                         complete = FromTo(vessel, target).magnitude > minRange;
 
@@ -476,13 +486,13 @@ namespace KerbalCombatSystems
                             yield return new WaitForFixedUpdate();
                         }
                     }
-                    else if (target != null && currentProjectile != null && AngularVelocity(vessel, target) > 2)
+                    else if (target != null && currentProjectile != null && AngularVelocity(vessel, target) > firingAngularVelocityLimit)
                     {
                         state = "Manoeuvring (Kill Angular Velocity)";
 
                         while (UnderTimeLimit() && target != null && !complete)
                         {
-                            complete = AngularVelocity(vessel, target) < 2;
+                            complete = AngularVelocity(vessel, target) < firingAngularVelocityLimit / 2;
                             fc.attitude = Vector3.ProjectOnPlane(RelVel(vessel, target), FromTo(vessel, target)).normalized * -1;
                             fc.throttle = !complete ? 1 : 0;
 

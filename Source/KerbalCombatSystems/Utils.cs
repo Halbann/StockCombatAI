@@ -190,10 +190,9 @@ namespace KerbalCombatSystems
 
         public static float AngularVelocity(Vessel v, Vessel t)
         {
-            Vector3 relVel = RelVel(v, t);
-            Vector3 relVelAngular = Vector3.ProjectOnPlane(relVel.normalized, FromTo(v, t).normalized).normalized;
-
-            return Vector3.Dot(relVel, relVelAngular);
+            Vector3 tv1 = FromTo(v, t);
+            Vector3 tv2 = tv1 + RelVel(v, t);
+            return Vector3.Angle(tv1.normalized, tv2.normalized);
         }
     }
 

@@ -30,8 +30,8 @@ namespace KerbalCombatSystems
         private Vector3 relVelNrm;
         private float relVelmag;
 
-        private float correctionAmount;
-        private Vector3 correction;
+        //private float correctionAmount;
+        //private Vector3 correction;
 
         public float timeToHit;
         private Vector3 lead;
@@ -183,7 +183,11 @@ namespace KerbalCombatSystems
 
         private void UpdateGuidance()
         {
-            if (target == null || (isInterceptor && (targetWeapon == null || targetWeapon.missed))) StopGuidance();
+            if (target == null || (isInterceptor && (targetWeapon == null || targetWeapon.missed))) 
+            {
+                StopGuidance();
+                return;
+            }
 
             targetVector = target.transform.position - vessel.ReferenceTransform.position;
             relVel = vessel.GetObtVelocity() - target.GetObtVelocity();
@@ -210,7 +214,10 @@ namespace KerbalCombatSystems
 
             accuracy = Vector3.Dot(targetVectorNormal, relVelNrm);
             if (targetVector.magnitude < 10 || ((mainEngine == null || !mainEngine.isOperational) && accuracy < 0.99))
+            {
                 StopGuidance();
+                return;
+            }
 
             drift = accuracy > 0.999999
                 && (Vector3.Dot(relVel, targetVectorNormal) > terminalVelocity || isInterceptor);
@@ -264,7 +271,6 @@ namespace KerbalCombatSystems
             engageAutopilot = false;
             controller.missed = true;
             OnDestroy();
-            return;
         }
     }
 }

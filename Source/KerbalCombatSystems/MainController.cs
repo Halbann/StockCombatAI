@@ -222,13 +222,13 @@ namespace KerbalCombatSystems
                     c = controller; 
                     v = c.vessel;
 
-                    string colour = "#FFFFFF";
+                    string colour = "#ffffff";
                     var activeTarget = FlightGlobals.ActiveVessel.targetObject;
 
                     if (!c.alive)
-                        colour = "#808080ff";
+                        colour = "#808080";
                     else if (v == FlightGlobals.ActiveVessel)
-                        colour = "#00b5bf";
+                        colour = "#00f2ff";
                     else if (activeTarget != null && v == activeTarget.GetVessel())
                         colour = "#b4ff33";
 
