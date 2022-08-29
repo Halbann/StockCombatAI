@@ -33,7 +33,7 @@ namespace KerbalCombatSystems
         private float correctionAmount;
         private Vector3 correction;
 
-        private float timeToHit;
+        public float timeToHit;
         private Vector3 lead;
         private Vector3 predictedPos;
         private Vector3 interceptVector;

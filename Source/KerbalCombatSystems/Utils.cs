@@ -187,6 +187,14 @@ namespace KerbalCombatSystems
         {
             return (vel * time) + 0.5f * acceleration * Mathf.Pow(time, 2);
         }
+
+        public static float AngularVelocity(Vessel v, Vessel t)
+        {
+            Vector3 relVel = RelVel(v, t);
+            Vector3 relVelAngular = Vector3.ProjectOnPlane(relVel.normalized, FromTo(v, t).normalized).normalized;
+
+            return Vector3.Dot(relVel, relVelAngular);
+        }
     }
 
     /*public class KCSShip

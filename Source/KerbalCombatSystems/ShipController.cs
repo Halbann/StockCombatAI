@@ -287,7 +287,7 @@ namespace KerbalCombatSystems
 
                 fc.alignmentToleranceforBurn = previousTolerance;
             }
-            else if (target != null && CanFireProjectile(target))
+            else if (target != null && CanFireProjectile(target) && AngularVelocity(vessel, target) < 2)
             {
                 // Aim at target using current projectile weapon.
                 // The weapon handles firing.
@@ -433,14 +433,14 @@ namespace KerbalCombatSystems
 
                     fc.alignmentToleranceforBurn = oldAlignment;
                 }
-                else if (currentRange > maxRange && !NearIntercept(relVel, minRange, maxAcceleration))
+                else if (currentRange > maxRange && !NearIntercept(relVel, minRange))
                 {
                     float angle;
 
                     while (UnderTimeLimit() && target != null && !complete)
                     {
                         relVel = RelVel(vessel, target);
-                        Vector3 targetVec = ToClosestApproach(relVel, minRange).normalized;
+                        Vector3 targetVec = ToClosestApproach(relVel, minRange * 1.2f).normalized;
                         angle = Vector3.Angle(relVel.normalized, targetVec);
 
                         if (angle > 45 && relVel.magnitude > maxAcceleration * 2)
@@ -471,6 +471,19 @@ namespace KerbalCombatSystems
                             relVel = RelVel(vessel, target);
                             fc.attitude = relVel.normalized * -1;
                             complete = relVel.magnitude < firingSpeed / 3;
+                            fc.throttle = !complete ? 1 : 0;
+
+                            yield return new WaitForFixedUpdate();
+                        }
+                    }
+                    else if (target != null && currentProjectile != null && AngularVelocity(vessel, target) > 2)
+                    {
+                        state = "Manoeuvring (Kill Angular Velocity)";
+
+                        while (UnderTimeLimit() && target != null && !complete)
+                        {
+                            complete = AngularVelocity(vessel, target) < 2;
+                            fc.attitude = Vector3.ProjectOnPlane(RelVel(vessel, target), FromTo(vessel, target)).normalized * -1;
                             fc.throttle = !complete ? 1 : 0;
 
                             yield return new WaitForFixedUpdate();
@@ -535,6 +548,9 @@ namespace KerbalCombatSystems
                     }
                 }
             }
+
+            // todo: could we actually intercept it before it reaches its target? don't want to waste an interceptor.
+            // need to know missile's time to hit and the ideal interceptors time to intercept
 
             if (weaponsToIntercept.Count > 0 && interceptors.Count > 0)
             {
@@ -607,9 +623,12 @@ namespace KerbalCombatSystems
             available = available.FindAll(w => targetRange > w.MinMaxRange.x && targetRange < w.MinMaxRange.y);
             available = available.FindAll(w => w.canFire);
 
-            if (available.Count < 1) return false;
-            currentProjectile = available.First();
+            if (available.Count < 1) { 
+                currentProjectile = null;
+                return false;
+            }
 
+            currentProjectile = available.First();
             return true;
         }
 
@@ -624,6 +643,7 @@ namespace KerbalCombatSystems
             }
         }
 
+        // todo: something about CheckStatus or CheckWithdraw might be preventing ships from starting to withdraw unless they are the active vessel
         public bool CheckStatus()
         {
             hasPropulsion = vessel.FindPartModulesImplementing<ModuleEngines>().FindAll(e => e.EngineIgnited && e.isOperational).Count > 0;
@@ -651,13 +671,9 @@ namespace KerbalCombatSystems
             var sensors = vessel.FindPartModulesImplementing<ModuleObjectTracking>();
 
             if (sensors.Count < 1)
-            {
                 maxDetectionRange = 1000;
-            }
             else
-            {
                 maxDetectionRange = sensors.Max(s => s.detectionRange);
-            }
 
             //if the sensors aren't deployed and the AI is running
             if(!DeployedSensors && controllerRunning)
@@ -756,16 +772,20 @@ namespace KerbalCombatSystems
             return Time.time - lastUpdate < updateInterval;
         }
 
-        private bool NearIntercept(Vector3 relVel, float minRange, float maxAccel)
+        private bool NearIntercept(Vector3 relVel, float minRange)
         {
-            float timeToKillVelocity = relVel.magnitude / maxAccel;
+            float timeToKillVelocity = (relVel.magnitude - firingSpeed) / maxAcceleration;
+
+            float rotDistance = Vector3.Angle(vessel.ReferenceTransform.up, relVel.normalized * -1) * Mathf.Deg2Rad;
+            //float timeToRotate = SolveTime(rotDistance / 2, maxAngularAcceleration.magnitude) * 2;
+            float timeToRotate = SolveTime(rotDistance * 0.75f, maxAngularAcceleration.magnitude) / 0.75f;
 
             Vector3 toClosestApproach = ToClosestApproach(relVel, minRange);
             float velToClosestApproach = Vector3.Dot(relVel, toClosestApproach.normalized);
             if (velToClosestApproach < 1) return false;
             float timeToClosestApproach = Mathf.Abs(toClosestApproach.magnitude / velToClosestApproach);
 
-            return timeToClosestApproach < timeToKillVelocity;
+            return timeToClosestApproach < (timeToKillVelocity + timeToRotate);
         }
 
         private Vector3 ToClosestApproach(Vector3 relVel, float minRange)
@@ -823,6 +843,7 @@ namespace KerbalCombatSystems
                 float timeToDodge = timeToRotate + timeToDisplace;
 
                 float timeToHit = SolveTime(incomingVector.magnitude, (float)iv.acceleration.magnitude, Vector3.Dot(relVel, incomingVector.normalized));
+                //float timeToHit = incoming.MCFireTime;;
 
                 if (timeToHit > Mathf.Max(timeToDodge * 1.25f, updateInterval * 2)) continue;
                 shouldDodgeWeapons.Add(new Tuple<ModuleWeaponController, float>(incoming, timeToHit));
@@ -878,5 +899,3 @@ namespace KerbalCombatSystems
         #endregion
     }
 }
-
-
