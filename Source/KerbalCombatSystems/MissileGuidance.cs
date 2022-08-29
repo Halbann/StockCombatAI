@@ -129,7 +129,7 @@ namespace KerbalCombatSystems
             yield break;
         }
 
-        private void UpdateGuidanceByAngle()
+        /*private void UpdateGuidanceByAngle()
         {
             if (target == null || (isInterceptor && (targetWeapon == null || targetWeapon.missed))) StopGuidance();
 
@@ -179,7 +179,7 @@ namespace KerbalCombatSystems
             KCSDebug.PlotLine(new[] { origin, origin + targetVector }, targetLine);
             KCSDebug.PlotLine(new[] { origin, origin + (relVelNrm * 50) }, rvLine);
             KCSDebug.PlotLine(new[] { origin, origin + lead }, leadLine);
-        }
+        }*/
 
         private void UpdateGuidance()
         {
