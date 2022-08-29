@@ -7,7 +7,7 @@ using UnityEngine;
 
 namespace KerbalCombatSystems
 {
-    public static class KCS
+    public static partial class KCS
     {
         public static ModuleDecouple FindDecoupler(Part origin, string type, bool ignoreTypeRequirement)
         {

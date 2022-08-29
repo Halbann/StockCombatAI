@@ -83,6 +83,7 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="ClosestTimeToCPA.cs" />
     <Compile Include="MassCannonTargeting.cs" />
     <Compile Include="BombGuidance.cs" />
     <Compile Include="RocketTargeting.cs" />

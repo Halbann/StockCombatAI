@@ -105,7 +105,7 @@ namespace KerbalCombatSystems
                 }
 
                 var w = v.FindPartModuleImplementing<ModuleWeaponController>();
-                if (w != null && w.launched && !w.missed)
+                if (w != null && w.launched && !w.missed && !w.isInterceptor)
                     weaponsInFlight.Add(w);
 
                 //ships.Add(new KCSShip(v, v.GetTotalMass())); // todo: Should update mass instead

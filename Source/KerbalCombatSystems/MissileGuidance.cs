@@ -13,28 +13,42 @@ namespace KerbalCombatSystems
 {
     public class ModuleMissile : ModuleWeapon
     {
-        // Missile guidance variables.
+        // Settings
 
         public bool engageAutopilot = false;
-        private KCSFlightController fc;
+        private Vessel target;
+        private Vessel firer;
+        private float terminalVelocity;
+        private ModuleWeaponController targetWeapon;
+        private bool isInterceptor;
+
+        // Missile guidance variables.
+
         private Vector3 targetVector;
         private Vector3 targetVectorNormal;
         private Vector3 relVel;
         private Vector3 relVelNrm;
         private float relVelmag;
+
         private float correctionAmount;
         private Vector3 correction;
+
+        private float timeToHit;
+        private Vector3 lead;
+        private Vector3 predictedPos;
+        private Vector3 interceptVector;
+
+        private float accuracy;
         private bool drift;
-        private Vessel target;
-        private ModuleWeaponController targetWeapon;
-        private Vessel firer;
+        private float maxAcceleration;
+
+        // Components
+
+        private KCSFlightController fc;
         private ModuleDecouple decoupler;
         private ModuleWeaponController controller;
         private List<ModuleEngines> engines;
-        private float timeToHit;
-        private Vector3 lead;
-        private float terminalVelocity;
-        private bool isInterceptor;
+        private ModuleEngines mainEngine;
 
         // Debugging line variables.
 
@@ -64,6 +78,7 @@ namespace KerbalCombatSystems
             // turn on engines
             engines = vessel.FindPartModulesImplementing<ModuleEngines>();
             engines.ForEach(e => e.Activate());
+            mainEngine = engines.First();
             
             if (!isInterceptor)
             {
@@ -109,6 +124,7 @@ namespace KerbalCombatSystems
             fc.lerpAttitude = false;
             engageAutopilot = true;
             controller.launched = true;
+            maxAcceleration = GetMaxAcceleration(vessel);
 
             yield break;
         }
@@ -147,7 +163,6 @@ namespace KerbalCombatSystems
                 fc.attitude = targetVectorNormal;
             }
 
-            // first expression only if interceptor
             drift = Vector3.Dot(targetVectorNormal, relVelNrm) > 0.999999
                 && (Vector3.Dot(relVel, targetVectorNormal) > terminalVelocity || isInterceptor);
 
@@ -170,32 +185,34 @@ namespace KerbalCombatSystems
         {
             if (target == null || (isInterceptor && (targetWeapon == null || targetWeapon.missed))) StopGuidance();
 
-            float maxAcceleration = GetMaxAcceleration(vessel);
-
             targetVector = target.transform.position - vessel.ReferenceTransform.position;
             relVel = vessel.GetObtVelocity() - target.GetObtVelocity();
             relVelNrm = relVel.normalized;
             relVelmag = relVel.magnitude;
 
-            float relVelDot = Vector3.Dot(relVel, targetVector.normalized);
-            timeToHit = SolveTime(targetVector.magnitude, maxAcceleration, relVelDot);
-            //Vector3 lead = relVelNrm * SolveDistance(timeToHit, (float)target.acceleration.magnitude, relVelmag);
-            Vector3 lead = (relVelNrm * -1) * timeToHit * relVelmag;
+            if (!isInterceptor)
+            {
+                timeToHit = SolveTime(targetVector.magnitude, maxAcceleration, Vector3.Dot(relVel, targetVector.normalized));
+                lead = (relVelNrm * -1) * timeToHit * relVelmag;
+                interceptVector = (target.transform.position + lead) - vessel.ReferenceTransform.position;
+            }
+            else
+            {
+                timeToHit = ClosestTimeToCPA(targetVector, target.obt_velocity - vessel.obt_velocity, target.acceleration - (vessel.ReferenceTransform.up * maxAcceleration), 30);
+                predictedPos = PredictPosition(target.transform.position, target.rootPart.Rigidbody.velocity - vessel.rootPart.Rigidbody.velocity, target.acceleration, timeToHit);
+                interceptVector = predictedPos - vessel.ReferenceTransform.position;
 
-            /*if (isInterceptor) {
-                Vector3 accLead = target.acceleration.normalized * SolveDistance(timeToHit, (float)target.acceleration.magnitude, 0);
-                lead = lead - accLead;
-                lead = (relVelNrm * -1) * SolveDistance(timeToHit, (float)target.acceleration.magnitude, relVelmag);
-            }*/
+                if (Vector3.Dot(interceptVector.normalized, targetVector.normalized) < 0)
+                    interceptVector = interceptVector * -1;
+            }
 
-            Vector3 interceptVector = (target.transform.position + lead) - vessel.ReferenceTransform.position;
             targetVectorNormal = interceptVector.normalized;
 
-            ModuleEngines mainEngine = engines.First();
-            if (targetVector.magnitude < 10 || mainEngine == null || !mainEngine.isOperational)
+            accuracy = Vector3.Dot(targetVectorNormal, relVelNrm);
+            if (targetVector.magnitude < 10 || ((mainEngine == null || !mainEngine.isOperational) && accuracy < 0.99))
                 StopGuidance();
 
-            drift = Vector3.Dot(targetVectorNormal, relVelNrm) > 0.999999
+            drift = accuracy > 0.999999
                 && (Vector3.Dot(relVel, targetVectorNormal) > terminalVelocity || isInterceptor);
 
             fc.throttle = drift ? 0 : 1;
@@ -205,9 +222,9 @@ namespace KerbalCombatSystems
             // Update debug lines.
             Vector3 origin = vessel.ReferenceTransform.position;
             KCSDebug.PlotLine(new[] { origin, origin + interceptVector }, targetLine);
-            KCSDebug.PlotLine(new[] { origin, origin + (relVelNrm * 50) }, rvLine);
+            KCSDebug.PlotLine(new[] { origin, origin + (relVelNrm * 15) }, rvLine);
 
-            if (isInterceptor)
+            if (!isInterceptor)
             {
                 Vector3 targetOrigin = target.transform.position;
                 KCSDebug.PlotLine(new[] { targetOrigin, targetOrigin + lead }, leadLine);
