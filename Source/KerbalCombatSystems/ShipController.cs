@@ -746,7 +746,7 @@ namespace KerbalCombatSystems
 
         private bool HasLock()
         {
-           return FromTo(vessel, target).magnitude < maxDetectionRange * (targetController.heatSignature / 1500);
+           return FromTo(vessel, target).magnitude < maxDetectionRange * Mathf.Clamp((targetController.heatSignature / 1500), 0.5f, 1.5f);
         }
 
         private void FindInterceptTarget()
