@@ -29,6 +29,7 @@ namespace KerbalCombatSystems
 
         private Coroutine shipControllerCoroutine;
         private Coroutine behaviourCoroutine;
+        private Coroutine missileCoroutine;
         public string state = "Init";
         private float lastUpdate;
 
@@ -231,7 +232,8 @@ namespace KerbalCombatSystems
                 // Missiles.
 
                 CheckWeapons();
-                MissileFireControl();
+                missileCoroutine = StartCoroutine(MissileFireControl());
+                yield return missileCoroutine;
 
                 // Update behaviour tree for movement and projectile weapons.
 
@@ -535,15 +537,14 @@ namespace KerbalCombatSystems
             }
         }
 
-        public void MissileFireControl()
+        public IEnumerator MissileFireControl()
         {
-            if (target == null) return;
+            if (target == null) yield break;
 
             if (Time.time - lastFired > fireInterval)
             {
                 lastFired = Time.time;
-                //fireInterval = UnityEngine.Random.Range(5, 15);
-                fireInterval = 7.5f;
+                fireInterval = UnityEngine.Random.Range(5, 15);
 
                 if (weapons.Count > 0)
                 {
@@ -554,9 +555,15 @@ namespace KerbalCombatSystems
                         weapon.target = target;
                         weapon.side = side;
                         weapon.Fire();
+
                         targetController.AddIncoming(weapon);
 
-                        //StartCoroutine(CheckWeaponsDelayed());
+                        if (weapon.frontLaunch)
+                        {
+                            Coroutine waitForLaunch = StartCoroutine(WaitForLaunch(weapon));
+                            yield return waitForLaunch;
+                        }
+
                         CheckWeapons();
                     }
                 }
@@ -570,13 +577,19 @@ namespace KerbalCombatSystems
                 var interceptor = interceptors.First();
                 var interceptTarget = weaponsToIntercept.First();
 
-                interceptor.side = side;
-                interceptor.target = interceptTarget.vessel;
                 interceptor.isInterceptor = true;
                 interceptor.targetWeapon = interceptTarget;
-
-                interceptor.Fire();
                 interceptTarget.interceptedBy.Add(interceptor);
+
+                interceptor.target = interceptTarget.vessel;
+                interceptor.side = side;
+                interceptor.Fire();
+
+                if (interceptor.frontLaunch)
+                {
+                    Coroutine waitForLaunch = StartCoroutine(WaitForLaunch(interceptor));
+                    yield return waitForLaunch;
+                }
 
                 Debug.Log($"[KCS]: {vessel.GetDisplayName()} fired an interceptor at {weaponsToIntercept.First().vessel.GetDisplayName()}");
 
@@ -780,9 +793,12 @@ namespace KerbalCombatSystems
             return o.PeA < minSafeAltitude;
         }
 
-        private bool UnderTimeLimit()
+        private bool UnderTimeLimit(float timeLimit = 0)
         {
-            return Time.time - lastUpdate < updateInterval;
+            if (timeLimit == 0) 
+                timeLimit = updateInterval;
+
+            return Time.time - lastUpdate < timeLimit;
         }
 
         private bool NearIntercept(Vector3 relVel, float minRange)
@@ -880,6 +896,22 @@ namespace KerbalCombatSystems
             float size = (vessel.vesselSize.x + vessel.vesselSize.y + vessel.vesselSize.z) / 3;
             heatSignature = hottestPartTemp * size;
             return heatSignature;
+        }
+
+        private IEnumerator WaitForLaunch(ModuleWeaponController weapon)
+        {
+            state = "Firing Missile";
+            fc.throttle = 0;
+            fc.Drive();
+            fc.Stability(true);
+
+            while (!weapon.launched && UnderTimeLimit(5))
+            {
+                fc.Drive();
+                yield return new WaitForFixedUpdate();
+            }
+
+            fc.Stability(false);
         }
 
         #endregion

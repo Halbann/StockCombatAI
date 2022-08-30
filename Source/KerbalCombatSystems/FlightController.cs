@@ -21,12 +21,13 @@ namespace KerbalCombatSystems
         private float error;
         private float angleLerp;
         private float lerpRate;
+        private bool lockAttitude = false;
 
         private Vessel controllingVessel;
 
         LineRenderer currentVectorLine, targetVectorLine;
 
-        public void Start()
+        public void Awake()
         {
             controllingVessel = gameObject.GetComponent<Part>().vessel;
 
@@ -74,7 +75,7 @@ namespace KerbalCombatSystems
 
         void UpdateSAS(Vessel v)
         {
-            if (attitude == Vector3.zero) return;
+            if (attitude == Vector3.zero || lockAttitude) return;
             //if (v == null) return;
 
             // SAS must be turned off. Don't know why.
@@ -101,6 +102,17 @@ namespace KerbalCombatSystems
             Vector3 origin = v.ReferenceTransform.position;
             KCSDebug.PlotLine(new[]{ origin, origin + v.ReferenceTransform.up * 50}, currentVectorLine);
             KCSDebug.PlotLine(new[]{ origin, origin + attitudeLerped * 50}, targetVectorLine);
+        }
+
+        public void Stability(bool enable)
+        {
+            lockAttitude = enable;
+
+            var ap = controllingVessel.Autopilot;
+            if (ap == null) return;
+
+            controllingVessel.ActionGroups.SetGroup(KSPActionGroup.SAS, enable);
+            ap.SetMode(enable ? VesselAutopilot.AutopilotMode.StabilityAssist : VesselAutopilot.AutopilotMode.Normal);
         }
     }
 }

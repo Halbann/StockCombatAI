@@ -59,6 +59,9 @@ namespace KerbalCombatSystems
             // find decoupler
             decoupler = FindDecoupler(part, "Weapon", true);
 
+            bool frontLaunch = Vector3.Dot(decoupler.transform.up, vessel.ReferenceTransform.up) > 0.99;
+            controller.frontLaunch = frontLaunch;
+
             // todo:
             // electric charge check
             // fuel check
@@ -68,33 +71,42 @@ namespace KerbalCombatSystems
             if (decoupler != null)
                 decoupler.Decouple();
             else
-                //notify of error but launch anyway for freefloating missiles
                 Debug.Log("[KCS]: Couldn't find decoupler.");
-
-            // wait to try to prevent destruction of decoupler.
-            // todo: could increase heat tolerance temporarily or calculate a lower throttle.
-            yield return new WaitForSeconds(0.2f);
 
             // turn on engines
             engines = vessel.FindPartModulesImplementing<ModuleEngines>();
             engines.ForEach(e => e.Activate());
             mainEngine = engines.First();
+
+            // Setup flight controller.
+            fc = part.gameObject.AddComponent<KCSFlightController>();
+            fc.alignmentToleranceforBurn = 20;
+            fc.lerpAttitude = false;
+            fc.throttleLerpRate = 99;
+            fc.attitude = vessel.ReferenceTransform.up;
+            fc.Drive();
+
+            // wait to try to prevent destruction of decoupler.
+            // todo: could increase heat tolerance temporarily or calculate a lower throttle.
+            yield return new WaitForSeconds(0.2f);
             
             if (!isInterceptor)
             {
                 // pulse to 5 m/s.
                 float burnTime = 0.5f;
                 float driftVelocity = 5;
-                vessel.ctrlState.mainThrottle = driftVelocity / burnTime / GetMaxAcceleration(vessel);
+                fc.throttle = driftVelocity / burnTime / GetMaxAcceleration(vessel);
+                fc.Drive();
 
                 yield return new WaitForSeconds(burnTime);
 
-                vessel.ctrlState.mainThrottle = 0;
+                fc.throttle = 0;
             }
             else
             {
-                vessel.ctrlState.mainThrottle = 1;
+                fc.throttle = 1;
             }
+            fc.Drive();
 
             // wait until clear of firer
             bool lineOfSight = false;
@@ -102,8 +114,17 @@ namespace KerbalCombatSystems
 
             while (!lineOfSight)
             {
-                yield return new WaitForSeconds(isInterceptor ? 0.1f : 0.5f);
-                if (target == null) yield break;
+                yield return new WaitForSeconds(0.1f);
+                //yield return new WaitForSeconds(isInterceptor ? 0.1f : 0.5f);
+                if (target == null) break;
+
+                if (frontLaunch)
+                {
+                    fc.attitude = firer.ReferenceTransform.up;
+                    fc.throttle = firer.acceleration.magnitude > 0 ? 1 : 0;
+                    fc.Drive();
+                }
+                
                 targetRay.origin = vessel.ReferenceTransform.position;
                 targetRay.direction = target.transform.position - vessel.transform.position;
                 lineOfSight = !RayIntersectsVessel(firer, targetRay);
@@ -119,12 +140,10 @@ namespace KerbalCombatSystems
             leadLine = KCSDebug.CreateLine(Color.cyan);
 
             // enable autopilot
-            fc = part.gameObject.AddComponent<KCSFlightController>();
-            fc.alignmentToleranceforBurn = 20;
-            fc.lerpAttitude = false;
             engageAutopilot = true;
-            controller.launched = true;
             maxAcceleration = GetMaxAcceleration(vessel);
+
+            controller.launched = true;
 
             yield break;
         }

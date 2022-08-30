@@ -41,13 +41,6 @@ namespace KerbalCombatSystems
 
         public ModuleWeapon typeModule;
 
-        // Interception variables.
-
-        public bool missed = false;
-        public bool isInterceptor = false;
-        internal ModuleWeaponController targetWeapon;
-        public List<ModuleWeaponController> interceptedBy = new List<ModuleWeaponController>();
-
         #region Generic weapon fields
 
         [KSPField(isPersistant = true,
@@ -114,7 +107,7 @@ namespace KerbalCombatSystems
             )]
         public bool useAsInterceptor = false;
 
-        [KSPField(isPersistant = true,
+        /*[KSPField(isPersistant = true,
             guiActive = true,
             guiActiveEditor = true,
             guiName = "Velocity Match",
@@ -125,7 +118,13 @@ namespace KerbalCombatSystems
                 disabledText = "Disabled",
                 scene = UI_Scene.All
         )]
-        public bool MatchTargetVelocity = true;
+        public bool MatchTargetVelocity = true;*/
+
+        public bool frontLaunch = false;
+        public bool missed = false;
+        public bool isInterceptor = false;
+        public ModuleWeaponController targetWeapon;
+        public List<ModuleWeaponController> interceptedBy = new List<ModuleWeaponController>();
 
         #endregion
 
@@ -310,8 +309,8 @@ namespace KerbalCombatSystems
             Fields["terminalVelocity"].guiActiveEditor = weaponType == "Missile";
             Fields["useAsInterceptor"].guiActive = weaponType == "Missile";
             Fields["useAsInterceptor"].guiActiveEditor = weaponType == "Missile";
-            Fields["MatchTargetVelocity"].guiActive = weaponType == "Missile";
-            Fields["MatchTargetVelocity"].guiActiveEditor = weaponType == "Missile";
+            //Fields["MatchTargetVelocity"].guiActive = weaponType == "Missile";
+            //Fields["MatchTargetVelocity"].guiActiveEditor = weaponType == "Missile";
             //Firework fields
             Fields["FWRoundBurst"].guiActive = weaponType == "Firework";
             Fields["FWRoundBurst"].guiActiveEditor = weaponType == "Firework";
