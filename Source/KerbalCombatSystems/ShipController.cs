@@ -55,6 +55,9 @@ namespace KerbalCombatSystems
         private double minSafeAltitude;
         private int updateCount;
         public float heatSignature;
+        private float averagedSize;
+
+        Part editorChild;
 
         [KSPField(isPersistant = true)]
         public Side side;
@@ -110,11 +113,9 @@ namespace KerbalCombatSystems
 
         public void StartAI()
         {
-            initialMass = vessel.GetTotalMass();
             CheckWeapons();
             shipControllerCoroutine = StartCoroutine(ShipController());
             controllerRunning = true;
-
         }
 
         public void StopAI()
@@ -149,7 +150,8 @@ namespace KerbalCombatSystems
 
                 Vector3 size = vessel.vesselSize;
                 shipLength = (new[] { size.x, size.y, size.z}).ToList().Max();
-
+                averagedSize = (size.x + size.y + size.z) / 3;
+                initialMass = vessel.GetTotalMass();
                 StartCoroutine(CalculateMaxAcceleration());
 
                 weaponsToIntercept = new List<ModuleWeaponController>();
@@ -198,7 +200,8 @@ namespace KerbalCombatSystems
             while (true)
             {
                 CheckStatus();
-                if (!alive) {
+                if (!alive) 
+                {
                     StopAI();
                     FireEscapePods();
                     yield break;
@@ -399,26 +402,6 @@ namespace KerbalCombatSystems
                 // https://github.com/MuMech/MechJeb2/blob/dev/MechJeb2/MechJebModuleRendezvousAutopilot.cs
                 // https://github.com/MuMech/MechJeb2/blob/dev/MechJeb2/OrbitalManeuverCalculator.cs
                 // https://github.com/MuMech/MechJeb2/blob/dev/MechJeb2/MechJebLib/Maths/Gooding.cs
-
-                /* 
-
-                known: 
-
-                mass of the target
-                mass of each of my weapons
-                min and max ranges of each of my weapons
-                my position & velocity
-                target position & velocity
-
-                
-                problem:
-
-                maintain a good range for firing the best weapon for this target
-
-                - best weapon: the weapon who's preferred target mass is closest to the target mass.
-                - good range: a range between the min and max range of these weapons, preferrably nearer the max range.
-
-                 */
 
                 // Deploy combat robotics.
                 UpdateRobotics(true);
@@ -893,8 +876,7 @@ namespace KerbalCombatSystems
         public float CalculateHeatSignature()
         {
             float hottestPartTemp = (float)vessel.parts.Max(p => (p.skinTemperature + p.temperature) / 2);
-            float size = (vessel.vesselSize.x + vessel.vesselSize.y + vessel.vesselSize.z) / 3;
-            heatSignature = hottestPartTemp * size;
+            heatSignature = hottestPartTemp * averagedSize;
             return heatSignature;
         }
 
@@ -917,8 +899,6 @@ namespace KerbalCombatSystems
         #endregion
 
         #region Part Appearance
-
-        Part editorChild;
 
         private void UpdateAttachment()
         {
