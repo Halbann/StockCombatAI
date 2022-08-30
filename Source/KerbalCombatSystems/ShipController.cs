@@ -53,6 +53,7 @@ namespace KerbalCombatSystems
         private Vector3 maxAngularAcceleration;
         private double minSafeAltitude;
         private int updateCount;
+        public float heatSignature;
 
         [KSPField(isPersistant = true)]
         public Side side;
@@ -201,6 +202,8 @@ namespace KerbalCombatSystems
                     FireEscapePods();
                     yield break;
                 }
+
+                CalculateHeatSignature();
                 
                 yield return new WaitForSeconds(updateInterval);
             }
@@ -869,6 +872,14 @@ namespace KerbalCombatSystems
                 incomingWeapons = new List<ModuleWeaponController>();
 
             incomingWeapons.Add(wep);
+        }
+
+        public float CalculateHeatSignature()
+        {
+            float hottestPartTemp = (float)vessel.parts.Max(p => (p.skinTemperature + p.temperature) / 2);
+            float size = (vessel.vesselSize.x + vessel.vesselSize.y + vessel.vesselSize.z) / 3;
+            heatSignature = hottestPartTemp * size;
+            return heatSignature;
         }
 
         #endregion

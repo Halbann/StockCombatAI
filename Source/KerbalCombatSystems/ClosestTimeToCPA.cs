@@ -11,7 +11,7 @@ namespace KerbalCombatSystems
     {
 
         // Originally written by Brett Ryland and josuenos. Copied from https://github.com/BrettRyland/BDArmory
-        // This code is licensed under CC-BY-SA 2.0: https://creativecommons.org/licenses/by-sa/2.0/
+        // This code is distributed under CC-BY-SA 2.0: https://creativecommons.org/licenses/by-sa/2.0/
 
         // Predict the next time to the closest point of approach within the next maxTime seconds for two accelerating rigidbodies.
         public static float ClosestTimeToCPA(Vector3 relPosition, Vector3 relVelocity, Vector3 relAcceleration, float maxTime)

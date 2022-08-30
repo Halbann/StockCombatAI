@@ -233,8 +233,8 @@ namespace KerbalCombatSystems
                         colour = "#b4ff33";
 
                     string targetName = c.target == null ? "None" : c.target.vesselName;
-                    string craftName = String.Format("<color={6}>{0}</color>\n<color=#808080ff>Part Count: {1}, Mass: {2} t\nAlive: {3}, Target: {4}\nState: {5}</color>",
-                        v.GetDisplayName(), v.parts.Count, Math.Round(v.GetTotalMass(), 1), c.alive, targetName, c.state, colour);
+                    string craftName = String.Format("<color={6}>{0}</color>\n<color=#808080ff>Part Count: {1}, Mass: {2} t, IR: {7}\nTarget: {4}\nState: {5}</color>",
+                        v.GetDisplayName(), v.parts.Count, Math.Round(v.GetTotalMass(), 1), null, targetName, c.state, colour, Math.Round(c.heatSignature));
 
                     GUILayout.BeginHorizontal();
 
