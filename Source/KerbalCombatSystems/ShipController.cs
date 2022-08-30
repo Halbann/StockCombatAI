@@ -220,7 +220,7 @@ namespace KerbalCombatSystems
             {
                 StopAI();
                 yield break;
-            } 
+            }
 
             while (true)
             {
@@ -242,7 +242,7 @@ namespace KerbalCombatSystems
 
                 behaviourCoroutine = StartCoroutine(UpdateBehaviour());
                 yield return behaviourCoroutine;
-            } 
+            }
         }
 
         private IEnumerator UpdateBehaviour()
@@ -262,21 +262,19 @@ namespace KerbalCombatSystems
 
                 // Withdraw sequence. Locks behaviour while burning 200 m/s of delta-v either north or south.
 
-                double initDeltaV = vessel.VesselDeltaV.TotalDeltaVActual;
                 Vector3 orbitNormal = vessel.orbit.Normal(Planetarium.GetUniversalTime());
                 bool facingNorth = Vector3.Angle(vessel.ReferenceTransform.up, orbitNormal) < 90;
-
+                Vector3 deltav = orbitNormal * (facingNorth ? 1 : -1) * 200;
                 fc.throttle = 1;
-                fc.attitude = orbitNormal * (facingNorth ? 1 : -1);
 
-                while (vessel.VesselDeltaV != null && vessel.VesselDeltaV.TotalDeltaVActual > (initDeltaV - 200))
+                while (deltav.magnitude > 10)
                 {
-                    if (vessel.VesselDeltaV.TotalDeltaVActual < 1) break;
+                    if (!hasPropulsion) break;
 
-                    orbitNormal = vessel.orbit.Normal(Planetarium.GetUniversalTime());
-                    fc.attitude = orbitNormal * (facingNorth ? 1 : -1);
+                    deltav = deltav - (Vector3.Project(vessel.acceleration, deltav) * TimeWarp.fixedDeltaTime);
+                    fc.attitude = deltav.normalized;
 
-                    yield return new WaitForSeconds(1.0f);
+                    yield return new WaitForFixedUpdate();
                 }
 
                 fc.throttle = 0;
@@ -304,7 +302,7 @@ namespace KerbalCombatSystems
 
                 fc.alignmentToleranceforBurn = previousTolerance;
             }
-            else if (target != null && CanFireProjectile(target) && AngularVelocity(vessel, target) < firingAngularVelocityLimit)
+            else if (target != null && HasLock() && CanFireProjectile(target) && AngularVelocity(vessel, target) < firingAngularVelocityLimit)
             {
                 // Aim at target using current projectile weapon.
                 // The weapon handles firing.
@@ -522,9 +520,7 @@ namespace KerbalCombatSystems
 
         public IEnumerator MissileFireControl()
         {
-            if (target == null) yield break;
-
-            if (Time.time - lastFired > fireInterval)
+            if (Time.time - lastFired > fireInterval && target != null && HasLock())
             {
                 lastFired = Time.time;
                 fireInterval = UnityEngine.Random.Range(5, 15);
@@ -628,14 +624,13 @@ namespace KerbalCombatSystems
             if (RelVel(vessel, target).magnitude > firingSpeed) return false;
 
             float targetRange = FromTo(vessel, target).magnitude;
+            currentProjectile = null;
+
             List<ModuleWeaponController> available = weapons.FindAll(w => ModuleWeaponController.projectileTypes.Contains(w.weaponType));
             available = available.FindAll(w => targetRange > w.MinMaxRange.x && targetRange < w.MinMaxRange.y);
             available = available.FindAll(w => w.canFire);
 
-            if (available.Count < 1) { 
-                currentProjectile = null;
-                return false;
-            }
+            if (available.Count < 1) return false;
 
             currentProjectile = available.First();
             return true;
@@ -667,12 +662,10 @@ namespace KerbalCombatSystems
 
         private bool CheckWithdraw()
         {
-            if (vessel.VesselDeltaV.TotalDeltaVActual < 1) return false; 
-
             var nearest = GetNearestEnemy();
             if (nearest == null) return false;
 
-            return Mathf.Abs((nearest.vessel.GetObtVelocity() - vessel.GetObtVelocity()).magnitude) < 200;
+            return Mathf.Abs(RelVel(vessel, nearest.vessel).magnitude) < 200;
         }
 
         private void UpdateDetectionRange()
@@ -713,22 +706,24 @@ namespace KerbalCombatSystems
 
         private void FindTarget()
         {
-            var ships = controller.ships.FindAll(
+            List<ModuleShipController> validEnemies = controller.ships.FindAll(
                 s => 
                 s != null
                 && s.vessel != null
-                && VesselDistance(s.vessel, vessel) < maxDetectionRange
                 && s.side != side
                 && s.alive);
 
-            if (ships.Count < 1) { 
+            if (validEnemies.Count < 1) { 
                 target = null;
                 return;
             }
 
-            targetController = ships.OrderBy(s => VesselDistance(s.vessel, vessel)).First();
+            targetController = validEnemies.OrderBy(s => WeighTarget(s)).First();
             target = targetController.vessel;
-
+            
+            // Debugging
+            List<Tuple<string, float, float>> targetsWeighted = validEnemies.Select(s => Tuple.Create(s.vessel.GetDisplayName(), WeighTarget(s), VesselDistance(vessel, s.vessel))).ToList();
+            
             if (vessel.targetObject == null || vessel.targetObject.GetVessel() != target)
             {
                 vessel.targetObject = target;
@@ -736,6 +731,22 @@ namespace KerbalCombatSystems
                 if (vessel == FlightGlobals.ActiveVessel)
                     FlightGlobals.fetch.SetVesselTarget(target, true);
             }
+        }
+
+        private float WeighTarget(ModuleShipController target)
+        {
+            float distance = VesselDistance(target.vessel, vessel);
+            float massDifference = Mathf.Abs(initialMass - target.initialMass);
+
+            float massComparison = Mathf.Min(initialMass, target.initialMass) / Mathf.Max(initialMass, target.initialMass);
+            //float massComparison2 = 2 * Mathf.Min(initialMass, target.initialMass) / (initialMass + target.initialMass);
+
+            return distance * (1 - massComparison);
+        }
+
+        private bool HasLock()
+        {
+           return FromTo(vessel, target).magnitude < maxDetectionRange * (targetController.heatSignature / 1500);
         }
 
         private void FindInterceptTarget()
