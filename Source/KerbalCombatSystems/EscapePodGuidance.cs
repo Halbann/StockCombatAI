@@ -17,6 +17,7 @@ namespace KerbalCombatSystems
         const string EscapeGuidanceGroupName = "Escape Pod Guidance";
 
         private List<Part> AIPartList;
+        private List<ModuleEngines> Engines;
 
         //universal flight controller and toggle
         KCSFlightController fc;
@@ -62,19 +63,20 @@ namespace KerbalCombatSystems
                 Debug.Log("[KCS]: Couldn't find decoupler on " + vessel.GetName() + " (Escape Pod)");
             }
 
+            // set target orientation to away from the vessel by default
+            fc = part.gameObject.AddComponent<KCSFlightController>();
+
             yield return new WaitForFixedUpdate(); // wait a frame
             FindCommand(vessel).MakeReference();
 
-            // turn on engines
-            List<ModuleEngines> Engines = vessel.FindPartModulesImplementing<ModuleEngines>();
+            // turn on engines and create list
+            Engines = vessel.FindPartModulesImplementing<ModuleEngines>();
             foreach (ModuleEngines Engine in Engines)
             {
                 Engine.Activate();
             }
 
             // enable autopilot and set target orientation to away from the vessel by default
-            fc = part.gameObject.AddComponent<KCSFlightController>();
-            
             fc.throttle = 1;
             fc.alignmentToleranceforBurn = 10;
             fc.attitude = vessel.ReferenceTransform.up;
@@ -160,12 +162,20 @@ namespace KerbalCombatSystems
                 fc.Drive();
             }
             
-            yield return new WaitForSeconds(1.0f);
+            yield return new WaitForSeconds(5.0f);
+            bool HasFuel = vessel.FindPartModulesImplementing<ModuleEngines>().FindAll(e => e.EngineIgnited && e.isOperational).Count > 0;
 
-            if (vessel.VesselDeltaV.TotalDeltaVActual > 2)
+            //if there are any active engines
+            if (HasFuel)
             {
+                //continue the loop
                 StartCoroutine(EscapeRoutine());
-            } 
+            }
+            else
+            {
+                //remove the flight controller and allow the guidance to cease
+                Destroy(part.gameObject.GetComponent<KCSFlightController>());
+            }
             yield break;
         }
 

@@ -474,12 +474,12 @@ namespace KerbalCombatSystems
             if (Combat)
             {
                 foreach (ModuleCombatRobotics Controller in RoboticControllers)
-                { Controller.CombatTrigger(); }
+                { Controller.KALTrigger(true); }
             }
             else
             {
                 foreach (ModuleCombatRobotics Controller in RoboticControllers)
-                { Controller.PassiveTrigger(); }
+                { Controller.KALTrigger(false); }
             }
         }
 
@@ -567,7 +567,7 @@ namespace KerbalCombatSystems
                     //try deploy animations, not all scanners will have them 
                     var anim = Sensor.part.FindModuleImplementing<ModuleAnimationGroup>();
                     if (anim == null) continue;
-                    KCS.TryToggle(true, anim);
+                    TryToggle(true, anim);
                 }
                 DeployedSensors = true;
             }
@@ -578,7 +578,7 @@ namespace KerbalCombatSystems
                 foreach (ModuleObjectTracking Sensor in sensors)
                 {
                     //try deploy animations, not all scanners will have them 
-                    try { KCS.TryToggle(true, Sensor.part.FindModuleImplementing<ModuleAnimationGroup>()); } catch { }
+                    try { TryToggle(true, Sensor.part.FindModuleImplementing<ModuleAnimationGroup>()); } catch { }
                 }
                 DeployedSensors = true;
             }
