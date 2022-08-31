@@ -98,6 +98,18 @@ namespace KerbalCombatSystems
             )]
         public float firingSpeed = 20f;
 
+        // todo: find option without green bar
+        [KSPField(
+            isPersistant = true, 
+            guiActive = true, 
+            guiActiveEditor = true, 
+            guiName = "Withdrawing Enemies",
+            groupName = shipControllerGroupName,
+            groupDisplayName = shipControllerGroupName),
+            UI_ChooseOption(controlEnabled = true, affectSymCounterparts = UI_Scene.None, 
+            options = new string[] { "De-prioritised", "Chase", "Ignore" })]
+        public string withdrawingPriority = "De-prioritised";
+
         #region Controller State & Start/Update
 
         [KSPEvent(guiActive = true,
@@ -487,7 +499,11 @@ namespace KerbalCombatSystems
                     }
                     else
                     {
-                        state = "Manoeuvring (Drift)";
+                        if (hasPropulsion)
+                            state = "Manoeuvring (Drift)";
+                        else
+                            state = "Stranded";
+
                         fc.throttle = 0;
                         fc.attitude = Vector3.zero;
 
@@ -718,7 +734,26 @@ namespace KerbalCombatSystems
                 return;
             }
 
-            targetController = validEnemies.OrderBy(s => WeighTarget(s)).First();
+            List<ModuleShipController> withdrawingEnemies = validEnemies.FindAll(s => s.state == "Withdrawing");
+            validEnemies = validEnemies.Except(withdrawingEnemies).ToList();
+            validEnemies = validEnemies.OrderBy(s => WeighTarget(s)).ToList();
+
+            if (withdrawingPriority != "Ignore")
+            {
+                withdrawingEnemies = withdrawingEnemies.OrderBy(s => WeighTarget(s)).ToList();
+
+                if (withdrawingPriority == "Chase")
+                {
+                    withdrawingEnemies.AddRange(validEnemies);
+                    validEnemies = withdrawingEnemies;
+                }
+                else
+                {
+                    validEnemies.AddRange(withdrawingEnemies);
+                }
+            }
+
+            targetController = validEnemies.First();
             target = targetController.vessel;
             
             // Debugging
@@ -746,7 +781,7 @@ namespace KerbalCombatSystems
 
         private bool HasLock()
         {
-           return FromTo(vessel, target).magnitude < maxDetectionRange * Mathf.Clamp((targetController.heatSignature / 1500), 0.5f, 1.5f);
+           return FromTo(vessel, target).magnitude < maxDetectionRange * Mathf.Clamp((targetController.heatSignature / 1500), 0.5f, 3.0f);
         }
 
         private void FindInterceptTarget()
