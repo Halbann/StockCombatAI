@@ -16,7 +16,8 @@ namespace KerbalCombatSystems
 
         const string shipControllerGroupName = "Ship AI";
         public bool controllerRunning = false;
-        public float updateInterval = 2.5f;
+        public float updateInterval;
+        private bool VeryDishonourable;
 
         // Ship AI variables.
 
@@ -94,10 +95,13 @@ namespace KerbalCombatSystems
         public void StartAI()
         {
             initialMass = vessel.GetTotalMass();
+            //refresh game settings
+            VeryDishonourable = HighLogic.CurrentGame.Parameters.CustomParams<KCSCombat>().VeryDishonourable;
+            updateInterval = HighLogic.CurrentGame.Parameters.CustomParams<KCSCombat>().RefreshRate;
+
             CheckWeapons();
             shipControllerCoroutine = StartCoroutine(ShipController());
             controllerRunning = true;
-
         }
 
         public void StopAI()
@@ -493,7 +497,7 @@ namespace KerbalCombatSystems
         {
             var enemiesByDistance = controller.ships.FindAll(s => s.alive && s.side != side);
             if (enemiesByDistance.Count < 1) return null;
-            return enemiesByDistance.OrderBy(s => KCS.VesselDistance(s.vessel, vessel)).First();
+            return enemiesByDistance.OrderBy(s => VesselDistance(s.vessel, vessel)).First();
         }
 
         private ModuleWeaponController GetPreferredWeapon(Vessel target, List<ModuleWeaponController> weapons)
@@ -543,6 +547,8 @@ namespace KerbalCombatSystems
             var nearest = GetNearestEnemy();
             if (nearest == null) return false;
 
+            if (!VeryDishonourable) return false;
+
             return Mathf.Abs((nearest.vessel.GetObtVelocity() - vessel.GetObtVelocity()).magnitude) < 200;
         }
 
@@ -550,14 +556,7 @@ namespace KerbalCombatSystems
         {
             var sensors = vessel.FindPartModulesImplementing<ModuleObjectTracking>();
 
-            if (sensors.Count < 1)
-            {
-                maxDetectionRange = 1000;
-            }
-            else
-            {
-                maxDetectionRange = sensors.Max(s => s.detectionRange);
-            }
+            maxDetectionRange = sensors.Max(s => s.DetectionRange);
 
             //if the sensors aren't deployed and the AI is running
             if(!DeployedSensors && controllerRunning)

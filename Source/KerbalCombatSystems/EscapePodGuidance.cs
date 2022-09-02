@@ -19,6 +19,9 @@ namespace KerbalCombatSystems
         private List<Part> AIPartList;
         private List<ModuleEngines> Engines;
 
+        //relavent game settings
+        private int RefreshRate;
+
         //universal flight controller and toggle
         KCSFlightController fc;
         private bool Escaped = false;
@@ -38,6 +41,8 @@ namespace KerbalCombatSystems
             //find decoupler
             Decoupler = FindDecoupler(part, "Escape Pod", false);
             Debug.Log("[KCS]: Escaping from " + Parent.GetName());
+            //set the refresh rate
+            RefreshRate = HighLogic.CurrentGame.Parameters.CustomParams<KCSCombat>().RefreshRate;
             StartCoroutine(RunEscapeSequence());
         }
 
@@ -77,6 +82,7 @@ namespace KerbalCombatSystems
             }
 
             // enable autopilot and set target orientation to away from the vessel by default
+            fc.throttleLerpRate = 100;
             fc.throttle = 1;
             fc.alignmentToleranceforBurn = 10;
             fc.attitude = vessel.ReferenceTransform.up;
@@ -131,51 +137,45 @@ namespace KerbalCombatSystems
 
         IEnumerator EscapeRoutine()
         {
-            if (CheckOrbitUnsafe())
+            while (vessel.FindPartModulesImplementing<ModuleEngines>().FindAll(e => e.EngineIgnited && e.isOperational).Count > 0)
             {
-                Orbit o = vessel.orbit;
-                double UT = Planetarium.GetUniversalTime();
 
-                // Execute a burn to circularize our orbit at the current altitude.
-
-                Vector3d fvel, deltaV = Vector3d.up * 100;
-                fc.throttle = 1;
-
-                while (deltaV.magnitude > 2)
+                if (CheckOrbitUnsafe())
                 {
-                    yield return new WaitForFixedUpdate();
+                    Orbit o = vessel.orbit;
+                    double UT = Planetarium.GetUniversalTime();
 
-                    UT = Planetarium.GetUniversalTime();
-                    fvel = Math.Sqrt(o.referenceBody.gravParameter / o.GetRadiusAtUT(UT)) * o.Horizontal(UT);
-                    deltaV = fvel - vessel.GetObtVelocity();
+                    // Execute a burn to circularize our orbit at the current altitude.
+                    Vector3d fvel, deltaV = Vector3d.up * 100;
 
-                    fc.attitude = deltaV.normalized;
-                    fc.throttle = Mathf.Lerp(0, 1, (float)(deltaV.magnitude / 10));
+                    while (deltaV.magnitude > 2)
+                    {
+                        yield return new WaitForFixedUpdate();
+
+                        UT = Planetarium.GetUniversalTime();
+                        fvel = Math.Sqrt(o.referenceBody.gravParameter / o.GetRadiusAtUT(UT)) * o.Horizontal(UT);
+                        deltaV = fvel - vessel.GetObtVelocity();
+
+                        fc.attitude = deltaV.normalized;
+                        fc.throttle = Mathf.Lerp(0, 1, (float)(deltaV.magnitude / 10));
+                        fc.Drive();
+                    }
+                }
+                else
+                {
+                    Vector3 orbitNormal = vessel.orbit.Normal(Planetarium.GetUniversalTime());
+                    bool facingNorth = Vector3.Angle(vessel.ReferenceTransform.up, orbitNormal) < 90;
+                    fc.attitude = orbitNormal * (facingNorth ? 1 : -1);
+                    fc.throttle = 1;
                     fc.Drive();
                 }
+                
+                yield return new WaitForSeconds(RefreshRate);
             }
-            else
-            {
-                Vector3 orbitNormal = vessel.orbit.Normal(Planetarium.GetUniversalTime());
-                bool facingNorth = Vector3.Angle(vessel.ReferenceTransform.up, orbitNormal) < 90;
-                fc.attitude = orbitNormal * (facingNorth ? 1 : -1);
-                fc.Drive();
-            }
-            
-            yield return new WaitForSeconds(5.0f);
-            bool HasFuel = vessel.FindPartModulesImplementing<ModuleEngines>().FindAll(e => e.EngineIgnited && e.isOperational).Count > 0;
 
-            //if there are any active engines
-            if (HasFuel)
-            {
-                //continue the loop
-                StartCoroutine(EscapeRoutine());
-            }
-            else
-            {
-                //remove the flight controller and allow the guidance to cease
-                Destroy(part.gameObject.GetComponent<KCSFlightController>());
-            }
+            Debug.Log("[KCS]: Escape Sequence Ending on " + vessel.GetName() + " (Escape Pod)");
+            //remove the flight controller and allow the guidance to cease
+            Destroy(part.gameObject.GetComponent<KCSFlightController>());
             yield break;
         }
 
