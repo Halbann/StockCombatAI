@@ -74,7 +74,7 @@ namespace KerbalCombatSystems
 
         void UpdateRCS (Vessel v)
         {
-            if (v == null) return;
+         /*   if (v == null) return;
 
             RCSActual = 0;
             RCSLerped = Mathf.MoveTowards(RCSLerped, RCSActual, RCSLerpRate * Time.fixedDeltaTime);
@@ -83,7 +83,7 @@ namespace KerbalCombatSystems
             
             v.ctrlState.X = RCSVector.x * RCSLerped;
             v.ctrlState.Y = RCSVector.y * RCSLerped;
-            v.ctrlState.Z = RCSVector.z * RCSLerped;
+            v.ctrlState.Z = RCSVector.z * RCSLerped;*/
         }
 
         void UpdateSAS(Vessel v)

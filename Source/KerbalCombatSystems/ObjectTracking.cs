@@ -64,13 +64,13 @@ namespace KerbalCombatSystems
             switch (SensorSize)
             {
                 case "Medium":
-                    BaseDetectionRange = 1000f * ScalingFactor;
+                    BaseDetectionRange = 1000f;
                     DetectionRange = BaseDetectionRange * ScalingFactor;
                     OreScanner.MaxAbundanceAltitude = 500000;//500km
                     UpdateButtons(SpinAnims[0], SpinAnims[1]);
                     break;
                 case "Short":
-                    BaseDetectionRange = 500f * ScalingFactor;
+                    BaseDetectionRange = 500f;
                     DetectionRange = BaseDetectionRange * ScalingFactor;
                     OreScanner.MaxAbundanceAltitude = 100000;//100km
                     UpdateButtons(SpinAnims[1], SpinAnims[0]);
