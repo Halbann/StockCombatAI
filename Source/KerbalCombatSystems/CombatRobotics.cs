@@ -22,6 +22,7 @@ namespace KerbalCombatSystems
         //access the sequence internals
         public ModuleRoboticController.SequenceDirectionOptions Forward { get; private set; }
         public ModuleRoboticController.SequenceLoopOptions Once { get; private set; }
+        public int SequenceLength { get; internal set; }
 
         public override void OnStart(StartState state)
         {

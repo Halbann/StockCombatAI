@@ -6,7 +6,7 @@ using System.Text;
 using System.Threading.Tasks;
 using UnityEngine;
 using static KerbalCombatSystems.KCS;
-using Random = UnityEngine.Random;
+using Expansions.Serenity;
 
 namespace KerbalCombatSystems
 {
@@ -708,8 +708,7 @@ namespace KerbalCombatSystems
             List<ModuleCombatRobotics> RoboticControllers = vessel.FindPartModulesImplementing<ModuleCombatRobotics>();
             foreach (ModuleCombatRobotics KAL in RoboticControllers)
             {
-                if (KAL.RoboticsType != "Ship") continue;
-                FlightRoboticControllers.Add(KAL);
+                if (KAL.RoboticsType == "Ship") FlightRoboticControllers.Add(KAL);
             }
 
             if (deploy)
@@ -717,20 +716,30 @@ namespace KerbalCombatSystems
             else
                 FlightRoboticControllers.ForEach(rc => rc.KALTrigger(false));
 
+            //clear list of all modules once fired
+            FlightRoboticControllers.Clear();
+
             roboticsDeployed = deploy;
         }
 
-        public void UpdateWeaponsRobotics(bool Deploy, string WeaponTag)
+        public float UpdateWeaponsRobotics(bool Deploy, string WeaponTag)
         {
-            if (Deploy == WeaponRoboticsDeployed) return;
+            if (Deploy == WeaponRoboticsDeployed) return 0f;
             //generate list of KAL250 parts, could change in flight
             List<ModuleCombatRobotics> RoboticControllers = vessel.FindPartModulesImplementing<ModuleCombatRobotics>();
+            if (RoboticControllers.Count() == 0) return 0f;
+
             foreach (ModuleCombatRobotics KAL in RoboticControllers)
             {
+                Debug.Log(KAL.GetModuleDisplayName());
                 if (KAL.RoboticsType != "Weapon") continue;
-                if (KAL.GetModuleDisplayName() != WeaponTag || KAL.GetModuleDisplayName() != "KAL Series Robotics Controller") continue;
+                if (KAL.GetModuleDisplayName() != WeaponTag && KAL.GetModuleDisplayName() != "KAL Series Robotics Controller") continue;
                 WeaponRoboticControllers.Add(KAL);
             }
+
+            //get longest sequence length to pass as a wait time before firing
+            float MaxSeqLength = WeaponRoboticControllers.Max(t => t.SequenceLength);
+            Debug.Log("max length" + MaxSeqLength);
 
             if (Deploy)
                 WeaponRoboticControllers.ForEach(rc => rc.KALTrigger(true));
@@ -739,8 +748,17 @@ namespace KerbalCombatSystems
 
             //clear list of all modules once fired
             WeaponRoboticControllers.Clear();
-
             WeaponRoboticsDeployed = Deploy;
+
+            //return a wait time to avoid premature firing unless retracting
+            if (Deploy == false)
+            {
+                return 0f;
+            }
+            else
+            {
+                return MaxSeqLength;
+            }
         }
 
         private bool CheckIncoming()
