@@ -83,6 +83,7 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="KCSDebug - Copy.cs" />
     <Compile Include="MassCannonTargetting.cs" />
     <Compile Include="BombGuidance.cs" />
     <Compile Include="RocketTargetting.cs" />
@@ -91,7 +92,7 @@
     <Compile Include="DecouplerDesignator.cs" />
     <Compile Include="EscapePodGuidance.cs" />
     <Compile Include="KCS.cs" />
-    <Compile Include="KCSDebug.cs" />
+    <Compile Include="KCSSettings.cs" />
     <Compile Include="KCSController.cs" />
     <Compile Include="FireworkTargetting.cs" />
     <Compile Include="MissileGuidance.cs" />

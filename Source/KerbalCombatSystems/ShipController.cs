@@ -16,7 +16,8 @@ namespace KerbalCombatSystems
 
         const string shipControllerGroupName = "Ship AI";
         public bool controllerRunning = false;
-        public float updateInterval = 2.5f;
+        public float updateInterval;
+        private bool VeryDishonourable;
 
         // Ship AI variables.
 
@@ -101,10 +102,13 @@ namespace KerbalCombatSystems
         public void StartAI()
         {
             initialMass = vessel.GetTotalMass();
+            //refresh game settings
+            VeryDishonourable = HighLogic.CurrentGame.Parameters.CustomParams<KCSCombat>().VeryDishonourable;
+            updateInterval = HighLogic.CurrentGame.Parameters.CustomParams<KCSCombat>().RefreshRate;
+
             CheckWeapons();
             shipControllerCoroutine = StartCoroutine(ShipController());
             controllerRunning = true;
-
         }
 
         public void StopAI()
@@ -164,7 +168,7 @@ namespace KerbalCombatSystems
                 CheckStatus();
                 if (!alive) {
                     StopAI();
-                    FireEscapePods();
+                    vessel.ActionGroups.SetGroup(KSPActionGroup.Abort, true);
                     yield break;
                 }
                 
@@ -521,6 +525,23 @@ namespace KerbalCombatSystems
             }
         }
 
+        public void RunRobotics(bool Combat)
+        {
+            //generate list of KAL500 parts, could change in flight
+            List<ModuleCombatRobotics> RoboticControllers = vessel.FindPartModulesImplementing<ModuleCombatRobotics>();
+            
+            if (Combat)
+            {
+                foreach (ModuleCombatRobotics Controller in RoboticControllers)
+                { Controller.KALTrigger(true); }
+            }
+            else
+            {
+                foreach (ModuleCombatRobotics Controller in RoboticControllers)
+                { Controller.KALTrigger(false); }
+            }
+        }
+
         public IEnumerator CheckWeaponsDelayed()
         {
             yield return new WaitForFixedUpdate();
@@ -531,7 +552,7 @@ namespace KerbalCombatSystems
         {
             var enemiesByDistance = controller.ships.FindAll(s => s != null && s.alive && s.side != side);
             if (enemiesByDistance.Count < 1) return null;
-            return enemiesByDistance.OrderBy(s => KCS.VesselDistance(s.vessel, vessel)).First();
+            return enemiesByDistance.OrderBy(s => VesselDistance(s.vessel, vessel)).First();
         }
 
         private ModuleWeaponController GetPreferredWeapon(Vessel target, List<ModuleWeaponController> weapons)
@@ -562,17 +583,6 @@ namespace KerbalCombatSystems
             return true;
         }
 
-        private void FireEscapePods()
-        {
-            //function to fire escape pods when the ship is dead but still holds AI units
-            List<ModuleEscapePodGuidance> PodList = vessel.FindPartModulesImplementing<ModuleEscapePodGuidance>();
-            //trigger the escape start method in every found controller
-            foreach (ModuleEscapePodGuidance EscapePod in PodList)
-            {
-                EscapePod.BeginEscape();
-            }
-        }
-
         public bool CheckStatus()
         {
             hasPropulsion = vessel.FindPartModulesImplementing<ModuleEngines>().FindAll(e => e.EngineIgnited && e.isOperational).Count > 0;
@@ -592,6 +602,8 @@ namespace KerbalCombatSystems
             var nearest = GetNearestEnemy();
             if (nearest == null) return false;
 
+            if (!VeryDishonourable) return false;
+
             return Mathf.Abs((nearest.vessel.GetObtVelocity() - vessel.GetObtVelocity()).magnitude) < 200;
         }
 
@@ -599,14 +611,7 @@ namespace KerbalCombatSystems
         {
             var sensors = vessel.FindPartModulesImplementing<ModuleObjectTracking>();
 
-            if (sensors.Count < 1)
-            {
-                maxDetectionRange = 1000;
-            }
-            else
-            {
-                maxDetectionRange = sensors.Max(s => s.detectionRange);
-            }
+            maxDetectionRange = sensors.Max(s => s.DetectionRange);
 
             //if the sensors aren't deployed and the AI is running
             if(!DeployedSensors && controllerRunning)
@@ -616,7 +621,7 @@ namespace KerbalCombatSystems
                     //try deploy animations, not all scanners will have them 
                     var anim = Sensor.part.FindModuleImplementing<ModuleAnimationGroup>();
                     if (anim == null) continue;
-                    KCS.TryToggle(true, anim);
+                    TryToggle(true, anim);
                 }
                 DeployedSensors = true;
             }
@@ -626,12 +631,12 @@ namespace KerbalCombatSystems
             {
                 foreach (ModuleObjectTracking Sensor in sensors)
                 {
-                    //try deploy animations, not all scanners will have them 
+                    //try retract animations, not all scanners will have them 
                     var anim = Sensor.part.FindModuleImplementing<ModuleAnimationGroup>();
                     if (anim == null) continue;
-                    TryToggle(true, Sensor.part.FindModuleImplementing<ModuleAnimationGroup>());
+                    TryToggle(false, anim);
                 }
-                DeployedSensors = true;
+                DeployedSensors = false;
             }
         }
 

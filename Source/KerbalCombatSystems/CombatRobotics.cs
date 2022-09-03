@@ -16,35 +16,57 @@ namespace KerbalCombatSystems
     {
         private ModuleRoboticController KAL;
         
+        [KSPField(isPersistant = true)]
+        public string RoboticsType; //Basic, Ship, Weapon
+
         //access the sequence internals
         public ModuleRoboticController.SequenceDirectionOptions Forward { get; private set; }
         public ModuleRoboticController.SequenceLoopOptions Once { get; private set; }
 
         public override void OnStart(StartState state)
         {
+            if (HighLogic.LoadedSceneIsEditor)
+                GameEvents.onEditorVariantApplied.Add(OnVariantApplied);
+
             KAL = part.FindModuleImplementing<ModuleRoboticController>();
-            KAL.SetLength(1);
+
+            string Name = KAL.GetModuleDisplayName();
+            Debug.Log("KAL Name" + Name);
+        }
+
+        //KCS KALs only have two states
+        public void KALTrigger(bool Extend)
+        {
             KAL.SetLoopMode(Once);
             KAL.ToggleControllerEnabled(true);
-        }
-
-        public void CombatTrigger()
-        {
-            Debug.Log("[KCS]: Extending KAL-500 Position");
-            //trigger robotics to end of sequence(trigger Combat)
             KAL.SetDirection(Forward);
+
+            if (Extend)
+            {
+                //send robotics to end of sequence(trigger Combat)
+                Debug.Log("[KCS]: Extending KAL Position");
+            }
+            else
+            {
+                //send robotics to start of sequence(trigger Passive)
+                Debug.Log("[KCS]: Resetting KAL Position");
+                //Reverse doesn't work as advertised so setting as forward then reversing
+                KAL.ToggleDirection();
+            }
+
             KAL.SequencePlay();
         }
 
-        public void PassiveTrigger()
+        private void OnVariantApplied(Part appliedPart, PartVariant variant)
         {
-            Debug.Log("[KCS]: Resetting KAL-500 Position");
-            //trigger robotics to start of sequence(trigger Passive)
-            KAL.SetDirection(Forward);
-            //Reverse doesn't work as advertised so setting as forward then reversing
-            KAL.ToggleDirection();
-            KAL.SequencePlay();
+            if (appliedPart != part) return;
+
+            RoboticsType = variant.Name;
         }
 
+        private void OnDestroy()
+        {
+            GameEvents.onEditorVariantApplied.Remove(OnVariantApplied);
+        }
     }
 }

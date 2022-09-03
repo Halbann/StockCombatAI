@@ -67,12 +67,26 @@ namespace KerbalCombatSystems
                 engine.Activate();
             }
 
+            // turn on rcs thrusters
+            List<ModuleRCSFX> Thrusters = vessel.FindPartModulesImplementing<ModuleRCSFX>();
+            foreach (ModuleRCSFX Thruster in Thrusters)
+            {
+                Thruster.enabled = true;
+            }
+
+            //get an onboard probe core to control from
+            FindCommand(vessel).MakeReference();
+
             // pulse to 5 m/s.
             var burnTime = 0.5f;
             var driftVelocity = 5;
-            vessel.ctrlState.mainThrottle = driftVelocity / burnTime / KCS.GetMaxAcceleration(vessel);
+            vessel.ctrlState.mainThrottle = driftVelocity / burnTime / GetMaxAcceleration(vessel);
             yield return new WaitForSeconds(burnTime);
             vessel.ctrlState.mainThrottle = 0;
+
+            //enable RCS for translation
+            if (!vessel.ActionGroups[KSPActionGroup.RCS])
+                vessel.ActionGroups.SetGroup(KSPActionGroup.RCS, true);
 
             // wait until clear of firer
             bool lineOfSight = false;
@@ -84,7 +98,7 @@ namespace KerbalCombatSystems
                 if (target == null) yield break;
                 targetRay.origin = vessel.ReferenceTransform.position;
                 targetRay.direction = target.transform.position - vessel.transform.position;
-                lineOfSight = !KCS.RayIntersectsVessel(firer, targetRay);
+                lineOfSight = !RayIntersectsVessel(firer, targetRay);
             }
 
             // initialise debug line renderer
@@ -122,6 +136,8 @@ namespace KerbalCombatSystems
             fc.alignmentToleranceforBurn = 20;
             //fc.alignmentToleranceforBurn = relVelmag > 50 ? 5 : 20;
             fc.throttle = drift ? 0 : 1;
+
+            fc.RCSVector = -relVelNrm;
 
             if (targetVector.magnitude < 10)
             {
