@@ -84,6 +84,10 @@ namespace KerbalCombatSystems
             yield return new WaitForSeconds(burnTime);
             vessel.ctrlState.mainThrottle = 0;
 
+            //enable RCS for translation
+            if (!vessel.ActionGroups[KSPActionGroup.RCS])
+                vessel.ActionGroups.SetGroup(KSPActionGroup.RCS, true);
+
             // wait until clear of firer
             bool lineOfSight = false;
             Ray targetRay = new Ray();
@@ -133,7 +137,7 @@ namespace KerbalCombatSystems
             //fc.alignmentToleranceforBurn = relVelmag > 50 ? 5 : 20;
             fc.throttle = drift ? 0 : 1;
 
-            fc.RCSVector = targetVector.normalized;
+            fc.RCSVector = -relVelNrm;
 
             if (targetVector.magnitude < 10)
             {

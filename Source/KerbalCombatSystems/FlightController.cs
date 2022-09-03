@@ -22,10 +22,7 @@ namespace KerbalCombatSystems
         private float angleLerp;
         private float lerpRate;
 
-        public float RCSActual;
-        private float RCSLerped;
-        public float RCSLerpRate = 2;
-        public Vector3 RCSVector = new Vector3 (0f,0f,0f);
+        public Vector3 RCSVector;
 
         private Vessel controllingVessel;
 
@@ -74,18 +71,16 @@ namespace KerbalCombatSystems
 
         void UpdateRCS (Vessel v)
         {
-         /*   if (v == null) return;
+            if (v == null || RCSVector == null) return;
 
-            RCSActual = 0;
-            RCSLerped = Mathf.MoveTowards(RCSLerped, RCSActual, RCSLerpRate * Time.fixedDeltaTime);
+            //removed lerping 
+            //todo: consider a toggle for gradual spool up to avoid overcorrection
 
-            // Move actual translation towards translation target gradually.
-            
-            v.ctrlState.X = RCSVector.x * RCSLerped;
-            v.ctrlState.Y = RCSVector.y * RCSLerped;
-            v.ctrlState.Z = RCSVector.z * RCSLerped;*/
+            v.ctrlState.X = RCSVector.x;
+            v.ctrlState.Y = RCSVector.y;
+            v.ctrlState.Z = RCSVector.z;
         }
-
+        
         void UpdateSAS(Vessel v)
         {
             if (attitude == Vector3.zero) return;
