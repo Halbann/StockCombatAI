@@ -7,6 +7,7 @@ using System.Text;
 using System.Threading.Tasks;
 using UnityEngine;
 using Object = UnityEngine.Object;
+using static KerbalCombatSystems.KCS;
 
 namespace KerbalCombatSystems
 {
@@ -361,7 +362,7 @@ namespace KerbalCombatSystems
 
         private float CalculateMass()
         {
-            var decoupler = KCS.FindDecoupler(part, "Weapon", true); // todo: set to false later
+            var decoupler = FindDecoupler(part, "Weapon", true); // todo: set to false later
             if (decoupler == null) return 1.0f; // temp fix
 
             float totalMass = 0;

@@ -19,6 +19,10 @@ namespace KerbalCombatSystems
         public float updateInterval;
         private bool VeryDishonourable;
 
+        // Robotics tracking variables
+        List<ModuleCombatRobotics> WeaponRoboticControllers = new List<ModuleCombatRobotics>();
+        List<ModuleCombatRobotics> FlightRoboticControllers = new List<ModuleCombatRobotics>();
+
         // Ship AI variables.
 
         private Coroutine shipControllerCoroutine;
@@ -41,6 +45,7 @@ namespace KerbalCombatSystems
         public string state = "Init";
         private ModuleWeaponController currentProjectile;
         private bool roboticsDeployed;
+        private bool WeaponRoboticsDeployed;
         private List<ModuleWeaponController> incomingWeapons;
         private List<Tuple<ModuleWeaponController, float>> shouldDodgeWeapons;
         private float shipLength;
@@ -216,7 +221,7 @@ namespace KerbalCombatSystems
                 state = "Withdrawing";
 
                 // Switch to passive robotics while withdrawing.
-                UpdateRobotics(false);
+                UpdateFlightRobotics(false);
 
                 // Withdraw sequence. Locks behaviour while burning 200 m/s of delta-v either north or south.
 
@@ -381,7 +386,7 @@ namespace KerbalCombatSystems
                  */
 
                 // Deploy combat robotics.
-                UpdateRobotics(true);
+                UpdateFlightRobotics(true);
 
                 ModuleWeaponController currentWeapon = GetPreferredWeapon(target, weapons);
                 float minRange = currentWeapon.MinMaxRange.x;
@@ -478,7 +483,7 @@ namespace KerbalCombatSystems
                 fc.attitude = Vector3.zero;
 
                 // Switch to passive robotics.
-                UpdateRobotics(false);
+                UpdateFlightRobotics(false);
 
                 yield return new WaitForSeconds(updateInterval);
             }
@@ -522,23 +527,6 @@ namespace KerbalCombatSystems
             {
                 weaponsMinRange = weapons.Min(w => w.MinMaxRange.x);
                 weaponsMaxRange = weapons.Max(w => w.MinMaxRange.y);
-            }
-        }
-
-        public void RunRobotics(bool Combat)
-        {
-            //generate list of KAL500 parts, could change in flight
-            List<ModuleCombatRobotics> RoboticControllers = vessel.FindPartModulesImplementing<ModuleCombatRobotics>();
-            
-            if (Combat)
-            {
-                foreach (ModuleCombatRobotics Controller in RoboticControllers)
-                { Controller.KALTrigger(true); }
-            }
-            else
-            {
-                foreach (ModuleCombatRobotics Controller in RoboticControllers)
-                { Controller.KALTrigger(false); }
             }
         }
 
@@ -713,19 +701,46 @@ namespace KerbalCombatSystems
             return toClosestApproach;
         }
 
-        public void UpdateRobotics(bool deploy)
+        public void UpdateFlightRobotics(bool deploy)
         {
             if (deploy == roboticsDeployed) return;
-
             //generate list of KAL500 parts, could change in flight
             List<ModuleCombatRobotics> RoboticControllers = vessel.FindPartModulesImplementing<ModuleCombatRobotics>();
-            
+            foreach (ModuleCombatRobotics KAL in RoboticControllers)
+            {
+                if (KAL.RoboticsType != "Ship") continue;
+                FlightRoboticControllers.Add(KAL);
+            }
+
             if (deploy)
-                RoboticControllers.ForEach(rc => rc.CombatTrigger());
+                FlightRoboticControllers.ForEach(rc => rc.KALTrigger(true));
             else
-                RoboticControllers.ForEach(rc => rc.PassiveTrigger());
+                FlightRoboticControllers.ForEach(rc => rc.KALTrigger(false));
 
             roboticsDeployed = deploy;
+        }
+
+        public void UpdateWeaponsRobotics(bool Deploy, string WeaponTag)
+        {
+            if (Deploy == WeaponRoboticsDeployed) return;
+            //generate list of KAL250 parts, could change in flight
+            List<ModuleCombatRobotics> RoboticControllers = vessel.FindPartModulesImplementing<ModuleCombatRobotics>();
+            foreach (ModuleCombatRobotics KAL in RoboticControllers)
+            {
+                if (KAL.RoboticsType != "Weapon") continue;
+                if (KAL.GetModuleDisplayName() != WeaponTag || KAL.GetModuleDisplayName() != "KAL Series Robotics Controller") continue;
+                WeaponRoboticControllers.Add(KAL);
+            }
+
+            if (Deploy)
+                WeaponRoboticControllers.ForEach(rc => rc.KALTrigger(true));
+            else
+                WeaponRoboticControllers.ForEach(rc => rc.KALTrigger(false));
+
+            //clear list of all modules once fired
+            WeaponRoboticControllers.Clear();
+
+            WeaponRoboticsDeployed = Deploy;
         }
 
         private bool CheckIncoming()
