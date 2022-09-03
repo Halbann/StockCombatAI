@@ -21,6 +21,7 @@ namespace KerbalCombatSystems
         private float terminalVelocity;
         private ModuleWeaponController targetWeapon;
         private bool isInterceptor;
+        private int shutoffDistance;
 
         // Missile guidance variables.
 
@@ -49,6 +50,7 @@ namespace KerbalCombatSystems
         private ModuleWeaponController controller;
         private List<ModuleEngines> engines;
         private ModuleEngines mainEngine;
+        private Part mainEnginePart;
 
         // Debugging line variables.
 
@@ -77,10 +79,11 @@ namespace KerbalCombatSystems
             engines = vessel.FindPartModulesImplementing<ModuleEngines>();
             engines.ForEach(e => e.Activate());
             mainEngine = engines.First();
+            mainEnginePart = mainEngine.part;
 
             // Setup flight controller.
             fc = part.gameObject.AddComponent<KCSFlightController>();
-            fc.alignmentToleranceforBurn = 20;
+            fc.alignmentToleranceforBurn = isInterceptor ? 60 : 20;
             fc.lerpAttitude = false;
             fc.throttleLerpRate = 99;
             fc.attitude = vessel.ReferenceTransform.up;
@@ -108,27 +111,65 @@ namespace KerbalCombatSystems
             }
             fc.Drive();
 
-            // wait until clear of firer
-            bool lineOfSight = false;
             Ray targetRay = new Ray();
+            Vector3 sideways;
+            bool lineOfSight = false;
+            bool clear = false;
+            float previousTolerance = fc.alignmentToleranceforBurn;
 
             while (!lineOfSight)
             {
                 yield return new WaitForSeconds(0.1f);
-                //yield return new WaitForSeconds(isInterceptor ? 0.1f : 0.5f);
                 if (target == null) break;
+                
+                targetRay.origin = vessel.ReferenceTransform.position;
+                targetRay.direction = target.transform.position - vessel.transform.position;
 
-                if (frontLaunch)
+                // Do we have line of sight with the target vessel?
+                lineOfSight = !RayIntersectsVessel(firer, targetRay);
+
+                if (lineOfSight) break;
+                
+                if (!clear) // Latch clear once true.
                 {
+                    // We don't have line of sight with the target yet, but are we clear of the ship?
+
+                    sideways = vessel.transform.forward;
+
+                    for (int i = 0; i < 4; i++)
+                    {
+                        targetRay.origin = vessel.ReferenceTransform.position;
+                        sideways = Vector3.Cross(sideways, vessel.ReferenceTransform.up);
+                        targetRay.direction = sideways;
+                        clear = !RayIntersectsVessel(firer, targetRay);
+
+                        if (!clear) break;
+                    }
+                }
+
+                if (clear)
+                {
+                    // We are clear of the ship but it is blocking line of sight with the target.
+                    // Fly towards the target in an arc around the ship until we have line of sight.
+                    
+                    controller.launched = true; // Trigger early.
+
+                    fc.attitude = Vector3.ProjectOnPlane(FromTo(vessel, target).normalized, FromTo(vessel, firer).normalized);
+                    fc.throttle = 0.5f;
+                    fc.alignmentToleranceforBurn = 60;
+                    fc.Drive();
+                }
+                else if (frontLaunch)
+                {
+                    // We are exiting a front facing weapons bay, match the ship's rotation and acceleration until clear of the bay.
+
                     fc.attitude = firer.ReferenceTransform.up;
                     fc.throttle = firer.acceleration.magnitude > 0 ? 1 : 0;
                     fc.Drive();
                 }
-                
-                targetRay.origin = vessel.ReferenceTransform.position;
-                targetRay.direction = target.transform.position - vessel.transform.position;
-                lineOfSight = !RayIntersectsVessel(firer, targetRay);
             }
+
+            fc.alignmentToleranceforBurn = previousTolerance;
 
             // Remove end cap. todo: will need to change to support cluster missiles.
             List<ModuleDecouple> decouplers = vessel.FindPartModulesImplementing<ModuleDecouple>();
@@ -142,6 +183,8 @@ namespace KerbalCombatSystems
             // enable autopilot
             engageAutopilot = true;
             maxAcceleration = GetMaxAcceleration(vessel);
+
+            shutoffDistance = isInterceptor ? 3 : 10;
 
             controller.launched = true;
 
@@ -232,7 +275,12 @@ namespace KerbalCombatSystems
             targetVectorNormal = interceptVector.normalized;
 
             accuracy = Vector3.Dot(targetVectorNormal, relVelNrm);
-            if (targetVector.magnitude < 10 || ((mainEngine == null || !mainEngine.isOperational) && accuracy < 0.99))
+            if (targetVector.magnitude < shutoffDistance 
+                || ((mainEngine == null 
+                || !mainEngine.isOperational 
+                || mainEngine == null
+                || mainEnginePart.vessel != vessel) 
+                && accuracy < 0.99))
             {
                 StopGuidance();
                 return;

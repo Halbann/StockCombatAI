@@ -69,8 +69,8 @@ namespace KerbalCombatSystems
             throttleLerped = Mathf.MoveTowards(throttleLerped, throttleActual, throttleLerpRate * Time.fixedDeltaTime);
 
             v.ctrlState.mainThrottle = throttleLerped;
-            if (FlightGlobals.ActiveVessel != null && v == FlightGlobals.ActiveVessel)
-                FlightInputHandler.state.mainThrottle = throttleLerped; //so that the on-screen throttle gauge reflects the autopilot throttle
+            //if (FlightGlobals.ActiveVessel != null && v == FlightGlobals.ActiveVessel)
+            //      FlightInputHandler.state.mainThrottle = throttleLerped; //so that the on-screen throttle gauge reflects the autopilot throttle
         }
 
         void UpdateSAS(Vessel v)

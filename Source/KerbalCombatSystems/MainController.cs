@@ -56,6 +56,15 @@ namespace KerbalCombatSystems
             GameEvents.onVesselGoOnRails.Add(VesselEventUpdate);
         }
 
+        private void Update()
+        {
+            // Update throttle UI to match flight controller.
+            var controller = ships.Find(s => s.vessel == FlightGlobals.ActiveVessel);
+
+            if (FlightGlobals.ActiveVessel != null && controller != null && controller.controllerRunning)
+                FlightInputHandler.state.mainThrottle = FlightGlobals.ActiveVessel.ctrlState.mainThrottle;
+        }
+
         void OnDestroy()
         {
             GameEvents.onVesselCreate.Remove(VesselEventUpdate);

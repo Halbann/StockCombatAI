@@ -16,7 +16,7 @@ namespace KerbalCombatSystems
 
         const string shipControllerGroupName = "Ship AI";
         public bool controllerRunning = false;
-        public float updateInterval = 2.5f;
+        public float updateInterval = 2f;
         public float firingAngularVelocityLimit = 1; // degrees per second
 
         // Ship AI variables.
@@ -30,19 +30,18 @@ namespace KerbalCombatSystems
         private Coroutine shipControllerCoroutine;
         private Coroutine behaviourCoroutine;
         private Coroutine missileCoroutine;
+        private Coroutine interceptorCoroutine;
         public string state = "Init";
         private float lastUpdate;
 
         public List<ModuleWeaponController> weapons;
-        private float weaponsMinRange;
-        private float weaponsMaxRange;
-        private float lastFired;
-        private float fireInterval;
         private ModuleWeaponController currentProjectile;
-        private List<ModuleWeaponController> incomingWeapons;
-        private List<Tuple<ModuleWeaponController, float>> shouldDodgeWeapons;
+        public List<ModuleWeaponController> incomingWeapons;
+        private List<Tuple<ModuleWeaponController, float>> dodgeWeapons;
         private List<ModuleWeaponController> interceptors;
         private List<ModuleWeaponController> weaponsToIntercept;
+        private float lastFired = 0;
+        private const float firingInterval = 7.5f;
 
         private float maxDetectionRange;
         public float initialMass;
@@ -97,6 +96,20 @@ namespace KerbalCombatSystems
                 scene = UI_Scene.All
             )]
         public float firingSpeed = 20f;
+
+        [KSPField(isPersistant = true,
+            guiActive = true,
+            guiActiveEditor = true,
+            guiName = "Max. Salvo Size",
+            groupName = shipControllerGroupName,
+            groupDisplayName = shipControllerGroupName),
+            UI_FloatRange(
+                minValue = 1,
+                maxValue = 20,
+                stepIncrement = 1,
+                scene = UI_Scene.All
+            )]
+        public float maxSalvoSize = 5;
 
         // todo: find option without green bar
         [KSPField(
@@ -220,6 +233,7 @@ namespace KerbalCombatSystems
                 }
 
                 CalculateHeatSignature();
+                UpdateIncoming();
                 
                 yield return new WaitForSeconds(updateInterval);
             }
@@ -247,6 +261,10 @@ namespace KerbalCombatSystems
                 // Missiles.
 
                 CheckWeapons();
+
+                interceptorCoroutine = StartCoroutine(InterceptorFireControl());
+                yield return interceptorCoroutine;
+
                 missileCoroutine = StartCoroutine(MissileFireControl());
                 yield return missileCoroutine;
 
@@ -299,7 +317,7 @@ namespace KerbalCombatSystems
                 fc.alignmentToleranceforBurn = 45;
                 fc.throttle = 1;
 
-                ModuleWeaponController incoming = shouldDodgeWeapons.First().Item1;
+                ModuleWeaponController incoming = dodgeWeapons.First().Item1;
                 Vector3 incomingVector;
                 bool complete = false;
 
@@ -536,59 +554,115 @@ namespace KerbalCombatSystems
 
         public IEnumerator MissileFireControl()
         {
-            if (Time.time - lastFired > fireInterval && target != null && HasLock())
+            if (target != null && weapons.Count > 0 && Time.time - lastFired > firingInterval && HasLock())
             {
+                //float targetMass = targetController.initialMass;
+
+                List<ModuleWeaponController> missiles = GetAvailableMissiles(target);
+                var preferred = GetPreferredWeapon(target, missiles);
+                if (preferred == null) yield break;
+
                 lastFired = Time.time;
-                fireInterval = UnityEngine.Random.Range(5, 15);
+                bool checkWeapons = false;
+                float targetMass = (float)target.totalMass;
 
-                if (weapons.Count > 0)
+                if (targetController.incomingWeapons.Count > 0)
                 {
-                    var weapon = GetPreferredWeapon(target, GetAvailableMissiles(target));
-
-                    if (weapon != null)
-                    {
-                        weapon.target = target;
-                        weapon.side = side;
-                        weapon.Fire();
-
-                        targetController.AddIncoming(weapon);
-
-                        if (weapon.frontLaunch)
-                        {
-                            Coroutine waitForLaunch = StartCoroutine(WaitForLaunch(weapon));
-                            yield return waitForLaunch;
-                        }
-
-                        CheckWeapons();
-                    }
+                    targetMass = (float)target.totalMass - targetController.incomingWeapons.Sum(w => w.mass * w.targetMassRatio);
+                    if (targetMass < ((preferred.mass * 1.2f) * preferred.targetMassRatio)) yield break;
                 }
-            }
 
+                int salvoCount = (int)Mathf.Max(Mathf.Floor(targetMass / (preferred.mass * preferred.targetMassRatio)), 1);
+                salvoCount = Mathf.Min(salvoCount, missiles.Count);
+                salvoCount = Mathf.Min(salvoCount, (int)maxSalvoSize);
+
+                List<ModuleWeaponController> salvo = GetPreferredWeapon(target, missiles, salvoCount);
+                ModuleWeaponController last = salvo.Last();
+
+                Debug.Log($"[KCS]: SALVO of {salvo.Count} from {vessel.GetDisplayName()} to {target.GetDisplayName()}. " +
+                    $"(TM: {target.totalMass} / PM: {preferred.mass * preferred.targetMassRatio} / S: {targetMass / (preferred.mass * preferred.targetMassRatio)})");
+
+                foreach (ModuleWeaponController weapon in salvo)
+                {
+                    if (weapon == null || weapon.vessel != vessel) continue;
+
+                    checkWeapons = true;
+
+                    weapon.target = target;
+                    weapon.side = side;
+                    weapon.Fire();
+
+                    Debug.Log($"[KCS]: MISSILE from {vessel.GetDisplayName()} to {target.GetDisplayName()} using {weapon.weaponCode}");
+
+                    controller.weaponsInFlight.Add(weapon);
+                    targetController.AddIncoming(weapon);
+
+                    if (weapon.frontLaunch)
+                    {
+                        Coroutine waitForLaunch = StartCoroutine(WaitForLaunch(weapon));
+                        yield return waitForLaunch;
+                    }
+                    else if (weapon != last)
+                        yield return new WaitForSeconds(0.8f);
+                }
+
+                if (checkWeapons)
+                    CheckWeapons();
+            }
+        }
+
+        private IEnumerator InterceptorFireControl()
+        {
             // todo: could we actually intercept it before it reaches its target? don't want to waste an interceptor.
             // need to know missile's time to hit and the ideal interceptors time to intercept
 
             if (weaponsToIntercept.Count > 0 && interceptors.Count > 0)
             {
-                var interceptor = interceptors.First();
-                var interceptTarget = weaponsToIntercept.First();
+                bool checkWeapons = false;
+                ModuleWeaponController interceptor;
+                //List<ModuleWeaponController> interceptorsReady;
 
-                interceptor.isInterceptor = true;
-                interceptor.targetWeapon = interceptTarget;
-                interceptTarget.interceptedBy.Add(interceptor);
+                //var interceptorsReady = interceptors.OrderByDescending()
 
-                interceptor.target = interceptTarget.vessel;
-                interceptor.side = side;
-                interceptor.Fire();
-
-                if (interceptor.frontLaunch)
+                foreach (var interceptTarget in weaponsToIntercept)
                 {
-                    Coroutine waitForLaunch = StartCoroutine(WaitForLaunch(interceptor));
-                    yield return waitForLaunch;
+                    if (interceptors.Count < 1) break;
+                    checkWeapons = true;
+
+                    Vector3 interceptVector = FromTo(vessel, interceptTarget.vessel).normalized;
+
+                    // Group and order interceptors by 
+                    //var interceptorGroups = interceptors.GroupBy(i => i.childDecouplers).ToList();
+                    //var interceptorsReady = interceptorGroups.OrderBy(i => i.Key).First().ToList();
+                    //interceptorsReady = interceptorsReady.OrderByDescending(w => Vector3.Dot(w.part.parent.transform.up, interceptVector)).ToList();
+
+                    //var interceptorsReady = GetPreferredWeapon(interceptTarget.vessel, interceptors);
+
+                    //interceptor = interceptorsReady.First();
+                    interceptor = GetPreferredWeapon(interceptTarget.vessel, interceptors, 1).First();
+                    interceptors.Remove(interceptor);
+
+                    interceptor.isInterceptor = true;
+                    interceptor.targetWeapon = interceptTarget;
+                    interceptor.target = interceptTarget.vessel;
+                    interceptor.side = side;
+                    interceptor.Fire();
+
+                    Debug.Log($"[KCS]: INTERCEPTOR from {vessel.GetDisplayName()} to {weaponsToIntercept.First().weaponCode}");
+
+                    interceptTarget.interceptedBy.Add(interceptor);
+
+                    if (interceptor.frontLaunch)
+                    {
+                        Coroutine waitForLaunch = StartCoroutine(WaitForLaunch(interceptor));
+                        yield return waitForLaunch;
+                    }
+                    else
+                        yield return new WaitForSeconds(0.25f);
                 }
 
-                Debug.Log($"[KCS]: {vessel.GetDisplayName()} fired an interceptor at {weaponsToIntercept.First().vessel.GetDisplayName()}");
-
-                CheckWeapons();
+                if (checkWeapons)
+                    CheckWeapons();
             }
         }
 
@@ -602,8 +676,8 @@ namespace KerbalCombatSystems
 
             if (weapons.Count > 0)
             {
-                weaponsMinRange = weapons.Min(w => w.MinMaxRange.x);
-                weaponsMaxRange = weapons.Max(w => w.MinMaxRange.y);
+                //weaponsMinRange = weapons.Min(w => w.MinMaxRange.x);
+                //weaponsMaxRange = weapons.Max(w => w.MinMaxRange.y);
             }
 
             interceptors = weapons.FindAll(w => w.useAsInterceptor); 
@@ -624,9 +698,51 @@ namespace KerbalCombatSystems
 
         private ModuleWeaponController GetPreferredWeapon(Vessel target, List<ModuleWeaponController> weapons)
         {
-            float targetMass = (float)target.totalMass;
             if (weapons.Count < 1) return null;
-            return weapons.OrderBy(w => Mathf.Abs(targetMass - (w.mass * w.targetMassRatio))).First();
+            return GetPreferredWeapon(target, weapons, -1).First();
+        }
+
+        private List<ModuleWeaponController> GetPreferredWeapon(Vessel target, List<ModuleWeaponController> weapons, int count = 1)
+        {
+            if (weapons.Count < 1) return null;
+
+            float targetMass = (float)target.totalMass;
+
+            // Order the available weapons based on the suitability of the their mass compared to the target. 
+            var weaponsRanked = weapons.OrderBy(w => Mathf.Abs(targetMass - (w.mass * w.targetMassRatio))).ToList();
+            
+            if (count < 0)
+                return weaponsRanked.Take(1).ToList();
+
+            // Select the most suitable weapons.
+            weaponsRanked = weaponsRanked.Take(count).ToList();
+
+            // For each weapon that has already been selected, add any identical weapons to the list.
+            var identicalWeapons = new List<ModuleWeaponController>();
+
+            foreach (var selectedWeapon in weaponsRanked)
+                identicalWeapons.AddRange(weapons.FindAll(w => Mathf.Approximately(selectedWeapon.mass, w.mass) && !weaponsRanked.Contains(w) && !identicalWeapons.Contains(w)));
+
+            // Make doubly sure there aren't any duplicate entries.
+            weaponsRanked.AddRange(identicalWeapons);
+            weaponsRanked = weaponsRanked.Distinct().ToList();
+
+            // Group and order the identical missiles by their orientation to the target. More lined-up is better. 
+            Vector3 targetVector = FromTo(vessel, target).normalized;
+            var bays = weaponsRanked.GroupBy(w => Math.Round(Vector3.Dot(w.part.parent.transform.up, targetVector), 1)).ToList();
+            bays = bays.OrderByDescending(i => i.Key).ToList();
+
+            // Order the groups internally by their position in the stack. No bumper torpedos.
+            weaponsRanked.Clear();
+
+            foreach (var bay in bays)
+            {
+                var orderedBay = bay.OrderBy(w => w.childDecouplers).ToList();
+                weaponsRanked.AddRange(orderedBay);
+            }
+
+            // Return a list of weapons with a suitable mass for the target, prioritised by alignment to the target, and sorted to fire stacks in the correct sequence.
+            return weaponsRanked.Take(count).ToList();
         }
 
         private List<ModuleWeaponController> GetAvailableMissiles(Vessel target)
@@ -663,7 +779,6 @@ namespace KerbalCombatSystems
             }
         }
 
-        // todo: something about CheckStatus or CheckWithdraw might be preventing ships from starting to withdraw unless they are the active vessel
         public bool CheckStatus()
         {
             hasPropulsion = vessel.FindPartModulesImplementing<ModuleEngines>().FindAll(e => e.EngineIgnited && e.isOperational).Count > 0;
@@ -797,7 +912,7 @@ namespace KerbalCombatSystems
                 && VesselDistance(w.vessel, vessel) < maxDetectionRange
                 && w.interceptedBy.Count < 1);
 
-            weaponsToIntercept.OrderBy(w => VesselDistance(w.vessel, vessel));
+            weaponsToIntercept = weaponsToIntercept.OrderBy(w => VesselDistance(w.vessel, vessel)).ToList();
         }
 
         public void ToggleSide()
@@ -878,8 +993,8 @@ namespace KerbalCombatSystems
             float timeToDisplace = SolveTime(shipLength, maxAcceleration);
             if (float.IsInfinity(timeToDisplace)) return false;
 
-            shouldDodgeWeapons = new List<Tuple<ModuleWeaponController, float>>();
-            incomingWeapons.RemoveAll(w => w == null);
+            dodgeWeapons = new List<Tuple<ModuleWeaponController, float>>();
+            UpdateIncoming();
 
             Vessel iv;
             Vector3 incomingVector;
@@ -901,14 +1016,13 @@ namespace KerbalCombatSystems
                 float timeToDodge = timeToRotate + timeToDisplace;
 
                 float timeToHit = SolveTime(incomingVector.magnitude, (float)iv.acceleration.magnitude, Vector3.Dot(relVel, incomingVector.normalized));
-                //float timeToHit = incoming.MCFireTime;;
 
                 if (timeToHit > Mathf.Max(timeToDodge * 1.25f, updateInterval * 2)) continue;
-                shouldDodgeWeapons.Add(new Tuple<ModuleWeaponController, float>(incoming, timeToHit));
+                dodgeWeapons.Add(new Tuple<ModuleWeaponController, float>(incoming, timeToHit));
             }
 
-            shouldDodgeWeapons.OrderBy(i => i.Item2);
-            return shouldDodgeWeapons.Count > 0;
+            dodgeWeapons = dodgeWeapons.OrderBy(i => i.Item2).ToList();
+            return dodgeWeapons.Count > 0;
         }
 
         public void AddIncoming(ModuleWeaponController wep)
@@ -917,6 +1031,11 @@ namespace KerbalCombatSystems
                 incomingWeapons = new List<ModuleWeaponController>();
 
             incomingWeapons.Add(wep);
+        }
+
+        private void UpdateIncoming()
+        {
+            incomingWeapons.RemoveAll(w => w == null || w.missed);
         }
 
         public float CalculateHeatSignature()

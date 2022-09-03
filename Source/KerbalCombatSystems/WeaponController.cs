@@ -7,6 +7,7 @@ using System.Text;
 using System.Threading.Tasks;
 using UnityEngine;
 using Object = UnityEngine.Object;
+using static KerbalCombatSystems.KCS;
 
 namespace KerbalCombatSystems
 {
@@ -24,6 +25,7 @@ namespace KerbalCombatSystems
         public Vessel target;
         public float mass;
         public Side side;
+        public int childDecouplers;
 
         [KSPField(isPersistant = true)]
         public bool canFire = true;
@@ -365,8 +367,13 @@ namespace KerbalCombatSystems
 
             UpdateUI();
 
-            if (HighLogic.LoadedSceneIsFlight && massTypes.Contains(weaponType)) 
-                CalculateMass();
+            if (HighLogic.LoadedSceneIsFlight)
+            {
+                if (massTypes.Contains(weaponType))
+                    CalculateMass();
+
+                CountChildDecouplers();
+            }
         }
 
         private float CalculateMass()
@@ -387,11 +394,24 @@ namespace KerbalCombatSystems
             return totalMass;
         }
 
+        private void CountChildDecouplers()
+        {
+            Part parent;
+            var decoupler = FindDecoupler(part, "Weapon", true); // todo: set to false later
+
+            if (decoupler != null)
+                parent = decoupler.part;
+            else 
+                parent = part.parent;
+
+            var parts = parent.FindChildParts<Part>(true).ToList();
+            childDecouplers = parts.FindAll(p => p.HasModuleImplementing<ModuleDecouple>()).Count;
+        }
+
         public void Setup()
         {
-            Debug.Log($"[KCS]: " + vessel.GetName() + " initialising " + weaponType);
-
             string moduleName;
+
             switch (weaponType)
             {
                 case "Missile":
