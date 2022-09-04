@@ -19,9 +19,6 @@ namespace KerbalCombatSystems
         private List<Part> AIPartList;
         private List<ModuleEngines> Engines;
 
-        //relavent game settings
-        private int RefreshRate;
-
         //universal flight controller and toggle
         KCSFlightController fc;
         private bool Escaped = false;
@@ -42,7 +39,6 @@ namespace KerbalCombatSystems
             Decoupler = FindDecoupler(part, "Escape Pod", false);
             Debug.Log("[KCS]: Escaping from " + Parent.GetName());
             //set the refresh rate
-            RefreshRate = HighLogic.CurrentGame.Parameters.CustomParams<KCSCombat>().RefreshRate;
             StartCoroutine(RunEscapeSequence());
         }
 
@@ -170,7 +166,7 @@ namespace KerbalCombatSystems
                     fc.Drive();
                 }
                 
-                yield return new WaitForSeconds(RefreshRate);
+                yield return new WaitForSeconds(5.0f);
             }
 
             Debug.Log("[KCS]: Escape Sequence Ending on " + vessel.GetName() + " (Escape Pod)");

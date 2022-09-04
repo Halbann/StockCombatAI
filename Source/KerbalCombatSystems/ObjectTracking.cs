@@ -15,7 +15,6 @@ namespace KerbalCombatSystems
         //all ore scanning parts plus the sentinal at superlong range
 
         const string objectTrackingGroupName = "Situational Awareness";
-        private int ScalingFactor;
 
         [KSPField(
               guiActive = true,
