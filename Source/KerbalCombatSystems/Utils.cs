@@ -220,8 +220,7 @@ namespace KerbalCombatSystems
 
             return name;
         }
-    }
-        
+
         public static ModuleCommand FindCommand(Vessel craft)
         {
             //get a list of onboard control points and return the first found
@@ -233,23 +232,23 @@ namespace KerbalCombatSystems
             //gotta have a command point somewhere so this is just for compiling
             return null;
         }
+    }
+       
+    /*public class KCSShip
+    {
+        public Vessel v;
+        public float initialMass;
 
-        /*public class KCSShip
+        public KCSShip(Vessel ship, float mass)
         {
-            public Vessel v;
-            public float initialMass;
-
-            public KCSShip(Vessel ship, float mass)
-            {
-                v = ship;
-                initialMass = mass;
-            }
-        }*/
-
-        public enum Side
-        {
-            A,
-            B
+            v = ship;
+            initialMass = mass;
         }
+    }*/
+
+    public enum Side
+    {
+        A,
+        B
     }
 }
