@@ -23,7 +23,7 @@ namespace KerbalCombatSystems
         // Generic weapon variables.
 
         public Vessel target;
-        public float mass;
+        public float mass = -1;
         public Side side;
         public int childDecouplers;
 
@@ -127,6 +127,7 @@ namespace KerbalCombatSystems
         public bool isInterceptor = false;
         public ModuleWeaponController targetWeapon;
         public List<ModuleWeaponController> interceptedBy = new List<ModuleWeaponController>();
+        public float timeToHit = -1;
 
         #endregion
 
@@ -378,6 +379,8 @@ namespace KerbalCombatSystems
 
         private float CalculateMass()
         {
+            if (mass > 0) return mass;
+
             var decoupler = KCS.FindDecoupler(part, "Weapon", true); // todo: set to false later
             if (decoupler == null) return 1.0f; // temp fix
 
@@ -406,6 +409,30 @@ namespace KerbalCombatSystems
 
             var parts = parent.FindChildParts<Part>(true).ToList();
             childDecouplers = parts.FindAll(p => p.HasModuleImplementing<ModuleDecouple>()).Count;
+        }
+
+        public float CalculateAcceleration()
+        {
+            var decoupler = FindDecoupler(part, "Weapon", true).part;
+            var children = decoupler.FindChildParts<Part>(true).ToList();
+
+            var engines = new List<ModuleEngines>();
+            ModuleEngines engineModule;
+
+            foreach (var p in children)
+            {
+                engineModule = p.FindModuleImplementing<ModuleEngines>();
+
+                if (engineModule != null)
+                    engines.Add(engineModule);
+            }
+
+            float thrust = engines.Sum(e => e.MaxThrustOutputVac(true));
+
+            if (mass < 0)
+                CalculateMass();
+
+            return thrust / mass;
         }
 
         public void Setup()

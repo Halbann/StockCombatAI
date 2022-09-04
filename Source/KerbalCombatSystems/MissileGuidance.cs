@@ -54,7 +54,7 @@ namespace KerbalCombatSystems
 
         // Debugging line variables.
 
-        LineRenderer targetLine, rvLine, leadLine;
+        LineRenderer targetLine, rvLine, interceptLine;
 
         private IEnumerator Launch()
         {
@@ -178,7 +178,7 @@ namespace KerbalCombatSystems
             // initialise debug line renderer
             targetLine = KCSDebug.CreateLine(Color.magenta);
             rvLine = KCSDebug.CreateLine(Color.green);
-            leadLine = KCSDebug.CreateLine(Color.cyan);
+            interceptLine = KCSDebug.CreateLine(Color.cyan);
 
             // enable autopilot
             engageAutopilot = true;
@@ -261,6 +261,8 @@ namespace KerbalCombatSystems
                 timeToHit = SolveTime(targetVector.magnitude, maxAcceleration, Vector3.Dot(relVel, targetVector.normalized));
                 lead = (relVelNrm * -1) * timeToHit * relVelmag;
                 interceptVector = (target.transform.position + lead) - vessel.ReferenceTransform.position;
+
+                controller.timeToHit = timeToHit;
             }
             else
             {
@@ -295,14 +297,12 @@ namespace KerbalCombatSystems
 
             // Update debug lines.
             Vector3 origin = vessel.ReferenceTransform.position;
-            KCSDebug.PlotLine(new[] { origin, origin + interceptVector }, targetLine);
             KCSDebug.PlotLine(new[] { origin, origin + (relVelNrm * 15) }, rvLine);
 
-            if (!isInterceptor)
-            {
-                Vector3 targetOrigin = target.transform.position;
-                KCSDebug.PlotLine(new[] { targetOrigin, targetOrigin + lead }, leadLine);
-            }
+            if (isInterceptor)
+                KCSDebug.PlotLine(new[] { origin, origin + targetVector }, interceptLine);
+            else
+                KCSDebug.PlotLine(new[] { origin, origin + targetVector }, targetLine);
         }
 
         public override void Setup()
@@ -329,7 +329,7 @@ namespace KerbalCombatSystems
         {
             KCSDebug.DestroyLine(rvLine);
             KCSDebug.DestroyLine(targetLine);
-            KCSDebug.DestroyLine(leadLine);
+            KCSDebug.DestroyLine(interceptLine);
             Destroy(fc);
         }
 

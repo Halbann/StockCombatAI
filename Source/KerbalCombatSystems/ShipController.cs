@@ -55,6 +55,7 @@ namespace KerbalCombatSystems
         private int updateCount;
         public float heatSignature;
         private float averagedSize;
+        private float interceptorAcceleration = -1;
 
         Part editorChild;
 
@@ -680,7 +681,13 @@ namespace KerbalCombatSystems
                 //weaponsMaxRange = weapons.Max(w => w.MinMaxRange.y);
             }
 
-            interceptors = weapons.FindAll(w => w.useAsInterceptor); 
+            interceptors = weapons.FindAll(w => w.useAsInterceptor);
+
+            if (interceptors.Count > 0 && interceptorAcceleration < 0)
+            {
+                var firstInterceptor = interceptors.OrderBy(i => i.childDecouplers).First();
+                interceptorAcceleration = firstInterceptor.CalculateAcceleration();
+            }
         }
 
         public IEnumerator CheckWeaponsDelayed()
@@ -901,7 +908,7 @@ namespace KerbalCombatSystems
 
         private void FindInterceptTarget()
         {
-            if (controller.weaponsInFlight.Count < 1) return;
+            if (interceptors.Count < 1 || controller.weaponsInFlight.Count < 1) return;
 
             weaponsToIntercept = controller.weaponsInFlight.FindAll(
                 w => 
@@ -910,21 +917,31 @@ namespace KerbalCombatSystems
                 && !w.missed
                 && w.side != side
                 && VesselDistance(w.vessel, vessel) < maxDetectionRange
-                && w.interceptedBy.Count < 1);
+                && w.interceptedBy.Count < 1
+                && CanIntercept(w));
 
             weaponsToIntercept = weaponsToIntercept.OrderBy(w => VesselDistance(w.vessel, vessel)).ToList();
+        }
+
+        private bool CanIntercept(ModuleWeaponController weapon)
+        {
+            if (interceptorAcceleration < 1) return false;
+
+            Vessel intTarget = weapon.vessel;
+            Vector3 targetVector = FromTo(vessel, intTarget);
+            Vector3 intAccVector = targetVector.normalized * interceptorAcceleration;
+            float timeToIntercept = ClosestTimeToCPA(targetVector, intTarget.obt_velocity - vessel.obt_velocity, intTarget.acceleration - intAccVector, 30);
+            float distance = VesselDistance(vessel, intTarget);
+
+            return timeToIntercept + 0.5f < weapon.timeToHit && weapon.timeToHit > 0 && distance > 500;
         }
 
         public void ToggleSide()
         {
             if (side == Side.A)
-            {
                 side = Side.B;
-            }
             else
-            {
                 side = Side.A;
-            }
         }
 
         private bool CheckOrbitUnsafe()
