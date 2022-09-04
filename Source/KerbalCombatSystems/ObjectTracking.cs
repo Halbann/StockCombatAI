@@ -25,17 +25,14 @@ namespace KerbalCombatSystems
               groupName = objectTrackingGroupName,
               groupDisplayName = objectTrackingGroupName),
               UI_Label(scene = UI_Scene.All)]
-        public float DetectionRange = 0f;
-
-        [KSPField(isPersistant = true)]
-        public float BaseDetectionRange = 0f;
+        public float detectionRange = 0f;
 
         public override string GetInfo()
         {
             StringBuilder output = new StringBuilder();
 
             output.Append(Environment.NewLine);
-            output.Append(String.Format("Detection Range: {0} m", DetectionRange));
+            output.Append(String.Format("Detection Range: {0} m", detectionRange));
 
             return output.ToString();
         }
@@ -46,11 +43,7 @@ namespace KerbalCombatSystems
                 GameEvents.onEditorVariantApplied.Add(OnVariantApplied);
 
             SpinAnims = part.FindModulesImplementing<ModuleAnimationGroup>();
-
-            ScalingFactor = HighLogic.CurrentGame.Parameters.CustomParams<KCSCombat>().ScalingFactor;
-            DetectionRange = BaseDetectionRange * ScalingFactor;
         }
-
 
         private void OnVariantApplied(Part appliedPart, PartVariant variant)
         {
@@ -64,14 +57,12 @@ namespace KerbalCombatSystems
             switch (SensorSize)
             {
                 case "Medium":
-                    BaseDetectionRange = 1000f;
-                    DetectionRange = BaseDetectionRange * ScalingFactor;
+                    detectionRange = 1000f;
                     OreScanner.MaxAbundanceAltitude = 500000;//500km
                     UpdateButtons(SpinAnims[0], SpinAnims[1]);
                     break;
                 case "Short":
-                    BaseDetectionRange = 500f;
-                    DetectionRange = BaseDetectionRange * ScalingFactor;
+                    detectionRange = 500f;
                     OreScanner.MaxAbundanceAltitude = 100000;//100km
                     UpdateButtons(SpinAnims[1], SpinAnims[0]);
                     break;
