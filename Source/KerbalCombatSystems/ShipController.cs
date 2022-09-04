@@ -6,6 +6,7 @@ using System.Text;
 using System.Threading.Tasks;
 using UnityEngine;
 using static KerbalCombatSystems.KCS;
+using Random = UnityEngine.Random;
 using Expansions.Serenity;
 
 namespace KerbalCombatSystems

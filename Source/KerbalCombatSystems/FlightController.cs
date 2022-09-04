@@ -10,6 +10,13 @@ namespace KerbalCombatSystems
     class KCSFlightController : MonoBehaviour
     {
         public Vector3 attitude = Vector3.zero;
+        private Vector3 attitudeLerped;
+        private float error;
+        private float angleLerp;
+        public bool lerpAttitude = true;
+        private float lerpRate;
+        private bool lockAttitude = false;
+
         private bool facingDesiredRotation;
         public float throttle;
         public float throttleActual;
@@ -17,15 +24,7 @@ namespace KerbalCombatSystems
         public float throttleLerpRate = 1;
         public float alignmentToleranceforBurn = 5;
 
-        private Vector3 attitudeLerped;
-        public bool lerpAttitude = true;
-        private float error;
-        private float angleLerp;
-        private float lerpRate;
-        private bool lockAttitude = false;
-
         public Vector3 RCSVector;
-
         private Vessel controllingVessel;
 
         LineRenderer currentVectorLine, targetVectorLine;
