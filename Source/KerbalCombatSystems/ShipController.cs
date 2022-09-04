@@ -173,7 +173,6 @@ namespace KerbalCombatSystems
                 CheckStatus();
                 if (!alive) {
                     StopAI();
-                    vessel.ActionGroups.SetGroup(KSPActionGroup.Abort, true);
                     yield break;
                 }
                 
@@ -187,6 +186,7 @@ namespace KerbalCombatSystems
             if (!alive)
             {
                 StopAI();
+                vessel.ActionGroups.SetGroup(KSPActionGroup.Abort, true);
                 yield break;
             } 
 
