@@ -111,6 +111,20 @@ namespace KerbalCombatSystems
             }
             fc.Drive();
 
+            // turn on rcs thrusters
+            List<ModuleRCSFX> Thrusters = vessel.FindPartModulesImplementing<ModuleRCSFX>();
+            foreach (ModuleRCSFX Thruster in Thrusters)
+            {
+                Thruster.enabled = true;
+            }
+
+            //get an onboard probe core to control from
+            FindCommand(vessel).MakeReference();
+
+            //enable RCS for translation
+            if (!vessel.ActionGroups[KSPActionGroup.RCS])
+                vessel.ActionGroups.SetGroup(KSPActionGroup.RCS, true);
+
             Ray targetRay = new Ray();
             Vector3 sideways;
             bool lineOfSight = false;
@@ -280,6 +294,7 @@ namespace KerbalCombatSystems
                     interceptVector = interceptVector * -1;
             }
 
+            fc.RCSVector = -relVelNrm;
             targetVectorNormal = interceptVector.normalized;
 
             accuracy = Vector3.Dot(targetVectorNormal, relVelNrm);

@@ -45,10 +45,19 @@ namespace KerbalCombatSystems
 
         public static float GetMaxAcceleration(Vessel v)
         {
-            List<ModuleEngines> engines = v.FindPartModulesImplementing<ModuleEngines>();
-            float thrust = engines.Sum(e => e.MaxThrustOutputVac(true));
+            List<ModuleEngines> Engines = v.FindPartModulesImplementing<ModuleEngines>();
+            float Thrust = Engines.Sum(e => e.MaxThrustOutputVac(true));
 
-            return thrust / v.GetTotalMass();
+            List<ModuleRCSFX> RCS = v.FindPartModulesImplementing<ModuleRCSFX>();
+            foreach (ModuleRCSFX Thruster in RCS)
+            {
+                if (Thruster.useThrottle == true)
+                {
+                    Thrust += Thruster.thrusterPower;
+                }
+            }
+
+            return Thrust / v.GetTotalMass();
         }
 
         public static bool RayIntersectsVessel(Vessel v, Ray r)
@@ -212,22 +221,35 @@ namespace KerbalCombatSystems
             return name;
         }
     }
-
-    /*public class KCSShip
-    {
-        public Vessel v;
-        public float initialMass;
-
-        public KCSShip(Vessel ship, float mass)
+        
+        public static ModuleCommand FindCommand(Vessel craft)
         {
-            v = ship;
-            initialMass = mass;
+            //get a list of onboard control points and return the first found
+            List<ModuleCommand> CommandPoints = craft.FindPartModulesImplementing<ModuleCommand>();
+            if (CommandPoints.Count != 0)
+            {
+                return CommandPoints.First();
+            }
+            //gotta have a command point somewhere so this is just for compiling
+            return null;
         }
-    }*/
 
-    public enum Side
-    {
-        A,
-        B
+        /*public class KCSShip
+        {
+            public Vessel v;
+            public float initialMass;
+
+            public KCSShip(Vessel ship, float mass)
+            {
+                v = ship;
+                initialMass = mass;
+            }
+        }*/
+
+        public enum Side
+        {
+            A,
+            B
+        }
     }
 }

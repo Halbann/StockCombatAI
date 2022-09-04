@@ -6,7 +6,7 @@ using System.Text;
 using System.Threading.Tasks;
 using UnityEngine;
 using static KerbalCombatSystems.KCS;
-using Random = UnityEngine.Random;
+using Expansions.Serenity;
 
 namespace KerbalCombatSystems
 {
@@ -18,6 +18,10 @@ namespace KerbalCombatSystems
         public bool controllerRunning = false;
         public float updateInterval = 2f;
         public float firingAngularVelocityLimit = 1; // degrees per second
+
+        // Robotics tracking variables
+        List<ModuleCombatRobotics> WeaponRoboticControllers = new List<ModuleCombatRobotics>();
+        List<ModuleCombatRobotics> FlightRoboticControllers = new List<ModuleCombatRobotics>();
 
         // Ship AI variables.
 
@@ -49,6 +53,7 @@ namespace KerbalCombatSystems
         private bool hasWeapons;
         private float maxAcceleration;
         private bool roboticsDeployed;
+        private bool WeaponRoboticsDeployed;
         private float shipLength;
         private Vector3 maxAngularAcceleration;
         private double minSafeAltitude;
@@ -229,7 +234,6 @@ namespace KerbalCombatSystems
                 if (!alive) 
                 {
                     StopAI();
-                    FireEscapePods();
                     yield break;
                 }
 
@@ -246,6 +250,7 @@ namespace KerbalCombatSystems
             if (!alive)
             {
                 StopAI();
+                vessel.ActionGroups.SetGroup(KSPActionGroup.Abort, true);
                 yield break;
             }
 
@@ -289,7 +294,7 @@ namespace KerbalCombatSystems
                 state = "Withdrawing";
 
                 // Switch to passive robotics while withdrawing.
-                UpdateRobotics(false);
+                UpdateFlightRobotics(false);
 
                 // Withdraw sequence. Locks behaviour while burning 200 m/s of delta-v either north or south.
 
@@ -433,7 +438,7 @@ namespace KerbalCombatSystems
                 // https://github.com/MuMech/MechJeb2/blob/dev/MechJeb2/MechJebLib/Maths/Gooding.cs
 
                 // Deploy combat robotics.
-                UpdateRobotics(true);
+                UpdateFlightRobotics(true);
 
                 ModuleWeaponController currentWeapon = GetPreferredWeapon(target, weapons);
                 float minRange = currentWeapon.MinMaxRange.x;
@@ -547,7 +552,7 @@ namespace KerbalCombatSystems
                 fc.attitude = Vector3.zero;
 
                 // Switch to passive robotics.
-                UpdateRobotics(false);
+                UpdateFlightRobotics(false);
 
                 yield return new WaitForSeconds(updateInterval);
             }
@@ -700,7 +705,7 @@ namespace KerbalCombatSystems
         {
             var enemiesByDistance = controller.ships.FindAll(s => s != null && s.alive && s.side != side);
             if (enemiesByDistance.Count < 1) return null;
-            return enemiesByDistance.OrderBy(s => KCS.VesselDistance(s.vessel, vessel)).First();
+            return enemiesByDistance.OrderBy(s => VesselDistance(s.vessel, vessel)).First();
         }
 
         private ModuleWeaponController GetPreferredWeapon(Vessel target, List<ModuleWeaponController> weapons)
@@ -775,17 +780,6 @@ namespace KerbalCombatSystems
             return true;
         }
 
-        private void FireEscapePods()
-        {
-            //function to fire escape pods when the ship is dead but still holds AI units
-            List<ModuleEscapePodGuidance> PodList = vessel.FindPartModulesImplementing<ModuleEscapePodGuidance>();
-            //trigger the escape start method in every found controller
-            foreach (ModuleEscapePodGuidance EscapePod in PodList)
-            {
-                EscapePod.BeginEscape();
-            }
-        }
-
         public bool CheckStatus()
         {
             hasPropulsion = vessel.FindPartModulesImplementing<ModuleEngines>().FindAll(e => e.EngineIgnited && e.isOperational).Count > 0;
@@ -823,7 +817,7 @@ namespace KerbalCombatSystems
                     //try deploy animations, not all scanners will have them 
                     var anim = Sensor.part.FindModuleImplementing<ModuleAnimationGroup>();
                     if (anim == null) continue;
-                    KCS.TryToggle(true, anim);
+                    TryToggle(true, anim);
                 }
                 DeployedSensors = true;
             }
@@ -833,12 +827,12 @@ namespace KerbalCombatSystems
             {
                 foreach (ModuleObjectTracking Sensor in sensors)
                 {
-                    //try deploy animations, not all scanners will have them 
+                    //try retract animations, not all scanners will have them 
                     var anim = Sensor.part.FindModuleImplementing<ModuleAnimationGroup>();
                     if (anim == null) continue;
-                    TryToggle(true, Sensor.part.FindModuleImplementing<ModuleAnimationGroup>());
+                    TryToggle(false, anim);
                 }
-                DeployedSensors = true;
+                DeployedSensors = false;
             }
         }
 
@@ -985,19 +979,64 @@ namespace KerbalCombatSystems
             return toClosestApproach;
         }
 
-        public void UpdateRobotics(bool deploy)
+        public void UpdateFlightRobotics(bool deploy)
         {
             if (deploy == roboticsDeployed) return;
-
             //generate list of KAL500 parts, could change in flight
             List<ModuleCombatRobotics> RoboticControllers = vessel.FindPartModulesImplementing<ModuleCombatRobotics>();
-            
+            foreach (ModuleCombatRobotics KAL in RoboticControllers)
+            {
+                if (KAL.RoboticsType == "Ship") FlightRoboticControllers.Add(KAL);
+            }
+
             if (deploy)
-                RoboticControllers.ForEach(rc => rc.CombatTrigger());
+                FlightRoboticControllers.ForEach(rc => rc.KALTrigger(true));
             else
-                RoboticControllers.ForEach(rc => rc.PassiveTrigger());
+                FlightRoboticControllers.ForEach(rc => rc.KALTrigger(false));
+
+            //clear list of all modules once fired
+            FlightRoboticControllers.Clear();
 
             roboticsDeployed = deploy;
+        }
+
+        public float UpdateWeaponsRobotics(bool Deploy, string WeaponTag)
+        {
+            if (Deploy == WeaponRoboticsDeployed) return 0f;
+            //generate list of KAL250 parts, could change in flight
+            List<ModuleCombatRobotics> RoboticControllers = vessel.FindPartModulesImplementing<ModuleCombatRobotics>();
+            if (RoboticControllers.Count() == 0) return 0f;
+
+            foreach (ModuleCombatRobotics KAL in RoboticControllers)
+            {
+                Debug.Log(KAL.GetModuleDisplayName());
+                if (KAL.RoboticsType != "Weapon") continue;
+                if (KAL.GetModuleDisplayName() != WeaponTag && KAL.GetModuleDisplayName() != "KAL Series Robotics Controller") continue;
+                WeaponRoboticControllers.Add(KAL);
+            }
+
+            //get longest sequence length to pass as a wait time before firing
+            float MaxSeqLength = WeaponRoboticControllers.Max(t => t.SequenceLength);
+            Debug.Log("max length" + MaxSeqLength);
+
+            if (Deploy)
+                WeaponRoboticControllers.ForEach(rc => rc.KALTrigger(true));
+            else
+                WeaponRoboticControllers.ForEach(rc => rc.KALTrigger(false));
+
+            //clear list of all modules once fired
+            WeaponRoboticControllers.Clear();
+            WeaponRoboticsDeployed = Deploy;
+
+            //return a wait time to avoid premature firing unless retracting
+            if (Deploy == false)
+            {
+                return 0f;
+            }
+            else
+            {
+                return MaxSeqLength;
+            }
         }
 
         private bool CheckIncoming()

@@ -16,12 +16,15 @@ namespace KerbalCombatSystems
         private float throttleLerped;
         public float throttleLerpRate = 1;
         public float alignmentToleranceforBurn = 5;
+
         private Vector3 attitudeLerped;
         public bool lerpAttitude = true;
         private float error;
         private float angleLerp;
         private float lerpRate;
         private bool lockAttitude = false;
+
+        public Vector3 RCSVector;
 
         private Vessel controllingVessel;
 
@@ -54,6 +57,7 @@ namespace KerbalCombatSystems
 
             UpdateSAS(controllingVessel);
             UpdateThrottle(controllingVessel);
+            UpdateRCS(controllingVessel);
             // todo: implement own PID as alternative.
         }
 
@@ -73,6 +77,18 @@ namespace KerbalCombatSystems
             //      FlightInputHandler.state.mainThrottle = throttleLerped; //so that the on-screen throttle gauge reflects the autopilot throttle
         }
 
+        void UpdateRCS (Vessel v)
+        {
+            if (v == null || RCSVector == null) return;
+
+            //removed lerping 
+            //todo: consider a toggle for gradual spool up to avoid overcorrection
+
+            v.ctrlState.X = RCSVector.x;
+            v.ctrlState.Y = RCSVector.y;
+            v.ctrlState.Z = RCSVector.z;
+        }
+        
         void UpdateSAS(Vessel v)
         {
             if (attitude == Vector3.zero || lockAttitude) return;
