@@ -194,6 +194,23 @@ namespace KerbalCombatSystems
             Vector3 tv2 = tv1 + RelVel(v, t);
             return Vector3.Angle(tv1.normalized, tv2.normalized);
         }
+
+        public static string ShorternName(string name)
+        {
+            name = name.Split('(').First();
+            name = name.Split('[').First();
+            name = name.Replace(" - ", " ");
+            name = name.Replace("-class", "");
+            name = name.Replace("Heavy ", "");
+            name = name.Replace("Light ", "");
+            name = name.Replace("Frigate", "");
+            name = name.Replace("Destroyer", "");
+            name = name.Replace("Fighter", "");
+            name = name.Replace("  ", " ");
+            name = name.Trim();
+
+            return name;
+        }
     }
 
     /*public class KCSShip
