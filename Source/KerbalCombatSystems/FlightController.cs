@@ -26,8 +26,12 @@ namespace KerbalCombatSystems
 
         public Vector3 RCSVector;
         private Vessel controllingVessel;
+        public Vector3 RCSThrust;
+        Vector3 up, right, forward;
+        float RCSnormal, RCSpower;
 
         LineRenderer currentVectorLine, targetVectorLine;
+        //LineRenderer rup, rright, rforward;
 
         public void Awake()
         {
@@ -36,12 +40,18 @@ namespace KerbalCombatSystems
             // initialise debug lines
             currentVectorLine = KCSDebug.CreateLine(Color.yellow);
             targetVectorLine = KCSDebug.CreateLine(Color.red);
+            //rright = KCSDebug.CreateLine(Color.red);
+            //rup = KCSDebug.CreateLine(Color.green);
+            //rforward = KCSDebug.CreateLine(Color.blue);
         }
 
         internal void OnDestroy()
         {
             KCSDebug.DestroyLine(currentVectorLine);
             KCSDebug.DestroyLine(targetVectorLine);
+            //KCSDebug.DestroyLine(rup);
+            //KCSDebug.DestroyLine(rright);
+            //KCSDebug.DestroyLine(rforward);
         }
 
         public void Drive()
@@ -73,19 +83,29 @@ namespace KerbalCombatSystems
 
             v.ctrlState.mainThrottle = throttleLerped;
             //if (FlightGlobals.ActiveVessel != null && v == FlightGlobals.ActiveVessel)
-            //      FlightInputHandler.state.mainThrottle = throttleLerped; //so that the on-screen throttle gauge reflects the autopilot throttle
+            //    FlightInputHandler.state.mainThrottle = throttleLerped; //so that the on-screen throttle gauge reflects the autopilot throttle
         }
 
         void UpdateRCS (Vessel v)
         {
-            if (v == null || RCSVector == null) return;
+            if (RCSVector == Vector3.zero) return;
 
-            //removed lerping 
-            //todo: consider a toggle for gradual spool up to avoid overcorrection
+            up = v.ReferenceTransform.forward * -1;
+            forward = v.ReferenceTransform.up;
+            right = Vector3.Cross(forward, up);
 
-            v.ctrlState.X = RCSVector.x;
-            v.ctrlState.Y = RCSVector.y;
-            v.ctrlState.Z = RCSVector.z;
+            RCSnormal = Mathf.InverseLerp(0, 25, RCSVector.magnitude);
+            RCSpower = Mathf.Lerp(0, 2, RCSnormal);
+            RCSThrust = RCSVector.normalized * RCSpower;
+
+            v.ctrlState.X = Vector3.Dot(RCSThrust, right);
+            v.ctrlState.Y = Vector3.Dot(RCSThrust, up);
+            v.ctrlState.Z = Vector3.Dot(RCSThrust, forward);
+
+            //Vector3 origin = v.ReferenceTransform.position;
+            //KCSDebug.PlotLine(new[]{ origin, origin + right * 10}, rright);
+            //KCSDebug.PlotLine(new[]{ origin, origin + up * 10}, rup);
+            //KCSDebug.PlotLine(new[]{ origin, origin + forward * 10}, rforward);
         }
         
         void UpdateSAS(Vessel v)
@@ -115,8 +135,8 @@ namespace KerbalCombatSystems
 
             // Update debug lines.
             Vector3 origin = v.ReferenceTransform.position;
-            KCSDebug.PlotLine(new[]{ origin, origin + v.ReferenceTransform.up * 50}, currentVectorLine);
-            KCSDebug.PlotLine(new[]{ origin, origin + attitudeLerped * 50}, targetVectorLine);
+            //KCSDebug.PlotLine(new[]{ origin, origin + v.ReferenceTransform.up * 50}, currentVectorLine);
+            //KCSDebug.PlotLine(new[]{ origin, origin + attitudeLerped * 50}, targetVectorLine);
         }
 
         public void Stability(bool enable)

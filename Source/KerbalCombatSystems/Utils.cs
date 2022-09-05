@@ -9,11 +9,12 @@ namespace KerbalCombatSystems
 {
     public static partial class KCS
     {
-        public static ModuleDecouple FindDecoupler(Part origin, string type, bool ignoreTypeRequirement)
+        public static Seperator FindDecoupler(Part origin, string type, bool ignoreTypeRequirement)
         {
             Part currentPart;
             Part nextPart = origin.parent;
             ModuleDecouple Decoupler;
+            ModuleDockingNode port;
             ModuleDecouplerDesignate module;
 
             if (nextPart == null) return null;
@@ -24,15 +25,32 @@ namespace KerbalCombatSystems
                 nextPart = currentPart.parent;
 
                 if (nextPart == null) break;
-                if (!currentPart.isDecoupler(out Decoupler)) continue;
-                if (currentPart.GetComponent<ModuleDecouple>().isDecoupled == true) continue;
 
-                module = currentPart.GetComponent<ModuleDecouplerDesignate>();
-                if (module == null) continue;
+                Decoupler = currentPart.GetComponent<ModuleDecouple>();
+                port = currentPart.GetComponent<ModuleDockingNode>();
 
-                if (module.DecouplerType != type && !ignoreTypeRequirement) continue;
+                if (Decoupler == null && port == null) continue;
+                Seperator sep = new Seperator();
 
-                return Decoupler;
+                if (Decoupler != null)
+                {
+                    if (currentPart.GetComponent<ModuleDecouple>().isDecoupled == true) continue;
+
+                    module = currentPart.GetComponent<ModuleDecouplerDesignate>();
+                    if (module == null) continue;
+
+                    if (module.DecouplerType != type && !ignoreTypeRequirement) continue;
+
+                    sep.decoupler = Decoupler;
+                }
+                else
+                {
+                    sep.port = port;
+                    sep.isDockingPort = true;
+                }
+
+                sep.part = currentPart;
+                return sep;
             }
 
             return null;
@@ -46,18 +64,17 @@ namespace KerbalCombatSystems
         public static float GetMaxAcceleration(Vessel v)
         {
             List<ModuleEngines> Engines = v.FindPartModulesImplementing<ModuleEngines>();
-            float Thrust = Engines.Sum(e => e.MaxThrustOutputVac(true));
+            float thrust = Engines.Sum(e => e.MaxThrustOutputVac(true));
 
-            List<ModuleRCSFX> RCS = v.FindPartModulesImplementing<ModuleRCSFX>();
+            /*List<ModuleRCSFX> RCS = v.FindPartModulesImplementing<ModuleRCSFX>();
             foreach (ModuleRCSFX Thruster in RCS)
             {
-                if (Thruster.useThrottle == true)
-                {
+            // check fore by throttle
+                if (Thruster.useThrottle)
                     Thrust += Thruster.thrusterPower;
-                }
-            }
+            }*/
 
-            return Thrust / v.GetTotalMass();
+            return thrust / v.GetTotalMass();
         }
 
         public static bool RayIntersectsVessel(Vessel v, Ray r)
@@ -250,5 +267,30 @@ namespace KerbalCombatSystems
     {
         A,
         B
+    }
+
+    public class Seperator
+    {
+        public bool isDockingPort = false;
+        public ModuleDockingNode port;
+        public ModuleDecouple decoupler;
+        public Part part;
+        public Transform transform { get => part.transform; }
+
+        public void Separate()
+        {
+            // figure out which one to use#
+
+            if (isDockingPort)
+            {
+                //port.Undock();
+                //decoupler.ejectionForcePercent = 100;
+                port.Decouple();
+            }
+            else
+            {
+                decoupler.Decouple();
+            }
+        }
     }
 }

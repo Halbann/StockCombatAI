@@ -42,11 +42,13 @@ namespace KerbalCombatSystems
         private float accuracy;
         private bool drift;
         private float maxAcceleration;
+        private Vector3 rcs;
 
         // Components
 
         private KCSFlightController fc;
-        private ModuleDecouple decoupler;
+        //private ModuleDecouple decoupler;
+        private Seperator seperator;
         private ModuleWeaponController controller;
         private List<ModuleEngines> engines;
         private ModuleEngines mainEngine;
@@ -54,14 +56,15 @@ namespace KerbalCombatSystems
 
         // Debugging line variables.
 
-        LineRenderer targetLine, rvLine, interceptLine;
+        LineRenderer targetLine, rvLine, interceptLine, rcsLine;
 
         private IEnumerator Launch()
         {
             // find decoupler
-            decoupler = FindDecoupler(part, "Weapon", true);
+            //decoupler = FindDecoupler(part, "Weapon", true);
+            seperator = FindDecoupler(part, "Weapon", true);
 
-            bool frontLaunch = Vector3.Dot(decoupler.transform.up, vessel.ReferenceTransform.up) > 0.99;
+            bool frontLaunch = Vector3.Dot(seperator.transform.up, vessel.ReferenceTransform.up) > 0.99;
             controller.frontLaunch = frontLaunch;
 
             // todo:
@@ -69,9 +72,15 @@ namespace KerbalCombatSystems
             // fuel check
             // propulsion check
 
+            double separatorMaxtemp = 2000;
+
             // try to pop decoupler
-            if (decoupler != null)
-                decoupler.Decouple();
+            if (seperator != null)
+            {
+                seperator.Separate();
+                separatorMaxtemp = part.maxTemp;
+                seperator.part.maxTemp = double.MaxValue;
+            }
             else
                 Debug.Log("[KCS]: Couldn't find decoupler.");
 
@@ -86,12 +95,30 @@ namespace KerbalCombatSystems
             fc.alignmentToleranceforBurn = isInterceptor ? 60 : 20;
             fc.lerpAttitude = false;
             fc.throttleLerpRate = 99;
-            fc.attitude = vessel.ReferenceTransform.up;
+            fc.RCSVector = vessel.ReferenceTransform.up;
             fc.Drive();
+
+            //get an onboard probe core to control from
+            FindCommand(vessel).MakeReference();
+            fc.attitude = vessel.ReferenceTransform.up;
+
+            //enable RCS for translation
+            if (!vessel.ActionGroups[KSPActionGroup.RCS])
+                vessel.ActionGroups.SetGroup(KSPActionGroup.RCS, true);
+
+            // turn on rcs thrusters
+            var Thrusters = vessel.FindPartModulesImplementing<ModuleRCS>();
+            Thrusters.ForEach(t => t.rcsEnabled = true);
+
+            // Turn on reaction wheels.
+            var wheels = vessel.FindPartModulesImplementing<ModuleReactionWheel>();
+            wheels.ForEach(w => w.wheelState = ModuleReactionWheel.WheelState.Active);
 
             // wait to try to prevent destruction of decoupler.
             // todo: could increase heat tolerance temporarily or calculate a lower throttle.
             yield return new WaitForSeconds(0.2f);
+
+            seperator.part.maxTemp = separatorMaxtemp;
             
             if (!isInterceptor)
             {
@@ -109,21 +136,8 @@ namespace KerbalCombatSystems
             {
                 fc.throttle = 1;
             }
+            fc.RCSVector = Vector3.zero;
             fc.Drive();
-
-            // turn on rcs thrusters
-            List<ModuleRCSFX> Thrusters = vessel.FindPartModulesImplementing<ModuleRCSFX>();
-            foreach (ModuleRCSFX Thruster in Thrusters)
-            {
-                Thruster.enabled = true;
-            }
-
-            //get an onboard probe core to control from
-            FindCommand(vessel).MakeReference();
-
-            //enable RCS for translation
-            if (!vessel.ActionGroups[KSPActionGroup.RCS])
-                vessel.ActionGroups.SetGroup(KSPActionGroup.RCS, true);
 
             Ray targetRay = new Ray();
             Vector3 sideways;
@@ -193,6 +207,7 @@ namespace KerbalCombatSystems
             targetLine = KCSDebug.CreateLine(Color.magenta);
             rvLine = KCSDebug.CreateLine(Color.green);
             interceptLine = KCSDebug.CreateLine(Color.cyan);
+            rcsLine = KCSDebug.CreateLine(Color.white);
 
             // enable autopilot
             engageAutopilot = true;
@@ -200,13 +215,13 @@ namespace KerbalCombatSystems
 
             shutoffDistance = isInterceptor ? 3 : 10;
 
-            controller.launched = true;
-
             string oldName = vessel.vesselName;
             string missileName = controller.weaponCode == "" ? "Missile" : controller.weaponCode;
             string firerName = ShorternName(firer.vesselName);
             vessel.vesselName = !isInterceptor ? $"{missileName} ({firerName} >> {ShorternName(target.vesselName)})" : $"Interceptor ({firerName})";
             GameEvents.onVesselRename.Fire(new GameEvents.HostedFromToAction<Vessel,string>(vessel, oldName, vessel.vesselName));
+
+            controller.launched = true;
 
             yield break;
         }
@@ -294,7 +309,6 @@ namespace KerbalCombatSystems
                     interceptVector = interceptVector * -1;
             }
 
-            fc.RCSVector = -relVelNrm;
             targetVectorNormal = interceptVector.normalized;
 
             accuracy = Vector3.Dot(targetVectorNormal, relVelNrm);
@@ -312,13 +326,19 @@ namespace KerbalCombatSystems
             drift = accuracy > 0.999999
                 && (Vector3.Dot(relVel, targetVectorNormal) > terminalVelocity || isInterceptor);
 
+            rcs = Vector3.ProjectOnPlane(relVel, vessel.ReferenceTransform.up) * -1;
+
             fc.throttle = drift ? 0 : 1;
             fc.attitude = targetVectorNormal;
+            fc.RCSVector = rcs;
+
             fc.Drive();
 
             // Update debug lines.
             Vector3 origin = vessel.ReferenceTransform.position;
-            KCSDebug.PlotLine(new[] { origin, origin + (relVelNrm * 15) }, rvLine);
+            //KCSDebug.PlotLine(new[] { origin, origin + (relVelNrm * 15) }, rvLine);
+            KCSDebug.PlotLine(new[] { origin, origin + relVel }, rvLine);
+            KCSDebug.PlotLine(new[] { origin, origin + rcs}, rcsLine);
 
             if (isInterceptor)
                 KCSDebug.PlotLine(new[] { origin, origin + targetVector }, interceptLine);
@@ -329,7 +349,10 @@ namespace KerbalCombatSystems
         public override void Setup()
         {
             controller = part.FindModuleImplementing<ModuleWeaponController>();
+
+            if (controller.target == null && vessel.targetObject == null) return;
             target = controller.target ?? vessel.targetObject.GetVessel();
+
             terminalVelocity = controller.terminalVelocity;
             isInterceptor = controller.isInterceptor;
             targetWeapon = controller.targetWeapon;
@@ -351,6 +374,7 @@ namespace KerbalCombatSystems
             KCSDebug.DestroyLine(rvLine);
             KCSDebug.DestroyLine(targetLine);
             KCSDebug.DestroyLine(interceptLine);
+            KCSDebug.DestroyLine(rcsLine);
             Destroy(fc);
         }
 

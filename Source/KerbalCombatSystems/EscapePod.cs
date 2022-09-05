@@ -24,7 +24,8 @@ namespace KerbalCombatSystems
         private bool Escaped = false;
         private double minSafeAltitude;
 
-        ModuleDecouple Decoupler;
+        //ModuleDecouple Decoupler;
+        Seperator seperator;
         private Vessel Parent;
 
         //escape guidance is called when the button is pressed, when no ship controller can be found onboard the ship, or when the ship controller dictates an evacuation
@@ -36,7 +37,7 @@ namespace KerbalCombatSystems
         public void BeginEscape()
         {
             //find decoupler
-            Decoupler = FindDecoupler(part, "Escape Pod", false);
+            seperator = FindDecoupler(part, "Escape Pod", false);
             Debug.Log("[KCS]: Escaping from " + Parent.GetName());
             //set the refresh rate
             StartCoroutine(RunEscapeSequence());
@@ -56,7 +57,8 @@ namespace KerbalCombatSystems
             // try to pop decoupler
             try
             {
-                Decoupler.Decouple();
+                //Decoupler.Decouple();
+                seperator.Separate();
             }
             catch
             {

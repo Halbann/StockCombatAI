@@ -38,6 +38,8 @@ namespace KerbalCombatSystems
         ModuleWeaponController selectedWeapon;
         //public List<KCSShip> ships;
 
+        private Vessel currentVessel;
+
         private void Start()
         {
             // Setup GUI. 
@@ -59,11 +61,21 @@ namespace KerbalCombatSystems
 
         private void Update()
         {
-            // Update throttle UI to match flight controller.
-            var controller = ships.Find(s => s.vessel == FlightGlobals.ActiveVessel);
+            ManageThrottle();
+        }
 
-            if (FlightGlobals.ActiveVessel != null && controller != null && controller.controllerRunning)
-                FlightInputHandler.state.mainThrottle = FlightGlobals.ActiveVessel.ctrlState.mainThrottle;
+        private void ManageThrottle()
+        {
+            Vessel a = FlightGlobals.ActiveVessel;
+            if (a == null) return;
+
+            bool fcRunning = !a.ActionGroups[KSPActionGroup.SAS] && a.Autopilot.Mode == VesselAutopilot.AutopilotMode.Normal;
+            if (fcRunning || currentVessel != a)
+            {
+                FlightInputHandler.state.mainThrottle = a.ctrlState.mainThrottle;
+            }
+
+            currentVessel = a;
         }
 
         void OnDestroy()
