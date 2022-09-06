@@ -25,12 +25,15 @@ namespace KerbalCombatSystems
         public float alignmentToleranceforBurn = 5;
 
         public Vector3 RCSVector;
+        public float RCSPower = 3f;
         private Vessel controllingVessel;
-        public Vector3 RCSThrust;
-        Vector3 up, right, forward;
-        float RCSnormal, RCSpower;
+        private Vector3 RCSThrust;
+        private Vector3 up, right, forward;
+        private float RCSThrottle;
+        private Vector3 RCSVectorLerped = Vector3.zero;
 
         LineRenderer currentVectorLine, targetVectorLine;
+        LineRenderer rcsLine;
         //LineRenderer rup, rright, rforward;
 
         public void Awake()
@@ -40,6 +43,7 @@ namespace KerbalCombatSystems
             // initialise debug lines
             currentVectorLine = KCSDebug.CreateLine(Color.yellow);
             targetVectorLine = KCSDebug.CreateLine(Color.red);
+            rcsLine = KCSDebug.CreateLine(Color.white);
             //rright = KCSDebug.CreateLine(Color.red);
             //rup = KCSDebug.CreateLine(Color.green);
             //rforward = KCSDebug.CreateLine(Color.blue);
@@ -49,6 +53,7 @@ namespace KerbalCombatSystems
         {
             KCSDebug.DestroyLine(currentVectorLine);
             KCSDebug.DestroyLine(targetVectorLine);
+            KCSDebug.DestroyLine(rcsLine);
             //KCSDebug.DestroyLine(rup);
             //KCSDebug.DestroyLine(rright);
             //KCSDebug.DestroyLine(rforward);
@@ -90,22 +95,29 @@ namespace KerbalCombatSystems
         {
             if (RCSVector == Vector3.zero) return;
 
+            if (RCSVectorLerped == Vector3.zero)
+                RCSVectorLerped = RCSVector;
+
+            // This system works for now but it's convuluted and isn't very stable.
+            RCSVectorLerped = Vector3.Lerp(RCSVectorLerped, RCSVector, 5f * Time.fixedDeltaTime * Mathf.Clamp01(RCSVectorLerped.magnitude / RCSPower));
+            RCSThrottle = Mathf.Lerp(0, 1.732f, Mathf.InverseLerp(0, RCSPower, RCSVectorLerped.magnitude));
+            RCSThrust = RCSVectorLerped.normalized * RCSThrottle;
+            
             up = v.ReferenceTransform.forward * -1;
-            forward = v.ReferenceTransform.up;
-            right = Vector3.Cross(forward, up);
+            forward = v.ReferenceTransform.up * -1;
+            right = Vector3.Cross(up, forward);
 
-            RCSnormal = Mathf.InverseLerp(0, 25, RCSVector.magnitude);
-            RCSpower = Mathf.Lerp(0, 2, RCSnormal);
-            RCSThrust = RCSVector.normalized * RCSpower;
-
-            v.ctrlState.X = Vector3.Dot(RCSThrust, right);
-            v.ctrlState.Y = Vector3.Dot(RCSThrust, up);
-            v.ctrlState.Z = Vector3.Dot(RCSThrust, forward);
+            v.ctrlState.X = Mathf.Clamp(Vector3.Dot(RCSThrust, right), -1, 1);
+            v.ctrlState.Y = Mathf.Clamp(Vector3.Dot(RCSThrust, up), -1, 1);
+            v.ctrlState.Z = Mathf.Clamp(Vector3.Dot(RCSThrust, forward), -1, 1);
 
             //Vector3 origin = v.ReferenceTransform.position;
-            //KCSDebug.PlotLine(new[]{ origin, origin + right * 10}, rright);
-            //KCSDebug.PlotLine(new[]{ origin, origin + up * 10}, rup);
-            //KCSDebug.PlotLine(new[]{ origin, origin + forward * 10}, rforward);
+            //KCSDebug.PlotLine(new[] { origin, origin + right * 10 * v.ctrlState.X }, rright);
+            //KCSDebug.PlotLine(new[] { origin, origin + up * 10 *  v.ctrlState.Y}, rup);
+            //KCSDebug.PlotLine(new[] { origin, origin + forward * 10 * v.ctrlState.Z}, rforward);
+
+            Vector3 origin = v.ReferenceTransform.position;
+            KCSDebug.PlotLine(new[]{ origin, origin + RCSThrust.normalized * Mathf.Clamp(RCSThrust.magnitude, 0, 15) }, rcsLine);
         }
         
         void UpdateSAS(Vessel v)
@@ -135,8 +147,8 @@ namespace KerbalCombatSystems
 
             // Update debug lines.
             Vector3 origin = v.ReferenceTransform.position;
-            //KCSDebug.PlotLine(new[]{ origin, origin + v.ReferenceTransform.up * 50}, currentVectorLine);
-            //KCSDebug.PlotLine(new[]{ origin, origin + attitudeLerped * 50}, targetVectorLine);
+            KCSDebug.PlotLine(new[] { origin, origin + v.ReferenceTransform.up * 50 }, currentVectorLine);
+            KCSDebug.PlotLine(new[] { origin, origin + attitudeLerped * 50 }, targetVectorLine);
         }
 
         public void Stability(bool enable)

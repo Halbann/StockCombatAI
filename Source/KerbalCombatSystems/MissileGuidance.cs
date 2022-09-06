@@ -56,8 +56,7 @@ namespace KerbalCombatSystems
 
         // Debugging line variables.
 
-        LineRenderer targetLine, rvLine, interceptLine, rcsLine;
-
+        LineRenderer targetLine, rvLine, interceptLine;
         private IEnumerator Launch()
         {
             // find decoupler
@@ -96,6 +95,7 @@ namespace KerbalCombatSystems
             fc.lerpAttitude = false;
             fc.throttleLerpRate = 99;
             fc.RCSVector = vessel.ReferenceTransform.up;
+            fc.RCSPower = 20;
             fc.Drive();
 
             //get an onboard probe core to control from
@@ -207,7 +207,6 @@ namespace KerbalCombatSystems
             targetLine = KCSDebug.CreateLine(Color.magenta);
             rvLine = KCSDebug.CreateLine(Color.green);
             interceptLine = KCSDebug.CreateLine(Color.cyan);
-            rcsLine = KCSDebug.CreateLine(Color.white);
 
             // enable autopilot
             engageAutopilot = true;
@@ -336,9 +335,8 @@ namespace KerbalCombatSystems
 
             // Update debug lines.
             Vector3 origin = vessel.ReferenceTransform.position;
-            //KCSDebug.PlotLine(new[] { origin, origin + (relVelNrm * 15) }, rvLine);
-            KCSDebug.PlotLine(new[] { origin, origin + relVel }, rvLine);
-            KCSDebug.PlotLine(new[] { origin, origin + rcs}, rcsLine);
+            KCSDebug.PlotLine(new[] { origin, origin + (relVelNrm * 15) }, rvLine);
+            //KCSDebug.PlotLine(new[] { origin, origin + relVel }, rvLine);
 
             if (isInterceptor)
                 KCSDebug.PlotLine(new[] { origin, origin + targetVector }, interceptLine);
@@ -374,7 +372,6 @@ namespace KerbalCombatSystems
             KCSDebug.DestroyLine(rvLine);
             KCSDebug.DestroyLine(targetLine);
             KCSDebug.DestroyLine(interceptLine);
-            KCSDebug.DestroyLine(rcsLine);
             Destroy(fc);
         }
 

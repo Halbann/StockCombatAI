@@ -285,6 +285,7 @@ namespace KerbalCombatSystems
         private IEnumerator UpdateBehaviour()
         {
             maxAcceleration = GetMaxAcceleration(vessel);
+            fc.RCSVector = Vector3.zero;
 
             updateCount++;
             //Debug.Log($"[KCS]: Update {updateCount} for {vessel.GetDisplayName()}.");
@@ -326,12 +327,15 @@ namespace KerbalCombatSystems
 
                 ModuleWeaponController incoming = dodgeWeapons.First().Item1;
                 Vector3 incomingVector;
+                Vector3 dodgeVector;
                 bool complete = false;
 
                 while (UnderTimeLimit() && incoming != null && !complete)
                 {
                     incomingVector = FromTo(vessel, incoming.vessel);
-                    fc.attitude = Vector3.ProjectOnPlane(vessel.ReferenceTransform.up, incomingVector.normalized);
+                    dodgeVector = Vector3.ProjectOnPlane(vessel.ReferenceTransform.up, incomingVector.normalized);
+                    fc.attitude = dodgeVector;
+                    fc.RCSVector = dodgeVector * 2;
 
                     yield return new WaitForFixedUpdate();
                     complete = Vector3.Dot(RelVel(vessel, incoming.vessel), incomingVector) < 0;
@@ -339,7 +343,8 @@ namespace KerbalCombatSystems
 
                 fc.alignmentToleranceforBurn = previousTolerance;
             }
-            else if (target != null && HasLock() && CanFireProjectile(target) && AngularVelocity(vessel, target) < firingAngularVelocityLimit)
+            //else if (target != null && HasLock() && CanFireProjectile(target) && AngularVelocity(vessel, target) < firingAngularVelocityLimit)
+            else if (target != null && HasLock() && CanFireProjectile(target))
             {
                 // Aim at target using current projectile weapon.
                 // The weapon handles firing.
@@ -359,6 +364,8 @@ namespace KerbalCombatSystems
                 while (UnderTimeLimit() && target != null && currentProjectile.canFire)
                 {
                     fc.attitude = currentProjectile.Aim();
+                    fc.RCSVector = Vector3.ProjectOnPlane(RelVel(vessel, target), FromTo(vessel, target)) * -1;
+
                     // todo: correct for relative and angular velocity while firing if firing at an accelerating target
 
                     yield return new WaitForFixedUpdate();
