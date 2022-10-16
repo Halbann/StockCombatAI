@@ -14,31 +14,55 @@ namespace KerbalCombatSystems
     [KSPAddon(KSPAddon.Startup.Flight, false)]
     class KCSController : MonoBehaviour
     {
+        #region Fields
+
         // GUI variables.
         private static ApplicationLauncherButton appLauncherButton;
         private static bool addedAppLauncherButton = false;
         private static bool guiEnabled = false;
+        private static bool guiHidden;
 
         private int windowWidth = 350;
         private int windowHeight = 700;
         private Rect windowRect;
         private GUIStyle boxStyle;
-        private int scrollViewHeight;
+        private GUIStyle smallTextButtonStyle;
+        private GUIStyle buttonStyle;
+        private GUIStyle titleStyle;
+        private GUIStyle centeredText;
+        private static int scrollViewHeight;
         private Vector2 scrollPosition;
-        GUIStyle buttonStyle;
+        private Vector2 settingsScrollPosition;
+        private static Vector2 logScrollPosition;
+        private const int logScrollHeight = 350;
 
-        private string[] modes = { "Ships", "Weapons" };
+        private string[] modes = { "Ships", "Weapons", "Log", "Settings" };
         private string mode = "Ships";
 
-        public List<ModuleShipController> ships;
-        public List<ModuleWeaponController> weaponsInFlight;
+        public static List<ModuleShipController> ships;
+        public static List<ModuleWeaponController> weaponsInFlight;
+        public static List<ModuleWeaponController> interceptorsInFlight;
         private float lastUpdateTime;
 
         List<ModuleWeaponController> weaponList;
         ModuleWeaponController selectedWeapon;
-        //public List<KCSShip> ships;
-
         private Vessel currentVessel;
+
+        private static List<string> log;
+        private static float lastLogged;
+        private bool updateOverlayOpacity;
+
+        static bool hasCC;
+        static bool hasPRE;
+
+        #endregion
+
+        #region Main
+
+        private void Awake()
+        {
+            log = new List<string>();
+        }
 
         private void Start()
         {
@@ -57,6 +81,27 @@ namespace KerbalCombatSystems
             GameEvents.onVesselDestroy.Add(VesselEventUpdate);
             GameEvents.onVesselGoOffRails.Add(VesselEventUpdate);
             GameEvents.onVesselGoOnRails.Add(VesselEventUpdate);
+
+            GameEvents.onHideUI.Add(OnHideUI);
+            GameEvents.onShowUI.Add(OnShowUI);
+
+			foreach (var a in AssemblyLoader.loadedAssemblies)
+			{
+				if (!hasPRE && a.assembly.FullName.Contains("PhysicsRangeExtender"))
+                {
+                    hasPRE = true;
+                    continue;
+                }
+
+                if (!hasCC && a.assembly.FullName.Contains("ContinuousCollision"))
+                {
+                    hasCC = true;
+                    continue;
+                }
+
+                if (hasCC && hasPRE)
+                    break;
+            }
         }
 
         private void Update()
@@ -85,6 +130,10 @@ namespace KerbalCombatSystems
             GameEvents.onVesselGoOffRails.Remove(VesselEventUpdate);
             GameEvents.onVesselGoOnRails.Remove(VesselEventUpdate);
         }
+
+        #endregion
+
+        #region Ship Functions
 
         private void VesselEventUpdate(Vessel v)
         {
@@ -115,7 +164,7 @@ namespace KerbalCombatSystems
             var loadedVessels = FlightGlobals.VesselsLoaded;
             ships = new List<ModuleShipController>();
             weaponsInFlight = new List<ModuleWeaponController>();
-            //ships = new List<KCSShip>();
+            interceptorsInFlight = new List<ModuleWeaponController>();
 
             foreach (Vessel v in loadedVessels)
             {
@@ -127,11 +176,16 @@ namespace KerbalCombatSystems
                 }
 
                 var w = v.FindPartModuleImplementing<ModuleWeaponController>();
-                if (w != null && w.launched && !w.missed && !w.isInterceptor)
-                    weaponsInFlight.Add(w);
-
-                //ships.Add(new KCSShip(v, v.GetTotalMass())); // todo: Should update mass instead
+                if (w != null && !w.missed)
+                {
+                    if (!w.isInterceptor)
+                        weaponsInFlight.Add(w);
+                    else
+                        interceptorsInFlight.Add(w);
+                }
             }
+
+            ships = ships.OrderBy(s => s.side.ToString()).ToList();
         }
 
         private void UpdateWeaponList()
@@ -146,10 +200,6 @@ namespace KerbalCombatSystems
             c.CheckWeapons();
             weaponList = c.weapons;
 
-            // need to sort by distance from root part so that we don't fire bumper torpedos.
-            //weaponList.OrderBy(m => m.vessel.parts.FindIndex 
-
-            // todo: replace this.
             var ungroupedMissiles = weaponList.FindAll(m => m.weaponCode == "");
             weaponList = weaponList.Except(ungroupedMissiles).ToList();
             weaponList = weaponList.GroupBy(m => m.weaponCode).Select(g => g.First()).ToList();
@@ -176,38 +226,103 @@ namespace KerbalCombatSystems
             UpdateWeaponList();
         }
 
+        #endregion
 
+        #region Logging
 
+        public static void Log(string text)
+        {
+            if (Time.time - lastLogged > 3 && log.Count > 0)
+                log.Add(string.Format("<color=#808080>-</color>"));
+
+            log.Add(text);
+
+            lastLogged = Time.time;
+            logScrollPosition.y = int.MaxValue;
+        }
+
+        public static void Log(string text, Vessel v1, Vessel v2)
+        {
+            if (v1 == null) return;
+
+            var c = FindController(v1);
+
+            string colour = "#808080";
+            if (c != null && c.alive)
+                colour = c.SideColour();
+
+            text = text.Replace("%1", string.Format("<color={1}>{0}</color>", ShorternName(v1.GetDisplayName()), colour));
+
+            if (text.Contains("%2"))
+            {
+                if (v2 == null)
+                {
+                    text = text.Replace("%2", "unknown");
+                }
+                else
+                {
+                    c = FindController(v2);
+
+                    colour = "#808080";
+                    if (c != null && c.alive)
+                        colour = c.SideColour();
+
+                    text = text.Replace("%2", string.Format("<color={1}>{0}</color>", ShorternName(v2.GetDisplayName()), colour));
+                }
+            }
+
+            Log(text);
+        }
+
+        public static void Log(string text, Vessel v1) =>
+            Log(text, v1, null);
+
+        #endregion
+
+        #region GUI
 
         // GUI functions.
 
         void OnGUI()
         {
-            // todo: don't draw when UI is hidden
-            if (guiEnabled) DrawGUI();
+            if (guiEnabled && !guiHidden) DrawGUI();
         }
 
         private void DrawGUI() =>
-            windowRect = GUILayout.Window(GUIUtility.GetControlID(FocusType.Passive), windowRect, FillWindow, "Kerbal Combat Suite", GUILayout.Height(0), GUILayout.Width(windowWidth));
+            windowRect = GUILayout.Window(GUIUtility.GetControlID(FocusType.Passive), windowRect, FillWindow, "Kerbal Combat Systems", GUILayout.Height(0), GUILayout.Width(mode != "Log" ? windowWidth : windowWidth * 1.25f));
 
         private void FillWindow(int windowID)
         {
+            if (boxStyle == null)
+            {
+                buttonStyle = GUI.skin.button;
+                boxStyle = GUI.skin.GetStyle("Box");
+
+                smallTextButtonStyle = new GUIStyle(buttonStyle);
+                smallTextButtonStyle.fontSize = 10;
+                smallTextButtonStyle.alignment = TextAnchor.MiddleCenter;
+
+                titleStyle = new GUIStyle(GUI.skin.label);
+                titleStyle.alignment = TextAnchor.MiddleCenter;
+                titleStyle.fontStyle = FontStyle.Bold;
+
+                centeredText = new GUIStyle(GUI.skin.label);
+                centeredText.alignment = TextAnchor.MiddleCenter;
+            }
+
             if (GUI.Button(new Rect(windowRect.width - 18, 2, 16, 16), ""))
                 ToggleGui();
 
-            buttonStyle = GUI.skin.button;
-            boxStyle = GUI.skin.GetStyle("Box");
+            if (GUI.Button(new Rect(windowRect.width - (18 * 2 + 8), 2, 24, 16), "O", smallTextButtonStyle))
+                Overlay.DistanceToggle();
 
             GUILayout.BeginVertical();
-
             GUILayout.BeginHorizontal();
 
             foreach (var m in modes)
             {
                 if (GUILayout.Toggle(mode == m, m, buttonStyle))
-                {
                     mode = m;
-                }
             }
 
             GUILayout.EndHorizontal();
@@ -220,13 +335,36 @@ namespace KerbalCombatSystems
                 case "Weapons":
                     WeaponsGUI();
                     break;
+                case "Log":
+                    LogGUI();
+                    break;
+                case "Settings":
+                    SettingsGUI();
+                    break;
                 default:
                     GUILayout.Label("Something went wrong...");
                     break;
             }
 
+            if (!hasCC)
+                WarningMessage("Missing Continuous Collisions! Without continuous collisions, " +
+                    "high speed missiles will phase through small targets.");
+
+            if (!hasPRE)
+                WarningMessage("Missing Physics Range Extender! Without PRE, " +
+                    "KCS can't control vessels further than 200 metres away.");
+
             GUILayout.EndVertical();
             GUI.DragWindow(new Rect(0, 0, 10000, 500));
+        }
+
+        private void WarningMessage(string message)
+        {
+            GUI.color = Color.red;
+            GUILayout.BeginVertical(boxStyle);
+            GUILayout.Label(message);
+            GUILayout.EndVertical();
+            GUI.color = Color.white;
         }
 
         private void ShipsGUI()
@@ -272,7 +410,7 @@ namespace KerbalCombatSystems
                     if (GUILayout.Button(AI))
                         c.ToggleAI();
 
-                    if (GUILayout.Button(String.Format("<color={1}>{0}</color>", c.side, c.side == Side.A ? "#0AACE3" : "#E30A0A")))
+                    if (GUILayout.Button(String.Format("<color={1}>{0}</color>", c.side, c.SideColour())))
                         c.ToggleSide();
 
                     GUILayout.EndVertical();
@@ -297,14 +435,11 @@ namespace KerbalCombatSystems
                 foreach (var w in weaponList)
                 {
                     string code = w.weaponCode == "" ? w.weaponType : w.weaponCode;
-                    string weaponName = String.Format("{0}\n<color=#808080ff>Type: {1}, Mass: {2} t</color>",
-                        code, w.weaponType, w.mass);
+                    string weaponName = string.Format("{0}\n<color=#808080ff>Type: {1}, Mass: {2} t</color>",
+                        code, w.weaponType, w.mass.ToString("0.0"));
 
                     if (GUILayout.Toggle(w == selectedWeapon, weaponName, GUI.skin.button))
-                    {
-                        //selectedWeapon = selectedWeapon != w ? w : null;
                         selectedWeapon = w;
-                    }
                 }
             }
             GUILayout.EndScrollView();
@@ -314,21 +449,78 @@ namespace KerbalCombatSystems
             if (GUILayout.Button("Fire")) FireSelectedWeapon();
         }
 
+        private void LogGUI()
+        {
+            GUILayout.BeginVertical(boxStyle);
+            logScrollPosition = GUILayout.BeginScrollView(logScrollPosition, false, true, GUILayout.Height(logScrollHeight), GUILayout.Width(windowWidth * 1.25f));
+            foreach (var text in log)
+            {
+                GUILayout.Label(text);
+            }
+            GUILayout.EndScrollView();
+            GUILayout.EndVertical();
+        }
+
+        private void SettingsGUI()
+        {
+            GUILayout.BeginVertical(boxStyle);
+            settingsScrollPosition = GUILayout.BeginScrollView(settingsScrollPosition, false, false, GUILayout.Height(scrollViewHeight), GUILayout.Width(windowWidth));
+            
+            GUILayout.Label("Overlay", titleStyle);
+
+            Overlay.useElevationArcs = GUILayout.Toggle(Overlay.useElevationArcs, "Use Elevation Arcs");
+            Overlay.hideWithUI = GUILayout.Toggle(Overlay.hideWithUI, "Hide with UI");
+
+            SliderSetting(ref Overlay.globalOpacity, "Global Opacity", 0, 4);
+            SliderSetting(ref Overlay.rangeRingsOpacity, "Range Rings Opacity", 0, 1);
+            SliderSetting(ref Overlay.rangeLinesOpacity, "Range Lines Opacity", 0, 1);
+            SliderSetting(ref Overlay.secondaryRangeLinesOpacity, "Secondary Lines Opacity", 0, 1);
+            SliderSetting(ref Overlay.dashedLinesOpacity, "Target Lines Opacity", 0, 1);
+            SliderSetting(ref Overlay.elevationLinesOpacity, "Elevation Lines Opacity", 0, 1);
+            SliderSetting(ref Overlay.markerOpacity, "Marker Opacity", 0, 1);
+
+            if (updateOverlayOpacity)
+            {
+                updateOverlayOpacity = false;
+                Overlay.UpdateOpacity();
+            }
+
+            GUILayout.EndScrollView();
+            GUILayout.EndVertical();
+
+            GUILayout.Label("This menu is a placeholder. Settings changes are not permanent.");
+        }
+
+        private void SliderSetting(ref float setting, string text, int min, int max)
+        {
+            GUILayout.BeginHorizontal();
+
+            GUILayout.Label(text, GUILayout.Width(windowWidth * 0.25f));
+
+            float settingLast = setting;
+            setting = GUILayout.HorizontalSlider((float)Math.Round(setting, 2), min, max);
+
+            GUILayout.Label(setting.ToString(), centeredText, GUILayout.Width(windowWidth * 0.25f));
+            
+            if (setting != settingLast)
+                updateOverlayOpacity = true;
+
+            GUILayout.EndHorizontal();
+        }
+
         // Application launcher/Toolbar setup.
 
         private void AddToolbarButton()
         {
             if (!addedAppLauncherButton)
             {
-                Texture buttonTexture = GameDatabase.Instance.GetTexture("KCS/Icons/button", false);
+                Texture buttonTexture = GameDatabase.Instance.GetTexture("KCS/Icons/Button", false);
                 appLauncherButton = ApplicationLauncher.Instance.AddModApplication(ToggleGui, ToggleGui, null, null, null, null, ApplicationLauncher.AppScenes.FLIGHT, buttonTexture);
                 addedAppLauncherButton = true;
             }
 
             if (appLauncherButton.isActiveAndEnabled)
-            {
                 appLauncherButton.SetFalse(false);
-            }
         }
 
         public void ToggleGui()
@@ -347,5 +539,21 @@ namespace KerbalCombatSystems
         }
         public void EnableGui() { guiEnabled = true; }
         public void DisableGui() { guiEnabled = false; }
+
+        private void OnShowUI() =>
+            OnToggleUI(false);
+
+        private void OnHideUI() =>
+            OnToggleUI(true);
+
+        private void OnToggleUI(bool hide)
+        {
+            guiHidden = hide;
+
+            if ((Overlay.hideWithUI || !hide) && HighLogic.LoadedSceneIsFlight)
+                Overlay.SetVisibility(hide);
+        }
+
+        #endregion
     }
 }

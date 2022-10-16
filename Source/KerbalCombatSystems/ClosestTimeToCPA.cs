@@ -71,7 +71,12 @@ namespace KerbalCombatSystems
 
         public static Vector3 PredictPosition(Vector3 position, Vector3 velocity, Vector3 acceleration, float time)
         {
-            return position + time * velocity + 0.5f * time * time * acceleration;
+            return position + velocity * time + 0.5f * acceleration * Mathf.Pow(time, 2);
+        }
+
+        public static Vector3 Displacement(Vector3 velocity, Vector3 acceleration, float time)
+        {
+            return velocity * time + 0.5f * acceleration * Mathf.Pow(time, 2);
         }
     }
 }

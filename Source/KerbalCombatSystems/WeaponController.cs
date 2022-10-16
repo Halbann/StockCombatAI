@@ -38,8 +38,7 @@ namespace KerbalCombatSystems
 
         public static string[] types = { "Missile", "Rocket", "Firework", "Bomb", "MassCannon" };
         public static string[] massTypes = { "Missile", "Rocket", "Bomb" };
-        //public static string[] projectileTypes = { "Rocket", "Firework" };
-        public static string[] projectileTypes = { "Firework" };
+        public static string[] projectileTypes = { "Rocket", "Firework" };
 
         public ModuleWeapon typeModule;
 
@@ -94,7 +93,7 @@ namespace KerbalCombatSystems
                   stepIncrement = 50f,
                   scene = UI_Scene.All
               )]
-        public float terminalVelocity = 300f;
+        public float terminalVelocity = 2000f;
 
         [KSPField(isPersistant = true,
             guiActive = true,
@@ -124,10 +123,16 @@ namespace KerbalCombatSystems
 
         public bool frontLaunch = false;
         public bool missed = false;
+        public bool hit = false;
         public bool isInterceptor = false;
         public ModuleWeaponController targetWeapon;
         public List<ModuleWeaponController> interceptedBy = new List<ModuleWeaponController>();
         public float timeToHit = -1;
+
+        public ModuleMissile missile
+        {
+            get => (ModuleMissile)typeModule;
+        }
 
         #endregion
 
@@ -268,7 +273,7 @@ namespace KerbalCombatSystems
 
         public void SetWeaponCodeCallback(String code, VesselType t, int i)
         {
-            weaponCode = code;
+            weaponCode = code.ToUpper();
             UpdateWeaponCodeUI();
         }
 
@@ -312,8 +317,6 @@ namespace KerbalCombatSystems
             Fields["terminalVelocity"].guiActiveEditor = weaponType == "Missile";
             Fields["useAsInterceptor"].guiActive = weaponType == "Missile";
             Fields["useAsInterceptor"].guiActiveEditor = weaponType == "Missile";
-            //Fields["MatchTargetVelocity"].guiActive = weaponType == "Missile";
-            //Fields["MatchTargetVelocity"].guiActiveEditor = weaponType == "Missile";
             //Firework fields
             Fields["FWRoundBurst"].guiActive = weaponType == "Firework";
             Fields["FWRoundBurst"].guiActiveEditor = weaponType == "Firework";
@@ -358,6 +361,7 @@ namespace KerbalCombatSystems
 
         public override void OnStart(StartState state)
         {
+            weaponCode = weaponCode.ToUpper();
             UpdateWeaponCodeUI();
 
             if (types.IndexOf(weaponType) == -1)
@@ -377,15 +381,19 @@ namespace KerbalCombatSystems
             }
         }
 
-        private float CalculateMass()
+        private float CalculateMass(Part decoupler = null, bool useLast = true)
         {
-            if (mass > 0) return mass;
+            if (mass > 0 && useLast) return mass;
 
-            var decoupler = KCS.FindDecoupler(part, "Weapon", true); // todo: set to false later
-            if (decoupler == null) return 1.0f; // temp fix
+            if (decoupler == null)
+            {
+                var module = KCS.FindDecoupler(part, "Weapon", true); // todo: set to false later
+                if (module == null) return 1.0f;
+                decoupler = module.part;
+            }
 
             float totalMass = 0;
-            var parts = decoupler.part.FindChildParts<Part>(true);
+            var parts = decoupler.FindChildParts<Part>(true);
 
             foreach (Part part in parts)
             {
@@ -393,7 +401,7 @@ namespace KerbalCombatSystems
                 totalMass = totalMass + part.mass + part.GetResourceMass();
             }
 
-            mass = (float)Math.Round(totalMass, 2);
+            mass = totalMass;
             return totalMass;
         }
 
@@ -411,9 +419,11 @@ namespace KerbalCombatSystems
             childDecouplers = parts.FindAll(p => p.HasModuleImplementing<ModuleDecouple>()).Count;
         }
 
-        public float CalculateAcceleration()
+        public float CalculateAcceleration(Part decoupler = null)
         {
-            var decoupler = FindDecoupler(part, "Weapon", true).part;
+            if (decoupler == null)
+                decoupler = FindDecoupler(part, "Weapon", true).part;
+
             var children = decoupler.FindChildParts<Part>(true).ToList();
 
             var engines = new List<ModuleEngines>();
@@ -428,9 +438,7 @@ namespace KerbalCombatSystems
             }
 
             float thrust = engines.Sum(e => e.MaxThrustOutputVac(true));
-
-            if (mass < 0)
-                CalculateMass();
+            float mass = CalculateMass(decoupler, false);
 
             return thrust / mass;
         }

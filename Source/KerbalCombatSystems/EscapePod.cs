@@ -55,16 +55,10 @@ namespace KerbalCombatSystems
             StopCoroutine(StatusRoutine());
 
             // try to pop decoupler
-            try
-            {
-                //Decoupler.Decouple();
+            if (seperator != null)
                 seperator.Separate();
-            }
-            catch
-            {
-                //notify of error but launch anyway for pods that have lost decoupler
+            else
                 Debug.Log("[KCS]: Couldn't find decoupler on " + vessel.GetName() + " (Escape Pod)");
-            }
 
             // set target orientation to away from the vessel by default
             fc = part.gameObject.AddComponent<KCSFlightController>();

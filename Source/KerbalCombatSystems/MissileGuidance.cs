@@ -16,6 +16,7 @@ namespace KerbalCombatSystems
         // Settings
 
         public bool engageAutopilot = false;
+        private float maxThrust;
         private Vessel target;
         private Vessel firer;
         private float terminalVelocity;
@@ -30,37 +31,33 @@ namespace KerbalCombatSystems
         private Vector3 relVel;
         private Vector3 relVelNrm;
         private float relVelmag;
-
-        //private float correctionAmount;
-        //private Vector3 correction;
-
         public float timeToHit;
         private Vector3 lead;
-        private Vector3 predictedPos;
         private Vector3 interceptVector;
-
         private float accuracy;
         private bool drift;
-        private float maxAcceleration;
+        public float maxAcceleration;
         private Vector3 rcs;
+        private float targetSize;
 
         // Components
 
         private KCSFlightController fc;
-        //private ModuleDecouple decoupler;
         private Seperator seperator;
         private ModuleWeaponController controller;
         private List<ModuleEngines> engines;
         private ModuleEngines mainEngine;
         private Part mainEnginePart;
+        private int partCount = -1;
 
         // Debugging line variables.
 
         LineRenderer targetLine, rvLine, interceptLine;
+        //GameObject prediction;
+
         private IEnumerator Launch()
         {
             // find decoupler
-            //decoupler = FindDecoupler(part, "Weapon", true);
             seperator = FindDecoupler(part, "Weapon", true);
 
             bool frontLaunch = Vector3.Dot(seperator.transform.up, vessel.ReferenceTransform.up) > 0.99;
@@ -71,14 +68,15 @@ namespace KerbalCombatSystems
             // fuel check
             // propulsion check
 
-            double separatorMaxtemp = 2000;
-
             // try to pop decoupler
             if (seperator != null)
             {
                 seperator.Separate();
-                separatorMaxtemp = part.maxTemp;
+
+                // I will think of something smarter in the future time.
                 seperator.part.maxTemp = double.MaxValue;
+                seperator.part.skinMaxTemp = double.MaxValue;
+                seperator.part.tempExplodeChance = 0;
             }
             else
                 Debug.Log("[KCS]: Couldn't find decoupler.");
@@ -114,17 +112,21 @@ namespace KerbalCombatSystems
             var wheels = vessel.FindPartModulesImplementing<ModuleReactionWheel>();
             wheels.ForEach(w => w.wheelState = ModuleReactionWheel.WheelState.Active);
 
+            maxThrust = GetMaxThrust(vessel);
+            maxAcceleration = maxThrust / vessel.GetTotalMass();
+
+            vessel.targetObject = target;
+
             // wait to try to prevent destruction of decoupler.
             // todo: could increase heat tolerance temporarily or calculate a lower throttle.
             yield return new WaitForSeconds(0.2f);
 
-            seperator.part.maxTemp = separatorMaxtemp;
-            
             if (!isInterceptor)
             {
                 // pulse to 5 m/s.
                 float burnTime = 0.5f;
                 float driftVelocity = 5;
+                
                 fc.throttle = driftVelocity / burnTime / GetMaxAcceleration(vessel);
                 fc.Drive();
 
@@ -152,11 +154,6 @@ namespace KerbalCombatSystems
                 
                 targetRay.origin = vessel.ReferenceTransform.position;
                 targetRay.direction = target.transform.position - vessel.transform.position;
-
-                // Do we have line of sight with the target vessel?
-                lineOfSight = !RayIntersectsVessel(firer, targetRay);
-
-                if (lineOfSight) break;
                 
                 if (!clear) // Latch clear once true.
                 {
@@ -195,6 +192,9 @@ namespace KerbalCombatSystems
                     fc.throttle = firer.acceleration.magnitude > 0 ? 1 : 0;
                     fc.Drive();
                 }
+
+                // Do we have line of sight with the target vessel?
+                lineOfSight = !RayIntersectsVessel(firer, targetRay);
             }
 
             fc.alignmentToleranceforBurn = previousTolerance;
@@ -203,6 +203,9 @@ namespace KerbalCombatSystems
             List<ModuleDecouple> decouplers = vessel.FindPartModulesImplementing<ModuleDecouple>();
             decouplers.ForEach(d => d.Decouple());
 
+            List<ModuleProceduralFairing> fairings = vessel.FindPartModulesImplementing<ModuleProceduralFairing>();
+            fairings.ForEach(f => f.DeployFairing());
+
             // initialise debug line renderer
             targetLine = KCSDebug.CreateLine(Color.magenta);
             rvLine = KCSDebug.CreateLine(Color.green);
@@ -210,9 +213,11 @@ namespace KerbalCombatSystems
 
             // enable autopilot
             engageAutopilot = true;
-            maxAcceleration = GetMaxAcceleration(vessel);
 
             shutoffDistance = isInterceptor ? 3 : 10;
+            var targetController = FindController(target);
+            targetSize = targetController != null ? targetController.averagedSize : AveragedSize(target);
+            partCount = vessel.parts.Count;
 
             string oldName = vessel.vesselName;
             string missileName = controller.weaponCode == "" ? "Missile" : controller.weaponCode;
@@ -222,60 +227,22 @@ namespace KerbalCombatSystems
 
             controller.launched = true;
 
+            //if (isInterceptor)
+            //{
+            //    prediction = GameObject.CreatePrimitive(PrimitiveType.Sphere);
+            //    var mr = prediction.GetComponent<MeshRenderer>();
+
+            //    Material sphereMat = new Material(Shader.Find("Unlit/Color"));
+            //    sphereMat.color = Color.magenta;
+
+            //    mr.material = sphereMat;
+
+            //    prediction.transform.localScale = prediction.transform.localScale * 6;
+            //    Destroy(prediction.GetComponent<SphereCollider>());
+            //}
+
             yield break;
         }
-
-        /*private void UpdateGuidanceByAngle()
-        {
-            if (target == null || (isInterceptor && (targetWeapon == null || targetWeapon.missed))) StopGuidance();
-
-            float maxAcceleration = GetMaxAcceleration(vessel);
-
-            targetVector = target.transform.position - vessel.ReferenceTransform.position;
-            relVel = vessel.GetObtVelocity() - target.GetObtVelocity();
-            relVelNrm = relVel.normalized;
-            relVelmag = relVel.magnitude;
-
-            // Predict aim point based on missile acceleration and relative velocity.
-            timeToHit = SolveTime(targetVector.magnitude, maxAcceleration, relVel.magnitude);
-            lead = Vector3.ProjectOnPlane(relVel * -1, targetVector.normalized) * timeToHit;
-
-            // Read target acceleration. Significantly higher hit rate but possibly unfair as it defeats dodging.
-            //lead = target.acceleration.normalized * SolveDistance(timeToHit, (float)target.acceleration.magnitude, 0);
-
-            targetVector = targetVector + lead;
-            targetVectorNormal = targetVector.normalized;
-
-            if (relVelmag > 100)
-            {
-                //correctionAmount = Mathf.Max((relVelmag / GetMaxAcceleration(vessel)) * 1.33f, 0.1f);
-                //correctionAmount = Mathf.Max((relVelmag / maxAcceleration), 0.1f);
-                correctionAmount = Mathf.Max(relVelmag / maxAcceleration);
-                correction = Vector3.LerpUnclamped(relVelNrm, targetVectorNormal, 1 + correctionAmount);
-                fc.attitude = correction;
-            }
-            else
-            {
-                fc.attitude = targetVectorNormal;
-            }
-
-            drift = Vector3.Dot(targetVectorNormal, relVelNrm) > 0.999999
-                && (Vector3.Dot(relVel, targetVectorNormal) > terminalVelocity || isInterceptor);
-
-            //fc.alignmentToleranceforBurn = relVelmag > 50 ? 5 : 20;
-            fc.throttle = drift ? 0 : 1;
-
-            if (targetVector.magnitude < 10 || !engines.First().isOperational)
-                StopGuidance();
-
-            fc.Drive();
-
-            // Update debug lines.
-            Vector3 origin = vessel.ReferenceTransform.position;
-            KCSDebug.PlotLine(new[] { origin, origin + targetVector }, targetLine);
-            KCSDebug.PlotLine(new[] { origin, origin + (relVelNrm * 50) }, rvLine);
-            KCSDebug.PlotLine(new[] { origin, origin + lead }, leadLine);
-        }*/
 
         private void UpdateGuidance()
         {
@@ -285,27 +252,33 @@ namespace KerbalCombatSystems
                 return;
             }
 
-            targetVector = target.transform.position - vessel.ReferenceTransform.position;
+            targetVector = target.CoM - vessel.CoM;
             relVel = vessel.GetObtVelocity() - target.GetObtVelocity();
             relVelNrm = relVel.normalized;
             relVelmag = relVel.magnitude;
+            maxAcceleration = maxThrust / vessel.GetTotalMass();
 
             if (!isInterceptor)
             {
                 timeToHit = SolveTime(targetVector.magnitude, maxAcceleration, Vector3.Dot(relVel, targetVector.normalized));
                 lead = (relVelNrm * -1) * timeToHit * relVelmag;
-                interceptVector = (target.transform.position + lead) - vessel.ReferenceTransform.position;
+                interceptVector = (target.CoM + lead) - vessel.CoM;
 
                 controller.timeToHit = timeToHit;
             }
             else
             {
-                timeToHit = ClosestTimeToCPA(targetVector, target.obt_velocity - vessel.obt_velocity, target.acceleration - (vessel.ReferenceTransform.up * maxAcceleration), 30);
-                predictedPos = PredictPosition(target.transform.position, target.rootPart.Rigidbody.velocity - vessel.rootPart.Rigidbody.velocity, target.acceleration, timeToHit);
-                interceptVector = predictedPos - vessel.ReferenceTransform.position;
+                Vector3 acceleration = vessel.ReferenceTransform.up * maxAcceleration;
+                Vector3 relvela = target.GetObtVelocity() - vessel.GetObtVelocity();
 
-                if (Vector3.Dot(interceptVector.normalized, targetVector.normalized) < 0)
-                    interceptVector = interceptVector * -1;
+                timeToHit = ClosestTimeToCPA(targetVector, relvela, target.acceleration - acceleration, 30);
+                interceptVector = PredictPosition(targetVector, relvela, target.acceleration - acceleration * 0.5f, timeToHit);
+                interceptVector = interceptVector.normalized;
+
+                if (Vector3.Dot(interceptVector, targetVector.normalized) < 0)
+                    interceptVector = targetVector.normalized;
+
+                controller.timeToHit = timeToHit;
             }
 
             targetVectorNormal = interceptVector.normalized;
@@ -334,14 +307,16 @@ namespace KerbalCombatSystems
             fc.Drive();
 
             // Update debug lines.
-            Vector3 origin = vessel.ReferenceTransform.position;
+            Vector3 origin = vessel.CoM;
             KCSDebug.PlotLine(new[] { origin, origin + (relVelNrm * 15) }, rvLine);
-            //KCSDebug.PlotLine(new[] { origin, origin + relVel }, rvLine);
 
             if (isInterceptor)
                 KCSDebug.PlotLine(new[] { origin, origin + targetVector }, interceptLine);
             else
                 KCSDebug.PlotLine(new[] { origin, origin + targetVector }, targetLine);
+
+            //if (isInterceptor)
+            //    prediction.transform.position = predictedPosWorld;
         }
 
         public override void Setup()
@@ -365,6 +340,19 @@ namespace KerbalCombatSystems
         public void FixedUpdate()
         {
             if (engageAutopilot) UpdateGuidance();
+
+            // Works some of the time. Fix if needed in future.
+
+            //if (!controller.hit 
+            //    && target != null 
+            //    && FromTo(vessel, target).magnitude < Mathf.Max(targetSize * 3, 5))
+            //{
+            //    int pc = vessel.parts.Count;
+            //    if (pc < partCount)
+            //        OnHit();
+
+            //    partCount = pc;
+            //}
         }
 
         public void OnDestroy()
@@ -373,6 +361,7 @@ namespace KerbalCombatSystems
             KCSDebug.DestroyLine(targetLine);
             KCSDebug.DestroyLine(interceptLine);
             Destroy(fc);
+            //Destroy(prediction);
         }
 
         public void StopGuidance()
@@ -380,6 +369,19 @@ namespace KerbalCombatSystems
             engageAutopilot = false;
             controller.missed = true;
             OnDestroy();
+        }
+
+        private void OnHit()
+        {
+            controller.hit = true;
+
+            if (!isInterceptor)
+            {
+                string missileName = controller.weaponCode == "" ? "missile" : controller.weaponCode + " missile";
+                KCSController.Log($"%1 was hit by a {missileName} fired from %2", target, firer);
+            }
+            else
+                KCSController.Log("%1 intercepted a missile", firer);
         }
     }
 }

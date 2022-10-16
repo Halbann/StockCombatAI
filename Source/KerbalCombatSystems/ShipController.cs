@@ -18,6 +18,8 @@ namespace KerbalCombatSystems
         const string shipControllerGroupName = "Ship AI";
         public bool controllerRunning = false;
         public float updateInterval = 2f;
+        public float combatUpdateInterval = 2.0f;
+        public float emergencyUpdateInterval = 0.5f;
         public float firingAngularVelocityLimit = 1; // degrees per second
 
         // Robotics tracking variables
@@ -26,7 +28,6 @@ namespace KerbalCombatSystems
 
         // Ship AI variables.
 
-        private KCSController controller;
         private KCSFlightController fc;
 
         public Vessel target;
@@ -48,22 +49,24 @@ namespace KerbalCombatSystems
         private float lastFired = 0;
         private const float firingInterval = 7.5f;
 
-        private float maxDetectionRange;
+        internal float maxDetectionRange;
+        internal float maxWeaponRange;
         public float initialMass;
         private bool hasPropulsion;
         private bool hasWeapons;
+        private bool hasControl;
         private float maxAcceleration;
         private bool roboticsDeployed;
         private bool WeaponRoboticsDeployed;
         private float shipLength;
         private Vector3 maxAngularAcceleration;
         private double minSafeAltitude;
-        private int updateCount;
         public float heatSignature;
-        private float averagedSize;
+        public float averagedSize;
         private float interceptorAcceleration = -1;
-
-        Part editorChild;
+        private Part editorChild;
+        private float controlTimeout = 10;
+        private float lastInControl;
 
         [KSPField(isPersistant = true)]
         public Side side;
@@ -178,11 +181,10 @@ namespace KerbalCombatSystems
                 fc = part.gameObject.AddComponent<KCSFlightController>();
                 fc.alignmentToleranceforBurn = 7.5f;
                 fc.throttleLerpRate = 3;
-                controller = FindObjectOfType<KCSController>();
 
                 Vector3 size = vessel.vesselSize;
                 shipLength = (new[] { size.x, size.y, size.z}).ToList().Max();
-                averagedSize = (size.x + size.y + size.z) / 3;
+                averagedSize = AveragedSize(vessel);
                 initialMass = vessel.GetTotalMass();
                 StartCoroutine(CalculateMaxAcceleration());
 
@@ -221,6 +223,12 @@ namespace KerbalCombatSystems
         public void OnDestroy()
         {
             GameEvents.onEditorPartEvent.Remove(UpdateAttachment);
+
+            if (HighLogic.LoadedSceneIsFlight && !vessel.packed && alive)
+            {
+                alive = false;
+                DeathMessage(true);
+            }
         }
 
         #endregion
@@ -234,7 +242,9 @@ namespace KerbalCombatSystems
                 CheckStatus();
                 if (!alive) 
                 {
+                    DeathMessage();
                     StopAI();
+                    vessel.ActionGroups.SetGroup(KSPActionGroup.Abort, true);
                     yield break;
                 }
 
@@ -251,7 +261,6 @@ namespace KerbalCombatSystems
             if (!alive)
             {
                 StopAI();
-                vessel.ActionGroups.SetGroup(KSPActionGroup.Abort, true);
                 yield break;
             }
 
@@ -261,19 +270,20 @@ namespace KerbalCombatSystems
 
                 // Find target.
 
-                UpdateDetectionRange();
-                FindTarget();
-                FindInterceptTarget();
-
-                // Missiles.
-
                 CheckWeapons();
 
-                interceptorCoroutine = StartCoroutine(InterceptorFireControl());
-                yield return interceptorCoroutine;
+                if (hasWeapons || target != null)
+                {
+                    FindTarget();
+                    UpdateDetectionRange();
+                    FindInterceptTarget();
 
-                missileCoroutine = StartCoroutine(MissileFireControl());
-                yield return missileCoroutine;
+                    interceptorCoroutine = StartCoroutine(InterceptorFireControl());
+                    yield return interceptorCoroutine;
+
+                    missileCoroutine = StartCoroutine(MissileFireControl());
+                    yield return missileCoroutine;
+                }
 
                 // Update behaviour tree for movement and projectile weapons.
 
@@ -287,12 +297,12 @@ namespace KerbalCombatSystems
             maxAcceleration = GetMaxAcceleration(vessel);
             fc.RCSVector = Vector3.zero;
 
-            updateCount++;
-            //Debug.Log($"[KCS]: Update {updateCount} for {vessel.GetDisplayName()}.");
-
             // Movement.
             if (hasPropulsion && !hasWeapons && CheckWithdraw())
             {
+                if (state != "Withdrawing")
+                    KCSController.Log("%1 started to withdraw (out of weapons)", vessel);
+
                 state = "Withdrawing";
 
                 // Switch to passive robotics while withdrawing.
@@ -341,6 +351,7 @@ namespace KerbalCombatSystems
                     complete = Vector3.Dot(RelVel(vessel, incoming.vessel), incomingVector) < 0;
                 }
 
+                fc.throttle = 0;
                 fc.alignmentToleranceforBurn = previousTolerance;
             }
             //else if (target != null && HasLock() && CanFireProjectile(target) && AngularVelocity(vessel, target) < firingAngularVelocityLimit)
@@ -353,13 +364,6 @@ namespace KerbalCombatSystems
                 fc.throttle = 0;
                 currentProjectile.target = target;
                 currentProjectile.side = side;
-
-                // Temporarily disabled.
-                if (currentProjectile.weaponType == "Rocket")
-                {
-                    yield return new WaitForSeconds(updateInterval);
-                    yield break;
-                }
 
                 while (UnderTimeLimit() && target != null && currentProjectile.canFire)
                 {
@@ -374,7 +378,7 @@ namespace KerbalCombatSystems
             else if (CheckOrbitUnsafe())
             {
                 Orbit o = vessel.orbit;
-                double UT = Planetarium.GetUniversalTime();
+                double UT;
 
                 if (o.ApA < minSafeAltitude) 
                 {
@@ -383,7 +387,7 @@ namespace KerbalCombatSystems
                     state = "Correcting Orbit (Apoapsis too low)";
                     fc.throttle = 1;
 
-                    while (o.ApA < minSafeAltitude * 1.1)
+                    while (UnderTimeLimit() && o.ApA < minSafeAltitude * 1.1)
                     {
                         UT = Planetarium.GetUniversalTime();
                         fc.attitude = o.Radial(UT);
@@ -392,26 +396,18 @@ namespace KerbalCombatSystems
                 }
                 else if (o.altitude < minSafeAltitude)
                 {
-                    if (o.timeToPe < o.timeToAp)
+                    // Our apoapsis is outside the atmosphere but we are inside the atmosphere and descending.
+                    // Burn up until we are ascending and our apoapsis is outside the atmosphere by a 10% margin.
+
+                    state = "Correcting Orbit (Falling inside atmo)";
+                    fc.throttle = 1;
+
+                    while (UnderTimeLimit() && (o.ApA < minSafeAltitude * 1.1 || o.timeToPe < o.timeToAp))
                     {
-                        // Our apoapsis is outside the atmosphere but we are inside the atmosphere and descending.
-                        // Burn up until we are ascending and our apoapsis is outside the atmosphere by a 10% margin.
-
-                        state = "Correcting Orbit (Falling inside atmo)";
-                        fc.throttle = 1;
-
-                        while (o.ApA < minSafeAltitude * 1.1 || o.timeToPe < o.timeToAp)
-                        {
-                            UT = Planetarium.GetUniversalTime();
-                            fc.attitude = o.Radial(UT);
-                            yield return new WaitForFixedUpdate();
-                        }
+                        UT = Planetarium.GetUniversalTime();
+                        fc.attitude = o.Radial(UT);
+                        yield return new WaitForFixedUpdate();
                     }
-
-                    // We are inside the atmosphere but our apoapsis is outside the atmosphere and we are gaining altitude.
-                    // The most efficient thing to do is idle.
-
-                    state = "Correcting Orbit (Wait)";
                 }
                 else
                 {
@@ -423,7 +419,7 @@ namespace KerbalCombatSystems
                     Vector3d fvel, deltaV = Vector3d.up * 100;
                     fc.throttle = 1;
 
-                    while (deltaV.magnitude > 2)
+                    while (UnderTimeLimit() && deltaV.magnitude > 2)
                     {
                         yield return new WaitForFixedUpdate();
 
@@ -499,6 +495,25 @@ namespace KerbalCombatSystems
 
                         yield return new WaitForFixedUpdate();
                     }
+
+
+                    /*state = "Manoeuvring (Intercept Target)";
+
+                    while (UnderTimeLimit() && target != null && !complete)
+                    {
+                        relVel = RelVel(vessel, target);
+                        Vector3 targetVec = FromTo(vessel, target);
+
+                        float timeToClosestApproach = ClosestTimeToCPA(targetVec, relVel * -1, target.acceleration - (targetVec.normalized * maxAcceleration), 999);
+                        targetVec = PredictPosition(targetVec, relVel * -1, Vector3.zero, timeToClosestApproach);
+                        targetVec = ToClosestApproach(targetVec, relVel, minRange * 1.2f).normalized;
+                        fc.attitude = targetVec.normalized;
+
+                        fc.throttle = Vector3.Dot(RelVel(vessel, target), fc.attitude) < manoeuvringSpeed ? 1 : 0;
+                        complete = FromTo(vessel, target).magnitude < maxRange;
+
+                        yield return new WaitForFixedUpdate();
+                    }*/
                 }
                 else
                 {
@@ -570,8 +585,6 @@ namespace KerbalCombatSystems
         {
             if (target != null && weapons.Count > 0 && Time.time - lastFired > firingInterval && HasLock())
             {
-                //float targetMass = targetController.initialMass;
-
                 List<ModuleWeaponController> missiles = GetAvailableMissiles(target);
                 var preferred = GetPreferredWeapon(target, missiles);
                 if (preferred == null) yield break;
@@ -593,8 +606,18 @@ namespace KerbalCombatSystems
                 List<ModuleWeaponController> salvo = GetPreferredWeapon(target, missiles, salvoCount);
                 ModuleWeaponController last = salvo.Last();
 
-                Debug.Log($"[KCS]: SALVO of {salvo.Count} from {vessel.GetDisplayName()} to {target.GetDisplayName()}. " +
-                    $"(TM: {target.totalMass} / PM: {preferred.mass * preferred.targetMassRatio} / S: {targetMass / (preferred.mass * preferred.targetMassRatio)})");
+                // Make a log entry.
+
+                bool single = salvo.Count == 1;
+                string generic = single ? "missile" : "missiles";
+                string missileName = preferred.weaponCode == "" ? generic : preferred.weaponCode + " " + generic;
+
+                if (!single)
+                    KCSController.Log($"%1 fired a salvo of {salvo.Count} {missileName} at %2", vessel, target);
+                else
+                    KCSController.Log($"%1 fired a {missileName} at %2", vessel, target);
+
+                // Fire each missile.
 
                 foreach (ModuleWeaponController weapon in salvo)
                 {
@@ -606,9 +629,7 @@ namespace KerbalCombatSystems
                     weapon.side = side;
                     weapon.Fire();
 
-                    Debug.Log($"[KCS]: MISSILE from {vessel.GetDisplayName()} to {target.GetDisplayName()} using {weapon.weaponCode}");
-
-                    controller.weaponsInFlight.Add(weapon);
+                    KCSController.weaponsInFlight.Add(weapon);
                     targetController.AddIncoming(weapon);
 
                     if (weapon.frontLaunch)
@@ -627,16 +648,18 @@ namespace KerbalCombatSystems
 
         private IEnumerator InterceptorFireControl()
         {
-            // todo: could we actually intercept it before it reaches its target? don't want to waste an interceptor.
-            // need to know missile's time to hit and the ideal interceptors time to intercept
-
             if (weaponsToIntercept.Count > 0 && interceptors.Count > 0)
             {
                 bool checkWeapons = false;
                 ModuleWeaponController interceptor;
-                //List<ModuleWeaponController> interceptorsReady;
 
-                //var interceptorsReady = interceptors.OrderByDescending()
+                // Make a log entry.
+
+                int count = Mathf.Min(weaponsToIntercept.Count, interceptors.Count);
+                string interceptorString = count > 1 ? $"{count} interceptors" : "an interceptor";
+                KCSController.Log($"%1 launched {interceptorString}", vessel);
+
+                // Fire each interceptor.
 
                 foreach (var interceptTarget in weaponsToIntercept)
                 {
@@ -645,14 +668,6 @@ namespace KerbalCombatSystems
 
                     Vector3 interceptVector = FromTo(vessel, interceptTarget.vessel).normalized;
 
-                    // Group and order interceptors by 
-                    //var interceptorGroups = interceptors.GroupBy(i => i.childDecouplers).ToList();
-                    //var interceptorsReady = interceptorGroups.OrderBy(i => i.Key).First().ToList();
-                    //interceptorsReady = interceptorsReady.OrderByDescending(w => Vector3.Dot(w.part.parent.transform.up, interceptVector)).ToList();
-
-                    //var interceptorsReady = GetPreferredWeapon(interceptTarget.vessel, interceptors);
-
-                    //interceptor = interceptorsReady.First();
                     interceptor = GetPreferredWeapon(interceptTarget.vessel, interceptors, 1).First();
                     interceptors.Remove(interceptor);
 
@@ -662,9 +677,8 @@ namespace KerbalCombatSystems
                     interceptor.side = side;
                     interceptor.Fire();
 
-                    Debug.Log($"[KCS]: INTERCEPTOR from {vessel.GetDisplayName()} to {weaponsToIntercept.First().weaponCode}");
-
                     interceptTarget.interceptedBy.Add(interceptor);
+                    KCSController.interceptorsInFlight.Add(interceptor);
 
                     if (interceptor.frontLaunch)
                     {
@@ -688,14 +702,13 @@ namespace KerbalCombatSystems
         {
             weapons = vessel.FindPartModulesImplementing<ModuleWeaponController>();
 
+            // Store the max weapon range for the overlay.
             if (weapons.Count > 0)
-            {
-                //weaponsMinRange = weapons.Min(w => w.MinMaxRange.x);
-                //weaponsMaxRange = weapons.Max(w => w.MinMaxRange.y);
-            }
+                maxWeaponRange = weapons.Max(w => w.MinMaxRange.y);
 
             interceptors = weapons.FindAll(w => w.useAsInterceptor);
 
+            // Store the expected interceptor acceleration for CanIntercept calculations.
             if (interceptors.Count > 0 && interceptorAcceleration < 0)
             {
                 var firstInterceptor = interceptors.OrderBy(i => i.childDecouplers).First();
@@ -711,7 +724,7 @@ namespace KerbalCombatSystems
 
         public ModuleShipController GetNearestEnemy()
         {
-            var enemiesByDistance = controller.ships.FindAll(s => s != null && s.alive && s.side != side);
+            var enemiesByDistance = KCSController.ships.FindAll(s => s != null && s.alive && s.side != side);
             if (enemiesByDistance.Count < 1) return null;
             return enemiesByDistance.OrderBy(s => VesselDistance(s.vessel, vessel)).First();
         }
@@ -731,6 +744,7 @@ namespace KerbalCombatSystems
             // Order the available weapons based on the suitability of the their mass compared to the target. 
             var weaponsRanked = weapons.OrderBy(w => Mathf.Abs(targetMass - (w.mass * w.targetMassRatio))).ToList();
             
+            // Special case for when we just want to know the preffered missile type.
             if (count < 0)
                 return weaponsRanked.Take(1).ToList();
 
@@ -792,11 +806,21 @@ namespace KerbalCombatSystems
         {
             hasPropulsion = vessel.FindPartModulesImplementing<ModuleEngines>().FindAll(e => e.EngineIgnited && e.isOperational).Count > 0;
             hasWeapons = vessel.FindPartModulesImplementing<ModuleWeaponController>().FindAll(w => w.canFire).Count > 0;
-            //bool control = vessel.maxControlLevel != Vessel.ControlLevel.NONE && vessel.angularVelocity.magnitude < 20;
-            bool control = vessel.isCommandable && vessel.angularVelocity.magnitude < 99;
-            bool dead = (!hasPropulsion && !hasWeapons) || !control;
 
+            bool spunOut = false;
+            if (vessel.angularVelocity.magnitude > 50)
+            {
+                if (Time.time - lastInControl > controlTimeout)
+                    spunOut = true;
+            }
+            else
+                lastInControl = Time.time;
+
+            hasControl = vessel.isCommandable && !spunOut;
+
+            bool dead = (!hasPropulsion && !hasWeapons) || !hasControl;
             alive = !dead;
+
             return alive;
         }
 
@@ -846,20 +870,28 @@ namespace KerbalCombatSystems
 
         private void FindTarget()
         {
-            List<ModuleShipController> validEnemies = controller.ships.FindAll(
+            List<ModuleShipController> validEnemies = KCSController.ships.FindAll(
                 s => 
                 s != null
                 && s.vessel != null
                 && s.side != side
                 && s.alive);
 
-            if (validEnemies.Count < 1) { 
+            if (!hasWeapons || validEnemies.Count < 1)
+            { 
                 target = null;
+                targetController = null;
                 return;
             }
 
+            // Seperate out withdrawing enemies and enemies with disabled AI and de-prioritise them.
+
             List<ModuleShipController> withdrawingEnemies = validEnemies.FindAll(s => s.state == "Withdrawing");
             validEnemies = validEnemies.Except(withdrawingEnemies).ToList();
+
+            List<ModuleShipController> offlineEnemies = validEnemies.FindAll(s => !s.controllerRunning);
+            validEnemies = validEnemies.Except(offlineEnemies).ToList();
+
             validEnemies = validEnemies.OrderBy(s => WeighTarget(s)).ToList();
 
             if (withdrawingPriority != "Ignore")
@@ -877,12 +909,19 @@ namespace KerbalCombatSystems
                 }
             }
 
+            offlineEnemies = offlineEnemies.OrderBy(s => WeighTarget(s)).ToList();
+            validEnemies.AddRange(offlineEnemies);
+
+            // Pick the highest priority target.
+
             targetController = validEnemies.First();
             target = targetController.vessel;
             
             // Debugging
             List<Tuple<string, float, float>> targetsWeighted = validEnemies.Select(s => Tuple.Create(s.vessel.GetDisplayName(), WeighTarget(s), VesselDistance(vessel, s.vessel))).ToList();
             
+            // Update the stock target to reflect the KCS target.
+
             if (vessel.targetObject == null || vessel.targetObject.GetVessel() != target)
             {
                 vessel.targetObject = target;
@@ -910,32 +949,70 @@ namespace KerbalCombatSystems
 
         private void FindInterceptTarget()
         {
-            if (interceptors.Count < 1 || controller.weaponsInFlight.Count < 1) return;
+            if (interceptors.Count < 1 || KCSController.weaponsInFlight.Count < 1) return;
 
-            weaponsToIntercept = controller.weaponsInFlight.FindAll(
+            weaponsToIntercept = KCSController.weaponsInFlight.FindAll(
                 w => 
                 w != null
                 && w.vessel != null
+                && w.launched
                 && !w.missed
                 && w.side != side
-                && VesselDistance(w.vessel, vessel) < maxDetectionRange
                 && w.interceptedBy.Count < 1
+                && VesselDistance(w.vessel, vessel) < maxDetectionRange
                 && CanIntercept(w));
 
             weaponsToIntercept = weaponsToIntercept.OrderBy(w => VesselDistance(w.vessel, vessel)).ToList();
+
+            var priorityIntercept = weaponsToIntercept.FindAll(w => w.target == vessel);
+            if (priorityIntercept.Count > 0)
+            {
+                weaponsToIntercept = weaponsToIntercept.Except(priorityIntercept).ToList();
+                weaponsToIntercept = priorityIntercept.Concat(weaponsToIntercept).ToList();
+            }
+
+            if (weaponsToIntercept.Count > 0 && updateInterval != emergencyUpdateInterval)
+                updateInterval = emergencyUpdateInterval;
+            else if (weaponsToIntercept.Count < 1 && updateInterval == emergencyUpdateInterval)
+                updateInterval = combatUpdateInterval;
         }
 
-        private bool CanIntercept(ModuleWeaponController weapon)
+        private bool CanIntercept(ModuleWeaponController weaponModule)
         {
-            if (interceptorAcceleration < 1) return false;
+            if (interceptorAcceleration < 1)
+            {
+                // We can't know if our interceptors are fast enough.
+                // Say that we can intercept anyway, but only if it's heading for us.
+                if (weaponModule.target == vessel)
+                    return true;
+                else
+                    return false;
+            }
 
-            Vessel intTarget = weapon.vessel;
-            Vector3 targetVector = FromTo(vessel, intTarget);
-            Vector3 intAccVector = targetVector.normalized * interceptorAcceleration;
-            float timeToIntercept = ClosestTimeToCPA(targetVector, intTarget.obt_velocity - vessel.obt_velocity, intTarget.acceleration - intAccVector, 30);
-            float distance = VesselDistance(vessel, intTarget);
+            Vessel weapon = weaponModule.vessel;
+            Vessel target = weaponModule.target;
 
-            return timeToIntercept + 0.5f < weapon.timeToHit && weapon.timeToHit > 0 && distance > 500;
+            Vector3 weaponToTarget = target.CoM - weapon.CoM;
+            Vector3 weaponAccVector = weaponToTarget.normalized * weaponModule.missile.maxAcceleration;
+            Vector3 weaponRelVel = target.GetObtVelocity() - weapon.GetObtVelocity();
+
+            // Exit if the missile is not actually going towards the target.
+            if (Vector3.Dot(weaponToTarget, weaponRelVel * -1) < 0)
+                return false;
+
+            Vector3 intToTarget = target.CoM - vessel.CoM;
+            Vector3 intAccVector = intToTarget.normalized * interceptorAcceleration;
+
+            float timeToIntercept = ClosestTimeToCPA(intToTarget, target.GetObtVelocity() - vessel.GetObtVelocity(), target.acceleration - intAccVector, 99);
+
+            // We can't use weaponModule.timeToHit because it uses a less accurate method than ClosestTimeToCPA.
+            float weaponTime = ClosestTimeToCPA(weaponToTarget, weaponRelVel, target.acceleration - weaponAccVector, 99);
+
+            // Can the interceptor get to the target before the missile?
+            // This is the minimum requirement for an interception,
+            // Anything slower than this will fail and anything faster can be expected
+            // to intercept the missile at some time before it hits the target.
+            return timeToIntercept + 0.5f < weaponTime && weaponTime > 3;
         }
 
         public void ToggleSide()
@@ -953,7 +1030,8 @@ namespace KerbalCombatSystems
             PQS pqs = body.pqsController;
             double maxTerrainHeight = pqs.radiusMax - pqs.radius;
             minSafeAltitude = Math.Max(maxTerrainHeight, body.atmosphereDepth);
-            return o.PeA < minSafeAltitude;
+
+            return (o.PeA < minSafeAltitude && o.timeToPe < o.timeToAp) || o.ApA < minSafeAltitude;
         }
 
         private bool UnderTimeLimit(float timeLimit = 0)
@@ -969,7 +1047,6 @@ namespace KerbalCombatSystems
             float timeToKillVelocity = (relVel.magnitude - firingSpeed) / maxAcceleration;
 
             float rotDistance = Vector3.Angle(vessel.ReferenceTransform.up, relVel.normalized * -1) * Mathf.Deg2Rad;
-            //float timeToRotate = SolveTime(rotDistance / 2, maxAngularAcceleration.magnitude) * 2;
             float timeToRotate = SolveTime(rotDistance * 0.75f, maxAngularAcceleration.magnitude) / 0.75f;
 
             Vector3 toClosestApproach = ToClosestApproach(relVel, minRange);
@@ -980,11 +1057,18 @@ namespace KerbalCombatSystems
             return timeToClosestApproach < (timeToKillVelocity + timeToRotate);
         }
 
+        private Vector3 ToClosestApproach(Vector3 toTarget, Vector3 relVel, float minRange)
+        {
+            Vector3 rotatedVector = Vector3.ProjectOnPlane(relVel, toTarget.normalized).normalized;
+            //Vector3 toClosestApproach = target.transform.position + (rotatedVector * Mathf.Min(minRange, toTarget.magnitude)) - vessel.transform.position;
+            Vector3 toClosestApproach = toTarget + (rotatedVector * Mathf.Min(minRange, toTarget.magnitude));
+            return toClosestApproach;
+        }
+
         private Vector3 ToClosestApproach(Vector3 relVel, float minRange)
         {
-            Vector3 rotatedVector = Vector3.ProjectOnPlane(relVel, FromTo(vessel, target).normalized).normalized;
-            Vector3 toClosestApproach = (target.transform.position + (rotatedVector * minRange)) - vessel.transform.position;
-            return toClosestApproach;
+            Vector3 toTarget = FromTo(vessel, target);
+            return ToClosestApproach(toTarget, relVel, minRange);
         }
 
         public void UpdateFlightRobotics(bool deploy)
@@ -1123,6 +1207,29 @@ namespace KerbalCombatSystems
             }
 
             fc.Stability(false);
+        }
+
+        public string SideColour()
+        {
+            return side == Side.A ? "#0AACE3" : "#E30A0A";
+        }
+
+        public static string SideColour(Side side)
+        {
+            return side == Side.A ? "#0AACE3" : "#E30A0A";
+        }
+
+        private void DeathMessage(bool noController = false)
+        {
+            var reasons = new List<string>();
+            if (!hasWeapons) reasons.Add("no weapons");
+            if (!hasPropulsion) reasons.Add("no propulsion");
+            if (!hasControl) reasons.Add("no control");
+            if (noController) reasons.Add("AI controller destroyed");
+            string reason = string.Join(", ", reasons);
+
+            //KCSController.Log(string.Format("<b><color={0}>{1}</color> was disabled ({2})</b>", SideColour(), ShorternName(vessel.GetDisplayName()), reason));
+            KCSController.Log(string.Format("<b>%1 was disabled ({0})</b>", reason), vessel);
         }
 
         #endregion

@@ -63,18 +63,23 @@ namespace KerbalCombatSystems
 
         public static float GetMaxAcceleration(Vessel v)
         {
-            List<ModuleEngines> Engines = v.FindPartModulesImplementing<ModuleEngines>();
-            float thrust = Engines.Sum(e => e.MaxThrustOutputVac(true));
+            return GetMaxThrust(v) / v.GetTotalMass();
+        }
 
-            /*List<ModuleRCSFX> RCS = v.FindPartModulesImplementing<ModuleRCSFX>();
-            foreach (ModuleRCSFX Thruster in RCS)
+        public static float GetMaxThrust(Vessel v)
+        {
+            List<ModuleEngines> engines = v.FindPartModulesImplementing<ModuleEngines>();
+            engines.RemoveAll(e => !e.EngineIgnited || !e.isOperational);
+            float thrust = engines.Sum(e => e.MaxThrustOutputVac(true));
+
+            List<ModuleRCS> RCS = v.FindPartModulesImplementing<ModuleRCS>();
+            foreach (ModuleRCS thruster in RCS)
             {
-            // check fore by throttle
-                if (Thruster.useThrottle)
-                    Thrust += Thruster.thrusterPower;
-            }*/
+                if (thruster.useThrottle)
+                    thrust += thruster.thrusterPower;
+            }
 
-            return thrust / v.GetTotalMass();
+            return engines.Sum(e => e.MaxThrustOutputVac(true));
         }
 
         public static bool RayIntersectsVessel(Vessel v, Ray r)
@@ -92,7 +97,7 @@ namespace KerbalCombatSystems
 
         public static Vector3 TargetLead(Vessel Target, Part Firer, float TravelVelocity)
         {
-            Vector3 RelPos = Target.transform.position - Firer.transform.position;
+            Vector3 RelPos = Target.CoM - Firer.transform.position;
             Vector3 RelVel = Target.GetObtVelocity() - Firer.vessel.GetObtVelocity();
 
             // Quadratic equation coefficients a*t^2 + b*t + c = 0
@@ -103,26 +108,8 @@ namespace KerbalCombatSystems
             float desc = b * b - 4f * a * c;
             float ForwardDelta = 2f * c / (Mathf.Sqrt(desc) - b);
 
-            Vector3 leadPosition = Target.transform.position + RelVel * ForwardDelta;
+            Vector3 leadPosition = Target.CoM + RelVel * ForwardDelta;
             return leadPosition - Firer.transform.position;
-        }
-
-        
-        public static Vector3 GetAwayVector(Part WeaponPart)
-        {
-            //function to return a part vector that points away from its parent, used for weapon based aiming on ships
-            Vector3 TrueVector = WeaponPart.transform.up.normalized * 15f + WeaponPart.transform.position;
-            //TrueVector = TrueVector.normalized * 15f;
-            //get vector pointing towards parent from child
-            Vector3 targetDir = WeaponPart.parent.transform.position + WeaponPart.transform.position;
-
-            //if the up vector of the part points towards the parent then the part is backwards and we reverse the vector
-            if (Vector3.Angle(targetDir, TrueVector) > 90f)
-            {
-                TrueVector = -TrueVector;
-            }
-
-            return TrueVector;
         }
 
         public static void TryToggle(bool Direction, ModuleAnimationGroup Animation)
@@ -232,6 +219,11 @@ namespace KerbalCombatSystems
             name = name.Replace("Frigate", "");
             name = name.Replace("Destroyer", "");
             name = name.Replace("Fighter", "");
+            name = name.Replace("Debris", "");
+            name = name.Replace("Probe", "");
+            name = name.Replace("Lander", "");
+            name = name.Replace("Ship", "");
+            name = name.Replace("Plane", "");
             name = name.Replace("  ", " ");
             name = name.Trim();
 
@@ -248,6 +240,22 @@ namespace KerbalCombatSystems
             }
             //gotta have a command point somewhere so this is just for compiling
             return null;
+        }
+
+        public static ModuleShipController FindController(Vessel v)
+        {
+            var ship = KCSController.ships.Find(m => m.vessel == v);
+
+            if (ship == null)
+                return v.FindPartModuleImplementing<ModuleShipController>(); 
+
+            return ship;
+        }
+
+        public static float AveragedSize(Vessel v)
+        {
+            Vector3 size = v.vesselSize;
+            return (size.x + size.y + size.z) / 3;
         }
     }
        
@@ -279,18 +287,18 @@ namespace KerbalCombatSystems
 
         public void Separate()
         {
-            // figure out which one to use#
-
             if (isDockingPort)
-            {
-                //port.Undock();
-                //decoupler.ejectionForcePercent = 100;
                 port.Decouple();
-            }
             else
-            {
                 decoupler.Decouple();
-            }
         }
     }
+
+    //public static class VesselExtensions
+    //{
+    //    public static Vector3 Velocity(this Vessel v)
+    //    {
+    //        return v.rootPart.Rigidbody.velocity;
+    //    }
+    //}
 }

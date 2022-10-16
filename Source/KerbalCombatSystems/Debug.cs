@@ -33,6 +33,16 @@ namespace KerbalCombatSystems
             {
                 //switch bool return
                 ShowLines = !ShowLines;
+
+                if (!ShowLines)
+                {
+                    foreach (var line in lines)
+                    {
+                        if (line == null) continue;
+                        line.positionCount = 0;
+                    }
+                }
+
                 Debug.Log("[KCS]: Lines " + (ShowLines ? "enabled." : "disabled."));
             }
         }

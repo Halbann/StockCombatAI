@@ -14,73 +14,64 @@ namespace KerbalCombatSystems
 {
     public class ModuleRocket : ModuleWeapon
     {
-        // Status variables
-        public bool Firing = false;
-        Vessel Target;
+        Vessel target;
+        ModuleWeaponController controller;
+        LineRenderer leadLine;
+        private List<ModuleDecouple> decouplers;
+        ModuleDecouple decoupler;
 
-        // Targetting variables.
-        public Vector3 LeadVector;
-        private float AvgVel = 100f; //rough first guess
-        Vector3 AimVector;
-
-        // Debugging line variables.
-        LineRenderer AimLine;
-
-        // Rocket decoupler variables
-        private List<ModuleDecouple> RocketBases;
-        ModuleDecouple Decoupler;
-        Vector3 Origin;
-
+        public bool firing = false;
+        Vector3 targetVector;
+        Vector3 leadVector;
+        Vector3 rocketAcceleration;
+        Vector3 origin;
+        float timeToHit;
+        float acceleration;
 
         public override void Setup()
         {
-            Target = part.FindModuleImplementing<ModuleWeaponController>().target;
+            controller = part.FindModuleImplementing<ModuleWeaponController>();
 
-            // initialise debug line renderer
-            AimLine = KCSDebug.CreateLine(new Color(232f / 255f, 167f / 255f, 169f / 255f, 1f));
+            if (controller.target == null && vessel.targetObject == null) return;
+            target = controller.target ?? vessel.targetObject.GetVessel();
 
-            //find a decoupler associated with the weapon
-            RocketBases = FindDecouplerChildren(part.parent, "Weapon", false);
-            Decoupler = RocketBases[RocketBases.Count() - 1];
+            leadLine = KCSDebug.CreateLine(Color.green);
+
+            NextRocket();
         }
 
         public override Vector3 Aim()
         {
-            //if there is a ship target run the appropriate aiming angle calculations
-            if (Target != null)
-            {
-                //get where the weapon is currently pointing
-                Origin = Decoupler.part.transform.position;
-                AimVector = GetAwayVector(Decoupler.part);
+            if (decouplers.Count < 1 || decoupler == null || decoupler.vessel != vessel || target == null)
+                return Vector3.zero;
 
-                //recalculate LeadVector due to change in average rocket velocity
-                LeadVector = TargetLead(Target, Decoupler.part, AvgVel);
-                //recalculate Average Velocity over distance due to lead recalculation
-                AvgVel = RocketVelocity(LeadVector, Decoupler.part);
+            origin = decoupler.transform.position;
+            targetVector = target.CoM - decoupler.transform.position;
+            rocketAcceleration = targetVector.normalized * acceleration;
+            timeToHit = ClosestTimeToCPA(targetVector, target.obt_velocity - vessel.obt_velocity, target.acceleration - rocketAcceleration, 99);
+            leadVector = target.CoM + Displacement(target.obt_velocity - vessel.obt_velocity, (target.acceleration - rocketAcceleration) * 0.5, timeToHit);
+            leadVector = leadVector - origin;
+                
+            //leadVector = leadVector.normalized;
 
-                // Update debug lines.
-                KCSDebug.PlotLine(new[] { Origin, AimVector }, AimLine);
-            }
+            KCSDebug.PlotLine(new Vector3[] { origin, origin + leadVector }, leadLine);
 
-            //once aligned correctly start the firing sequence
-            if (((Vector3.Angle(Origin - AimVector, Origin - LeadVector) < 1f) || Target == null) && !Firing)
-            {
+            if (Vector3.Angle(leadVector.normalized, decoupler.transform.up) < 0.25 && !firing)
                 Fire();
-            }
 
-            return LeadVector.normalized;
+            return leadVector.normalized;
         }
 
         public override void Fire()
         {
-            Firing = true;
+            firing = true;
             StartCoroutine(FireRocket());
         }
 
         private IEnumerator FireRocket()
         {
             //run through all child parts of the controllers parent for engine modules
-            List<Part> DecouplerChildParts = Decoupler.part.FindChildParts<Part>(true).ToList();
+            List<Part> DecouplerChildParts = decoupler.part.FindChildParts<Part>(true).ToList();
 
             foreach (Part CurrentPart in DecouplerChildParts)
             {
@@ -96,57 +87,28 @@ namespace KerbalCombatSystems
 
             //wait a frame before decoupling to ensure engine activation(may not be required)
             yield return null;
-            Decoupler.Decouple();
+            decoupler.Decouple();
 
-            Firing = false;
+            yield return new WaitForSeconds(0.5f);
+            NextRocket();
+            firing = false;
         }
 
-        private float RocketVelocity(Vector3 TargetPos, Part RocketBase)
+        private void NextRocket()
         {
-            //get distance expected to travel
-            float FlightDistance = Vector3.Distance(TargetPos, RocketBase.transform.position);
-            //get child parts for weight and thrust
-            List<Part> RocketPartList = RocketBase.FindChildParts<Part>(true).ToList();
-            //get child engines
-            List<Part> RocketEngineList = RocketBase.FindChildParts<Part>(true).ToList();
-
-            //run through all child parts of the decoupler
-            foreach (Part CurrentPart in RocketPartList)
+            decouplers = FindDecouplerChildren(part.parent, "Weapon", true);
+            if (decouplers.Count < 1)
             {
-                if (CurrentPart.GetComponent<ModuleEngines>() != null)
-                {
-                    ModuleEngines Engine = CurrentPart.GetComponent<ModuleEngines>();
-                    Debug.Log("thrust: " + Engine.maxThrust + "/nisp: " + Engine.realIsp);
-                }
-
-                foreach (PartResource resource in part.Resources)
-                {
-                    Debug.Log(resource + " quantity: " + resource.amount);
-                }
-
-
-                if (CurrentPart.GetComponent<ModuleEngines>() != null)
-                {
-
-                }
-
-                CurrentPart.GetResourceMass();
+                controller.canFire = false;
+                return;
             }
 
-
-            //calculate 
-            /*Need to get average velocity in a given distance. To benefit the engines are always running on full.
-            Knowing fuel mass, engine isp, and capped thrust the total vessel mass over time can be got(hopefully without iteration)
-            Knowing mass over time we can then get twr and from that the acceleration
-            I really want to avoid second by second iterative because that's not very accurate 
-            Once you yet the average velocity then that gets passed to the lead vector, the lead distance changes the given distance and so that repeats until fire*/
-            return 55;
+            decoupler = decouplers.Last();
+            acceleration = controller.CalculateAcceleration(decoupler.part);
         }
 
-        public void OnDestroy()
-        {
-            KCSDebug.DestroyLine(AimLine);
-        }
+        public void OnDestroy() =>
+            KCSDebug.DestroyLine(leadLine);
         
     }
 }

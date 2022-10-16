@@ -52,14 +52,14 @@ namespace KerbalCombatSystems
             //if there is a ship target run the appropriate aiming angle calculations
             if (Target != null)
             {
-                //get the firework launcher to aim with and where it is currently facing
-                ModulePartFirework firstLauncher = FireworkLaunchers.First();
-
-                if (firstLauncher == null)
+                if (FireworkLaunchers.Count < 1)
                 {
                     controller.canFire = false;
                     return Vector3.zero;
                 }
+
+                //get the firework launcher to aim with and where it is currently facing
+                ModulePartFirework firstLauncher = FireworkLaunchers.First();
 
                 FiringPart = firstLauncher.part;
                 AimVector = FiringPart.transform.up;

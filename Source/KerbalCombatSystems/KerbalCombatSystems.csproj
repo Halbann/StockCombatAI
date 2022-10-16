@@ -57,6 +57,10 @@
       <HintPath>References\UnityEngine.AnimationModule.dll</HintPath>
       <Private>False</Private>
     </Reference>
+    <Reference Include="UnityEngine.AssetBundleModule">
+      <HintPath>References\UnityEngine.AssetBundleModule.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
     <Reference Include="UnityEngine.CoreModule">
       <HintPath>References\UnityEngine.CoreModule.dll</HintPath>
       <Private>False</Private>
@@ -77,15 +81,26 @@
       <HintPath>References\UnityEngine.PhysicsModule.dll</HintPath>
       <Private>False</Private>
     </Reference>
+    <Reference Include="UnityEngine.TextRenderingModule">
+      <HintPath>References\UnityEngine.TextRenderingModule.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
     <Reference Include="UnityEngine.UI">
       <HintPath>References\UnityEngine.UI.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="UnityEngine.UIModule">
+      <HintPath>References\UnityEngine.UIModule.dll</HintPath>
       <Private>False</Private>
     </Reference>
   </ItemGroup>
   <ItemGroup>
     <Compile Include="ClosestTimeToCPA.cs" />
+    <Compile Include="LineMesh.cs" />
+    <Compile Include="AssetLoader.cs" />
     <Compile Include="MassCannonTargeting.cs" />
     <Compile Include="BombGuidance.cs" />
+    <Compile Include="Overlay.cs" />
     <Compile Include="RocketTargeting.cs" />
     <Compile Include="FlightController.cs" />
     <Compile Include="CombatRobotics.cs" />
