@@ -207,8 +207,7 @@ namespace KerbalCombatSystems
             var reactionWheels = vessel.FindPartModulesImplementing<ModuleReactionWheel>();
             foreach(var wheel in reactionWheels)
             {
-                Vector3 pos;
-                wheel.GetPotentialTorque(out pos, out pos);
+                wheel.GetPotentialTorque(out Vector3 pos, out pos);
                 availableTorque += pos;
             }
 
@@ -319,7 +318,7 @@ namespace KerbalCombatSystems
                 {
                     if (!hasPropulsion) break;
 
-                    deltav = deltav - (Vector3.Project(vessel.acceleration, deltav) * TimeWarp.fixedDeltaTime);
+                    deltav -= Vector3.Project(vessel.acceleration, deltav) * TimeWarp.fixedDeltaTime;
                     fc.attitude = deltav.normalized;
 
                     yield return new WaitForFixedUpdate();
@@ -934,10 +933,7 @@ namespace KerbalCombatSystems
         private float WeighTarget(ModuleShipController target)
         {
             float distance = VesselDistance(target.vessel, vessel);
-            float massDifference = Mathf.Abs(initialMass - target.initialMass);
-
             float massComparison = Mathf.Min(initialMass, target.initialMass) / Mathf.Max(initialMass, target.initialMass);
-            //float massComparison2 = 2 * Mathf.Min(initialMass, target.initialMass) / (initialMass + target.initialMass);
 
             return distance * (1 - massComparison);
         }

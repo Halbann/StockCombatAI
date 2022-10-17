@@ -50,7 +50,7 @@ namespace KerbalCombatSystems
             rocketAcceleration = targetVector.normalized * acceleration;
             timeToHit = ClosestTimeToCPA(targetVector, target.obt_velocity - vessel.obt_velocity, target.acceleration - rocketAcceleration, 99);
             leadVector = target.CoM + Displacement(target.obt_velocity - vessel.obt_velocity, (target.acceleration - rocketAcceleration) * 0.5, timeToHit);
-            leadVector = leadVector - origin;
+            leadVector -= origin;
                 
             //leadVector = leadVector.normalized;
 

@@ -499,7 +499,7 @@ namespace KerbalCombatSystems
         {
             GameObject obj = new GameObject("Line Container");
             obj.layer = 8;
-            MeshFilter meshFilter = obj.AddComponent<MeshFilter>();
+            obj.AddComponent<MeshFilter>();
             LineMesh line = obj.AddComponent<LineMesh>();
             MeshRenderer meshRenderer = obj.AddComponent<MeshRenderer>();
             meshRenderer.material = mat;
@@ -934,7 +934,7 @@ namespace KerbalCombatSystems
 
             // Remove interior.
 
-            radius = radius - lineThickness;
+            radius -= lineThickness;
             rSquared = radius * radius;
 
             for (int u = x - radius; u < x + radius + 1; u++)
@@ -1000,7 +1000,7 @@ namespace KerbalCombatSystems
         public Transform centre;
         public ModuleShipController target;
 
-        private Transform targetTransform => target.vessel.transform;
+        private Transform TargetTransform => target.vessel.transform;
         private bool deleted = false;
         private bool visible = true;
         private Vector3 onPlane;
@@ -1032,7 +1032,7 @@ namespace KerbalCombatSystems
             else
             {
                 // Place the marker on the overlay plane underneath/above the target vessel.
-                transform.position = centre.transform.position + Vector3.ProjectOnPlane(targetTransform.position - centre.position, centre.up);
+                transform.position = centre.transform.position + Vector3.ProjectOnPlane(TargetTransform.position - centre.position, centre.up);
             }
 
             transform.forward = centre.up;
