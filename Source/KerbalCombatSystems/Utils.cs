@@ -257,6 +257,30 @@ namespace KerbalCombatSystems
             Vector3 size = v.vesselSize;
             return (size.x + size.y + size.z) / 3;
         }
+
+        public static float FuelMass(List<Part> parts)
+        {
+            float totalMass = 0;
+            foreach (Part part in parts)
+            {
+                if (part.partInfo.category == PartCategories.Coupling) break;
+                totalMass += part.GetResourceMass();
+            }
+
+            return totalMass;
+        }
+
+        public static float DryMass(List<Part> parts)
+        {
+            float totalMass = 0;
+            foreach (Part part in parts)
+            {
+                if (part.partInfo.category == PartCategories.Coupling) break;
+                totalMass += part.mass;
+            }
+
+            return totalMass;
+        }
     }
        
     /*public class KCSShip

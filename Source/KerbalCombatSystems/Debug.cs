@@ -14,13 +14,14 @@ namespace KerbalCombatSystems
 
     public class KCSDebug : MonoBehaviour
     {
-        public static bool ShowLines;
+        public static bool showLines;
         private static List<LineRenderer> lines;
         private static List<float> times;
+        private GUIStyle textStyle;
 
         private void Start()
         {
-            ShowLines = false;
+            showLines = false;
             lines = new List<LineRenderer>();
             times = new List<float>();
             StartCoroutine(LineCleaner());
@@ -32,9 +33,9 @@ namespace KerbalCombatSystems
             if (Input.GetKeyDown(KeyCode.F12) && !Input.GetKey(KeyCode.LeftAlt))
             {
                 //switch bool return
-                ShowLines = !ShowLines;
+                showLines = !showLines;
 
-                if (!ShowLines)
+                if (!showLines)
                 {
                     foreach (var line in lines)
                     {
@@ -43,8 +44,24 @@ namespace KerbalCombatSystems
                     }
                 }
 
-                Debug.Log("[KCS]: Lines " + (ShowLines ? "enabled." : "disabled."));
+                Debug.Log("[KCS]: Lines " + (showLines ? "enabled." : "disabled."));
             }
+        }
+
+        void OnGUI()
+        {
+            if (!showLines) return;
+
+            if (textStyle == null)
+            {
+                textStyle = new GUIStyle(GUI.skin.label);
+
+                Font calibriliFont = Resources.FindObjectsOfTypeAll<Font>().ToList().Find(f => f.name == "calibrili");
+                if (calibriliFont != null)
+                    textStyle.font = calibriliFont;
+            }
+
+            DrawDebugText();
         }
 
         public static LineRenderer CreateLine(Color LineColour)
@@ -75,7 +92,7 @@ namespace KerbalCombatSystems
 
         public static void PlotLine(Vector3[] Positions, LineRenderer Line)
         {
-            if (ShowLines)
+            if (showLines)
             {
                 Line.positionCount = 2;
                 Line.SetPositions(Positions);
@@ -113,6 +130,42 @@ namespace KerbalCombatSystems
                 }
 
                 yield return new WaitForSeconds(5);
+            }
+        }
+
+        // todo: draw construction lines and timetointecept text for nearintercept variables
+        private void ActiveVesselDebug()
+        {
+
+        }
+
+        private void DrawDebugText()
+        {
+            Vector2 textSize = textStyle.CalcSize(new GUIContent("ETA: 99.9999"));
+            Rect textRect = new Rect(0, 0, textSize.x, textSize.y);
+            Vector3 screenPos;
+
+            var allMissiles = KCSController.weaponsInFlight.Concat(KCSController.interceptorsInFlight);
+
+            GUI.color = Color.white;
+
+            foreach (var missile in allMissiles)
+            {
+                if (missile == null || missile.vessel == null)
+                    continue;
+
+                // Calculate the screen position.
+
+                screenPos = Camera.main.WorldToScreenPoint(missile.vessel.CoM);
+
+                textRect.x = screenPos.x + 18;
+                textRect.y = (Screen.height - screenPos.y) - (textSize.y / 2);
+
+                if (textRect.x > Screen.width || textRect.y > Screen.height || screenPos.z < 0) continue;
+
+                // Draw the missile debug text. For debugging interceptors.
+
+                GUI.Label(textRect, "ETA: " + missile.timeToHit.ToString("0.00"), textStyle);
             }
         }
     }

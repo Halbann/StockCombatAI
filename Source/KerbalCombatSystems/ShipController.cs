@@ -67,6 +67,7 @@ namespace KerbalCombatSystems
         private Part editorChild;
         private float controlTimeout = 10;
         private float lastInControl;
+        private Part originalReferenceTransform;
 
         [KSPField(isPersistant = true)]
         public Side side;
@@ -363,6 +364,14 @@ namespace KerbalCombatSystems
                 fc.throttle = 0;
                 currentProjectile.target = target;
                 currentProjectile.side = side;
+                fc.lerpAttitude = false;
+
+                if (!currentProjectile.setup)
+                    currentProjectile.Setup();
+
+                originalReferenceTransform = vessel.GetReferenceTransformPart();
+                vessel.SetReferenceTransform(currentProjectile.aimPart);
+                currentProjectile.targetSize = targetController.averagedSize;
 
                 while (UnderTimeLimit() && target != null && currentProjectile.canFire)
                 {
@@ -373,6 +382,9 @@ namespace KerbalCombatSystems
 
                     yield return new WaitForFixedUpdate();
                 }
+
+                RestoreReferenceTransform();
+                fc.lerpAttitude = true;
             }
             else if (CheckOrbitUnsafe())
             {
@@ -468,6 +480,9 @@ namespace KerbalCombatSystems
 
                     fc.alignmentToleranceforBurn = oldAlignment;
                 }
+                // Reduce near intercept time by accounting for target acceleration
+                // It should be such that "near intercept" is so close that you would go past them after you stop burning despite their acceleration
+                // Also a chase timeout after which both parties should just use their weapons regardless of range.
                 else if (currentRange > maxRange && !NearIntercept(relVel, minRange))
                 {
                     float angle;
@@ -1226,6 +1241,11 @@ namespace KerbalCombatSystems
 
             //KCSController.Log(string.Format("<b><color={0}>{1}</color> was disabled ({2})</b>", SideColour(), ShorternName(vessel.GetDisplayName()), reason));
             KCSController.Log(string.Format("<b>%1 was disabled ({0})</b>", reason), vessel);
+        }
+
+        internal void RestoreReferenceTransform()
+        {
+            vessel.SetReferenceTransform(originalReferenceTransform);
         }
 
         #endregion

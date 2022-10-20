@@ -703,9 +703,6 @@ namespace KerbalCombatSystems
                 DrawWeaponIcons();
                 DrawShipText();
 
-                if (KCSDebug.ShowLines)
-                    DrawDebugText();
-
                 if (linesOpacity > 0)
                     DrawRangeText();
             }
@@ -878,36 +875,6 @@ namespace KerbalCombatSystems
             }
         }
 
-        private void DrawDebugText()
-        {
-            Vector2 textSize = shipNameStyle.CalcSize(new GUIContent("ETA: 99.9999"));
-            Rect textRect = new Rect(0, 0, textSize.x, textSize.y);
-            Vector3 screenPos;
-
-            var allMissiles = KCSController.weaponsInFlight.Concat(KCSController.interceptorsInFlight);
-
-            GUI.color = Color.white;
-
-            foreach (var missile in allMissiles)
-            {
-                if (missile == null || missile.vessel == null)
-                    continue;
-
-                // Calculate the screen position.
-
-                screenPos = Camera.main.WorldToScreenPoint(missile.vessel.CoM);
-
-                textRect.x = screenPos.x + 18;
-                textRect.y = (Screen.height - screenPos.y) - (textSize.y / 2);
-
-                if (textRect.x > Screen.width || textRect.y > Screen.height || screenPos.z < 0) continue;
-
-                // Draw the missile debug text. For debugging interceptors.
-
-                GUI.Label(textRect, "ETA: " + missile.timeToHit.ToString("0.00"), shipNameStyle);
-            }
-        }
-
         private Texture2D CreateCircleTexture(int size, int radius, int lineThickness, Color colour)
         {
             // Create new texture and clear it.
@@ -976,6 +943,9 @@ namespace KerbalCombatSystems
         internal static void SetVisibility(bool hidden)
         {
             hideOverlay = hidden;
+
+            if (rangeLinesMesh == null)
+                return;
 
             var linemeshes = new List<LineMesh>() { 
                 rangeLinesMesh,

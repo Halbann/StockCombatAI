@@ -45,6 +45,8 @@ namespace KerbalCombatSystems
 
             if (FireworkLaunchers.Count < 1)
                 part.RemoveModule(part.GetComponent<ModuleFirework>());
+            else
+                controller.aimPart = FireworkLaunchers.First().part; 
         }
 
         public override Vector3 Aim()
@@ -62,6 +64,7 @@ namespace KerbalCombatSystems
                 ModulePartFirework firstLauncher = FireworkLaunchers.First();
 
                 FiringPart = firstLauncher.part;
+                controller.aimPart = FiringPart;
                 AimVector = FiringPart.transform.up;
                 LeadVector = TargetLead(Target, FiringPart, 100f).normalized;
 

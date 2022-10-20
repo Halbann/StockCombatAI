@@ -41,6 +41,9 @@ namespace KerbalCombatSystems
         public static string[] projectileTypes = { "Rocket", "Firework" };
 
         public ModuleWeapon typeModule;
+        public Part aimPart;
+        public bool setup = false;
+        public float targetSize;
 
         #region Generic weapon fields
 
@@ -52,9 +55,9 @@ namespace KerbalCombatSystems
             groupName = weaponGroupName,
             groupDisplayName = weaponGroupName),
             UI_MinMaxRange(
-                minValueX = 100f,
+                minValueX = 50f,
                 maxValueX = 5000f,
-                minValueY = 200f,
+                minValueY = 100f,
                 maxValueY = 5000f,
                 stepIncrement = 50f,
                 scene = UI_Scene.All
@@ -214,6 +217,41 @@ namespace KerbalCombatSystems
                 scene = UI_Scene.All
             )]
         public bool FWUseAsCIWS = false;
+
+        #endregion
+
+        #region Rocket fields
+
+        [KSPField(isPersistant = true,
+              guiActive = true,
+              guiActiveEditor = true,
+              guiName = "Firing Interval",
+              guiUnits = " Seconds",
+              groupName = rocketGroupName,
+              groupDisplayName = rocketGroupName),
+              UI_FloatRange(
+                  minValue = 0f,
+                  maxValue = 10f,
+                  stepIncrement = 0.1f,
+                  scene = UI_Scene.All
+              )]
+        public float firingInterval = 1f;
+
+        [KSPField(isPersistant = true,
+              guiActive = true,
+              guiActiveEditor = true,
+              guiName = "Firing Countdown",
+              guiUnits = " Seconds",
+              groupName = rocketGroupName,
+              groupDisplayName = rocketGroupName),
+              UI_FloatRange(
+                  minValue = 0f,
+                  maxValue = 10f,
+                  stepIncrement = 0.1f,
+                  scene = UI_Scene.All
+              )]
+        public float fireCountdown = 0.5f;
+
 
         #endregion
 
@@ -381,7 +419,7 @@ namespace KerbalCombatSystems
             }
         }
 
-        private float CalculateMass(Part decoupler = null, bool useLast = true)
+        internal float CalculateMass(Part decoupler = null, bool useLast = true)
         {
             if (mass > 0 && useLast) return mass;
 
@@ -445,8 +483,9 @@ namespace KerbalCombatSystems
 
         public void Setup()
         {
-            string moduleName;
+            if (setup) return;
 
+            string moduleName;
             switch (weaponType)
             {
                 case "Missile":
@@ -473,6 +512,7 @@ namespace KerbalCombatSystems
                 typeModule = (ModuleWeapon)part.AddModule(moduleName);
 
             typeModule.Setup();
+            setup = true;
         }
 
         public Vector3 Aim()
