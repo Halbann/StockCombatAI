@@ -30,6 +30,7 @@ namespace KerbalCombatSystems
 
         float fireCountdown;
         float firingInterval;
+        bool fireSymmetry;
 
         GameObject prediction;
 
@@ -49,6 +50,7 @@ namespace KerbalCombatSystems
             target = controller.target ?? vessel.targetObject.GetVessel();
             firingInterval = controller.firingInterval;
             fireCountdown = controller.fireCountdown;
+            fireSymmetry = controller.fireSymmetry;
 
             NextRocket();
 
@@ -98,13 +100,16 @@ namespace KerbalCombatSystems
                 {
                     Fire();
 
-                    // Fire any mirror rockets.
-                    //foreach (Part p in part.symmetryCounterparts)
-                    //{
-                    //    var r = p.GetComponent<ModuleWeaponController>();
-                    //    if (r != null && p != part)
-                    //        r.Fire();
-                    //}
+                    // Fire a rocket from any mirrored controllers.
+                    if (fireSymmetry)
+                    {
+                        foreach (Part p in part.symmetryCounterparts)
+                        {
+                            var r = p.GetComponent<ModuleWeaponController>();
+                            if (r != null && p != part)
+                                r.Fire();
+                        }
+                    }
 
                     // Create a static pink ball where the hit it predicted to happen.
                     if (KCSDebug.showLines)

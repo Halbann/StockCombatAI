@@ -252,6 +252,19 @@ namespace KerbalCombatSystems
               )]
         public float fireCountdown = 0.5f;
 
+        [KSPField(isPersistant = true,
+            guiActive = true,
+            guiActiveEditor = true,
+            guiName = "Fire Mirrored Rockets",
+            groupName = rocketGroupName,
+            groupDisplayName = rocketGroupName),
+            UI_Toggle(
+                enabledText = "Enabled",
+                disabledText = "Disabled",
+                scene = UI_Scene.All
+            )]
+        public bool fireSymmetry = false;
+
 
         #endregion
 
