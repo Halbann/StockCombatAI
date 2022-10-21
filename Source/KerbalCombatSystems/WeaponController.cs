@@ -253,6 +253,21 @@ namespace KerbalCombatSystems
         public float fireCountdown = 0.5f;
 
         [KSPField(isPersistant = true,
+              guiActive = true,
+              guiActiveEditor = true,
+              guiName = "Aiming Tolerance",
+              guiUnits = " Target Radius",
+              groupName = rocketGroupName,
+              groupDisplayName = rocketGroupName),
+              UI_FloatRange(
+                  minValue = 0.1f,
+                  maxValue = 2f,
+                  stepIncrement = 0.01f,
+                  scene = UI_Scene.All
+              )]
+        public float accuracyTolerance = 0.5f;
+
+        [KSPField(isPersistant = true,
             guiActive = true,
             guiActiveEditor = true,
             guiName = "Fire Mirrored Rockets",

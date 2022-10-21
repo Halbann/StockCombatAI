@@ -356,27 +356,6 @@ namespace KerbalCombatSystems
                 WarningMessage("Missing Physics Range Extender! Without PRE, " +
                     "KCS can't control vessels further than 200 metres away.");
 
-            // Rocket Debug
-            
-            //var active = FlightGlobals.ActiveVessel;
-            //float velTarget = 0;
-
-            //if (active.targetObject != null)
-            //    velTarget = (active.targetObject.GetVessel().GetObtVelocity() - active.GetObtVelocity()).magnitude;
-
-            //GUILayout.Label($"Acceleration: {active.acceleration.magnitude}");
-            //GUILayout.Label($"Velocity To Target: {velTarget}");
-            //GUILayout.Label($"Fuel Mass: {FuelMass(active.parts)}");
-            //GUILayout.Label($"Dry Mass: {DryMass(active.parts)}");
-            //GUILayout.Label($"Mass: {active.GetTotalMass()}");
-
-            //List<ModuleEngines> engines = active.FindPartModulesImplementing<ModuleEngines>();
-            //engines.RemoveAll(e => !e.EngineIgnited || !e.isOperational);
-            //float thrust = engines.Sum(e => e.MaxThrustOutputVac(true));
-
-            //GUILayout.Label($"Thrust: {thrust}");
-            //GUILayout.Label($"Time: {Time.time - rocketDebugTime}");
-
             GUILayout.EndVertical();
             GUI.DragWindow(new Rect(0, 0, 10000, 500));
         }

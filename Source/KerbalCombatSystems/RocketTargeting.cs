@@ -30,17 +30,10 @@ namespace KerbalCombatSystems
 
         float fireCountdown;
         float firingInterval;
+        float accuracyTolerance;
         bool fireSymmetry;
 
         GameObject prediction;
-
-        //private float dfuelMass;
-        //private float ddrymass;
-        //private float dmass;
-        //private float dacc;
-        //private float drvel;
-        //private float ddistance;
-        //private float dthrust;
 
         public override void Setup()
         {
@@ -51,6 +44,7 @@ namespace KerbalCombatSystems
             firingInterval = controller.firingInterval;
             fireCountdown = controller.fireCountdown;
             fireSymmetry = controller.fireSymmetry;
+            accuracyTolerance = controller.accuracyTolerance;
 
             NextRocket();
 
@@ -79,22 +73,21 @@ namespace KerbalCombatSystems
             origin = decoupler.transform.position;
 
             float timeToHit = Mathf.LerpUnclamped(previousCalculation, latestCalculation, 1 + (timeSinceLastCalculated / calculateInterval));
-            leadVector = target.CoM + Displacement(target.obt_velocity - vessel.obt_velocity, (target.acceleration - FlightGlobals.getGeeForceAtPosition(target.CoM)) - (vessel.acceleration - FlightGlobals.getGeeForceAtPosition(vessel.CoM)), timeToHit);
+            Vector3 relativeAcceleration = (target.acceleration - FlightGlobals.getGeeForceAtPosition(target.CoM)) - (vessel.acceleration - FlightGlobals.getGeeForceAtPosition(vessel.CoM));
+            leadVector = target.CoM + Displacement(target.obt_velocity - vessel.obt_velocity, relativeAcceleration, timeToHit);
             leadVector -= origin;
 
             KCSDebug.PlotLine(new Vector3[] { origin, origin + leadVector }, leadLine);
 
-
             // Scale the accuracy requirement (in degrees) based on the distance and size of the target.
-            //Vector3 targetVisualRadius = Vector3.ProjectOnPlane(Vector3.up, targetVector.normalized).normalized * controller.targetSize / 8;
-            Vector3 targetVisualRadius = Vector3.ProjectOnPlane(Vector3.up, targetVector.normalized).normalized * controller.targetSize / 2;
-            float aimTolerance = Vector3.Angle(targetVector, targetVector + targetVisualRadius);
+            Vector3 targetRadius = Vector3.ProjectOnPlane(Vector3.up, targetVector.normalized).normalized * (controller.targetSize / 2) * accuracyTolerance;
+            float aimTolerance = Vector3.Angle(targetVector, targetVector + targetRadius);
 
             bool onTarget = Vector3.Angle(leadVector.normalized, decoupler.transform.up) < aimTolerance;
             if (onTarget)
             {
                 // We must remain on target for fireCountdown seconds before we can fire.
-                // This ensures that angular velocity is low, which otherwise leads to curved trajectories.
+                // This ensures that angular velocity remains low, which otherwise leads to curved trajectories.
 
                 if (Time.time - lastOffTarget > fireCountdown && !firing)
                 {
@@ -117,24 +110,6 @@ namespace KerbalCombatSystems
                         GameObject prediction = CreateSphere();
                         prediction.transform.position = origin + leadVector;
                     }
-
-                    //Debug.Log($"dfuelMass: {dfuelMass}");
-                    //Debug.Log($"ddrymass: {ddrymass}");
-                    //Debug.Log($"dmass: {dmass}");
-                    //Debug.Log($"dacc: {dacc}");
-                    //Debug.Log($"drvel: {drvel}");
-                    //Debug.Log($"ddistance: {ddistance}");
-                    //Debug.Log($"dthrust: {dthrust}");
-
-                    //float dfuelMass1 = dfuelMass;
-                    //float ddrymass1 = ddrymass;
-                    //float dmass1 = dmass;
-                    //float dacc1 = dacc;
-                    //float drvel1 = drvel;
-                    //float ddistance1 = ddistance;
-                    //float dthrust1 = dthrust;
-
-                    //KCSController.rocketDebugTime = Time.time;
                 }
             }
             else
@@ -167,36 +142,32 @@ namespace KerbalCombatSystems
 
                 engines.Add(eng);
                 
-                // Sum fuel consumption in tons per second.
+                // Measure total fuel consumption in tons per second.
                 consumptionRate += Mathf.Lerp(eng.minFuelFlow, eng.maxFuelFlow, 1 * 0.01f * eng.thrustPercentage) * eng.flowMultiplier; // throttle = 1
             }
 
             if (engines.Count < 1)
                 return -1;
 
-            // Calculate the thrust of the rocket, accounting for losses due to engines
-            // pointing slightly off-axis (usually to induce spin, for accuracy).
-            float thrust = 0;
+            float cosineLosses;
+            Vector3 thrustDirectionVector;
+            Vector3 thrustVector = Vector3.zero;
             foreach (var e in engines)
             {
-                // Not giving the correct value.
-                //float cosineLosses = Vector3.Dot(-e.thrustTransforms[0].forward, decoupler.transform.up);
-                
-                float cosineLosses = 0.93333333333f;
-                thrust += (e.MaxThrustOutputVac(true) * cosineLosses);
+                thrustDirectionVector = -e.thrustTransforms[0].forward;
+                cosineLosses = Vector3.Dot(-e.thrustTransforms[0].forward, decoupler.transform.up);
+
+                thrustVector += e.MaxThrustOutputVac(true) * cosineLosses * thrustDirectionVector;
             }
 
-            // Correct values
-            //100.8 thrust
-            //0.93 cl
-
+            float thrust = Vector3.Dot(thrustVector, decoupler.transform.up);
             if (thrust < 1)
                 return -1;
             
             float fuelMass = FuelMass(rocketParts);
             float dryMass = DryMass(rocketParts);
             float time = 0;
-            float mass = dryMass + fuelMass;
+            float mass = 0;
 
             Vector3 pos = decoupler.transform.position;
             Vector3 velocity = vessel.GetObtVelocity();
@@ -229,8 +200,10 @@ namespace KerbalCombatSystems
                     mass = dryMass;
                 }
 
-                // Account for the curvature of the orbit by updating the gravitational part of the acceleration in each step.
+                // Update rocket, target and firer separately.
+                // Target and rocket could be tracked by relative values but it's harder to conceptualise.
 
+                // Account for the curvature of the orbit by updating the gravitational part of the acceleration in each step.
                 targetVel += (targetAcc + FlightGlobals.getGeeForceAtPosition(targetPos)) * simTimestep;
                 targetPos += targetVel * simTimestep;
 
@@ -245,14 +218,6 @@ namespace KerbalCombatSystems
             // A floating pink ball predicts where the rocket will be when it passes the target.
             if (KCSDebug.showLines && prediction != null)
                 prediction.transform.position = pos - (FlightGlobals.ActiveVessel.GetObtVelocity() * time);
-
-            //dfuelMass = fuelMass;
-            //ddrymass = dryMass;
-            //dmass = mass;
-            //dacc = ((Vector3)FlightGlobals.getGeeForceAtPosition(pos) + rocketAcceleration).magnitude;
-            //drvel = (targetVel - velocity).magnitude;
-            //ddistance = (targetPos - pos).magnitude;
-            //dthrust = thrust;
 
             return time;
         }
@@ -283,12 +248,11 @@ namespace KerbalCombatSystems
             if (vessel.GetReferenceTransformPart() == controller.aimPart)
                 FindController(vessel).RestoreReferenceTransform();
 
-            //wait a frame before decoupling to ensure engine activation(may not be required)
-            yield return null;
             decoupler.Decouple();
-
             NextRocket();
+            
             yield return new WaitForSeconds(firingInterval);
+
             firing = false;
         }
 
@@ -303,7 +267,6 @@ namespace KerbalCombatSystems
 
             decoupler = decouplers.Last();
             controller.aimPart = decoupler.part;
-            //acceleration = controller.CalculateAcceleration(decoupler.part);
         }
 
         public void OnDestroy() =>
