@@ -27,6 +27,7 @@ namespace KerbalCombatSystems
         float latestCalculation = 0;
         static float calculateInterval = 0.5f;
         static float simTimestep = 0.02f;
+        static float maxSimTime = 20f;
 
         float fireCountdown;
         float firingInterval;
@@ -181,7 +182,7 @@ namespace KerbalCombatSystems
             Vector3 targetVel = target.GetObtVelocity();
 
             // Stop the simulation when the rocket is past the target.
-            while (Vector3.Distance(firerPos, pos) < Vector3.Distance(firerPos, targetPos) && time < 20)
+            while (Vector3.Distance(firerPos, pos) < Vector3.Distance(firerPos, targetPos) && time < maxSimTime)
             {
                 time += simTimestep;
 
@@ -282,7 +283,7 @@ namespace KerbalCombatSystems
 
             mr.material = sphereMat;
 
-            prediction.transform.localScale = prediction.transform.localScale * 6;
+            prediction.transform.localScale = prediction.transform.localScale * 2;
             Destroy(prediction.GetComponent<SphereCollider>());
 
             return prediction;

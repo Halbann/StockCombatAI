@@ -53,9 +53,8 @@ namespace KerbalCombatSystems
         private float detectionRange;
         private float weaponRange;
 
-        //private static bool enableOverlay = true;
         private static bool runOnce = true;
-        private static bool hideOverlay = false;
+        internal static bool hideOverlay = false;
 
         private static LineMesh rangeLinesMesh;
         private static LineMesh secondaryRangeLinesMesh;
@@ -84,7 +83,7 @@ namespace KerbalCombatSystems
         private static float linesOpacity;
         private float linesOpacityLast = -1;
 
-        private List<Marker> markers = new List<Marker>();
+        private static List<Marker> markers = new List<Marker>();
         private static Material markerMaterial;
 
         private Color currentIconColour;
@@ -961,6 +960,8 @@ namespace KerbalCombatSystems
             {
                 linemesh.gameObject.GetComponent<MeshRenderer>().enabled = !hidden;
             }
+
+            markers.ForEach(m => m.gameObject.GetComponent<SpriteRenderer>().enabled = !hidden);
         }
     }
 
@@ -986,7 +987,7 @@ namespace KerbalCombatSystems
 
             // Hide the marker if it belongs to the active vessel.
             bool isActive = target.vessel == FlightGlobals.ActiveVessel;
-            if (visible == isActive)
+            if (visible == isActive && !Overlay.hideOverlay)
             {
                 visible = !isActive;
                 GetComponent<SpriteRenderer>().enabled = visible;
