@@ -13,12 +13,12 @@ namespace KerbalCombatSystems
 
         private List<Part> AIPartList;
         private List<ModuleEngines> Engines;
-
+        //relavent game settings
+        private int RefreshRate;
         //universal flight controller and toggle
         KCSFlightController fc;
         private bool Escaped = false;
         private double minSafeAltitude;
-
         //ModuleDecouple Decoupler;
         Seperator seperator;
         private Vessel Parent;
@@ -35,6 +35,7 @@ namespace KerbalCombatSystems
             seperator = FindDecoupler(part, "Escape Pod", false);
             Debug.Log("[KCS]: Escaping from " + Parent.GetName());
             //set the refresh rate
+            RefreshRate = HighLogic.CurrentGame.Parameters.CustomParams<KCSCombat>().RefreshRate;
             StartCoroutine(RunEscapeSequence());
         }
 
@@ -50,10 +51,15 @@ namespace KerbalCombatSystems
             StopCoroutine(StatusRoutine());
 
             // try to pop decoupler
-            if (seperator != null)
+            try
+            {
                 seperator.Separate();
-            else
+            }
+            catch
+            {
+                //notify of error but launch anyway for pods that have lost decoupler
                 Debug.Log("[KCS]: Couldn't find decoupler on " + vessel.GetName() + " (Escape Pod)");
+            }
 
             // set target orientation to away from the vessel by default
             fc = part.gameObject.AddComponent<KCSFlightController>();
@@ -117,7 +123,7 @@ namespace KerbalCombatSystems
                 CheckConnection();
             }
 
-            yield return new WaitForSeconds(5f);
+            yield return new WaitForSeconds(RefreshRate);
             StartCoroutine(StatusRoutine());
             yield break;
         }
@@ -157,7 +163,7 @@ namespace KerbalCombatSystems
                     fc.Drive();
                 }
 
-                yield return new WaitForSeconds(5.0f);
+                yield return new WaitForSeconds(RefreshRate);
             }
 
             Debug.Log("[KCS]: Escape Sequence Ending on " + vessel.GetName() + " (Escape Pod)");
