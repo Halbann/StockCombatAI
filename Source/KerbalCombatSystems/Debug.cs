@@ -141,32 +141,51 @@ namespace KerbalCombatSystems
 
         private void DrawDebugText()
         {
-            Vector2 textSize = textStyle.CalcSize(new GUIContent("ETA: 99.9999"));
-            Rect textRect = new Rect(0, 0, textSize.x, textSize.y);
-            Vector3 screenPos;
-
             var allMissiles = KCSController.weaponsInFlight.Concat(KCSController.interceptorsInFlight);
 
             GUI.color = Color.white;
 
-            foreach (var missile in allMissiles)
+            foreach (ModuleWeaponController missile in allMissiles)
             {
                 if (missile == null || missile.vessel == null)
                     continue;
 
-                // Calculate the screen position.
-
-                screenPos = Camera.main.WorldToScreenPoint(missile.vessel.CoM);
-
-                textRect.x = screenPos.x + 18;
-                textRect.y = (Screen.height - screenPos.y) - (textSize.y / 2);
-
-                if (textRect.x > Screen.width || textRect.y > Screen.height || screenPos.z < 0) continue;
-
-                // Draw the missile debug text. For debugging interceptors.
-
-                GUI.Label(textRect, "ETA: " + missile.timeToHit.ToString("0.00"), textStyle);
+                VesselLabel("ETA: " + missile.timeToHit.ToString("0.00"), missile.vessel);
             }
+
+            foreach (ModuleShipController ship in KCSController.ships)
+            {
+                if (ship == null || ship.vessel == null)
+                    continue;
+
+                VesselLabel("State: " 
+                    + ship.state 
+                    + "\n Burn Time: "
+                    + ship.nearInterceptBurnTime.ToString("0.00")
+                    + "\n Intercept Time: " 
+                    + ship.nearInterceptApproachTime.ToString("0.00")
+                    + "\n Lateral Vel: " 
+                    + ship.lateralVelocity.ToString("0.00"),
+                    ship.vessel);
+            }
+        }
+
+        private void VesselLabel(string text, Vessel vessel)
+        {
+            if (MapView.MapIsEnabled) return;
+
+            Vector2 textSize = textStyle.CalcSize(new GUIContent(text));
+            Rect textRect = new Rect(0, 0, textSize.x, textSize.y);
+            Vector3 screenPos;
+
+            screenPos = Camera.main.WorldToScreenPoint(vessel.CoM);
+
+            textRect.x = screenPos.x + 18;
+            textRect.y = (Screen.height - screenPos.y) - (textSize.y / 2);
+
+            if (textRect.x > Screen.width || textRect.y > Screen.height || screenPos.z < 0) return;
+
+            GUI.Label(textRect, text, textStyle);
         }
     }
 }

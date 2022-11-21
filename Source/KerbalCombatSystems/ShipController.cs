@@ -13,16 +13,20 @@ namespace KerbalCombatSystems
 {
     public class ModuleShipController : PartModule
     {
+       const string shipControllerGroupName = "Ship AI";
+
         // User parameters changed via UI.
 
-        const string shipControllerGroupName = "Ship AI";
         public bool controllerRunning = false;
         public float updateInterval = 2f;
         public float combatUpdateInterval = 2.0f;
         public float emergencyUpdateInterval = 0.5f;
         public float firingAngularVelocityLimit = 1; // degrees per second
+        public float firingInterval = 7.5f;
+        public float controlTimeout = 10;
 
         // Robotics tracking variables
+
         List<ModuleCombatRobotics> WeaponRoboticControllers = new List<ModuleCombatRobotics>();
         List<ModuleCombatRobotics> FlightRoboticControllers = new List<ModuleCombatRobotics>();
 
@@ -47,7 +51,6 @@ namespace KerbalCombatSystems
         private List<ModuleWeaponController> interceptors;
         private List<ModuleWeaponController> weaponsToIntercept;
         private float lastFired = 0;
-        private const float firingInterval = 7.5f;
 
         internal float maxDetectionRange;
         internal float maxWeaponRange;
@@ -65,7 +68,6 @@ namespace KerbalCombatSystems
         public float averagedSize;
         private float interceptorAcceleration = -1;
         private Part editorChild;
-        private float controlTimeout = 10;
         private float lastInControl;
         private Part originalReferenceTransform;
 
@@ -101,7 +103,7 @@ namespace KerbalCombatSystems
             groupName = shipControllerGroupName,
             groupDisplayName = shipControllerGroupName),
             UI_FloatRange(
-                minValue = 1f,
+                minValue = 0f,
                 maxValue = 100f,
                 stepIncrement = 10f,
                 scene = UI_Scene.All
@@ -122,7 +124,6 @@ namespace KerbalCombatSystems
             )]
         public float maxSalvoSize = 5;
 
-        // todo: find option without green bar
         [KSPField(
             isPersistant = true, 
             guiActive = true, 
@@ -131,8 +132,13 @@ namespace KerbalCombatSystems
             groupName = shipControllerGroupName,
             groupDisplayName = shipControllerGroupName),
             UI_ChooseOption(controlEnabled = true, affectSymCounterparts = UI_Scene.None, 
-            options = new string[] { "De-prioritised", "Chase", "Ignore" })]
-        public string withdrawingPriority = "De-prioritised";
+            options = new string[] { "Default", "Chase", "Ignore" })]
+        public string withdrawingPriority = "Default";
+
+        // Debugging
+        internal float nearInterceptBurnTime;
+        internal float nearInterceptApproachTime;
+        internal float lateralVelocity;
 
         #region Controller State & Start/Update
 
@@ -369,8 +375,9 @@ namespace KerbalCombatSystems
                 if (!currentProjectile.setup)
                     currentProjectile.Setup();
 
-                originalReferenceTransform = vessel.GetReferenceTransformPart();
-                vessel.SetReferenceTransform(currentProjectile.aimPart);
+                if (!currentProjectile.fireSymmetry)
+                    vessel.SetReferenceTransform(currentProjectile.aimPart);
+
                 currentProjectile.targetSize = targetController.averagedSize;
 
                 while (UnderTimeLimit() && target != null && currentProjectile.canFire)
@@ -460,14 +467,15 @@ namespace KerbalCombatSystems
                 float maxRange = currentWeapon.MinMaxRange.y;
                 float currentRange = VesselDistance(vessel, target);
                 bool complete = false;
+                bool nearInt = false;
                 Vector3 relVel = RelVel(vessel, target);
 
-                if (currentRange < minRange)
+                if (currentRange < minRange && AwayCheck(minRange))
                 {
                     state = "Manoeuvring (Away)";
                     fc.throttle = 1;
                     float oldAlignment = fc.alignmentToleranceforBurn;
-                    fc.alignmentToleranceforBurn = 45;
+                    fc.alignmentToleranceforBurn = 135;
 
                     while (UnderTimeLimit() && target != null && !complete)
                     {
@@ -483,55 +491,46 @@ namespace KerbalCombatSystems
                 // Reduce near intercept time by accounting for target acceleration
                 // It should be such that "near intercept" is so close that you would go past them after you stop burning despite their acceleration
                 // Also a chase timeout after which both parties should just use their weapons regardless of range.
-                else if (currentRange > maxRange && !NearIntercept(relVel, minRange))
+                else if (currentRange > maxRange 
+                    && !(nearInt = NearIntercept(relVel, minRange, maxRange))
+                    && CanInterceptShip(targetController))
                 {
-                    float angle;
+                    state = "Manoeuvring (Intercept Target)";
 
                     while (UnderTimeLimit() && target != null && !complete)
                     {
-                        relVel = RelVel(vessel, target);
-                        Vector3 targetVec = ToClosestApproach(relVel, minRange * 1.2f).normalized;
-                        angle = Vector3.Angle(relVel.normalized, targetVec);
+                        Vector3 toTarget = FromTo(vessel, target);
+                        relVel = target.GetObtVelocity() - vessel.GetObtVelocity();
 
-                        if (angle > 45 && relVel.magnitude > maxAcceleration * 2)
-                        {
-                            state = "Manoeuvring (Match Velocity)";
-                            fc.attitude = relVel.normalized * -1;
-                        }
+                        toTarget = ToClosestApproach(toTarget, relVel * -1, minRange * 1.2f);
+
+                        // Burn the difference between the target and current velocities.
+                        Vector3 desiredVel = toTarget.normalized * 100;
+                        Vector3 burn = desiredVel - (relVel * -1);
+
+                        // Bias towards eliminating lateral velocity early on.
+                        Vector3 lateral = Vector3.ProjectOnPlane(burn, toTarget.normalized);
+                        burn = Vector3.Slerp(burn.normalized, lateral.normalized,
+                            Mathf.Clamp01(lateral.magnitude / (maxAcceleration * 10))) * burn.magnitude;
+
+                        lateralVelocity = lateral.magnitude;
+
+                        float throttle = Vector3.Dot(RelVel(vessel, target), toTarget.normalized) < manoeuvringSpeed ? 1 : 0;
+                        fc.throttle = throttle * Mathf.Clamp(burn.magnitude / maxAcceleration, 0.2f, 1);
+
+                        if (fc.throttle > 0)
+                            fc.attitude = burn.normalized;
                         else
-                        {
-                            state = "Manoeuvring (Prograde to Target)";
-                            fc.attitude = Vector3.LerpUnclamped(relVel.normalized, targetVec, 1 + 1 * (relVel.magnitude / maxAcceleration));
-                        }
+                            fc.attitude = toTarget.normalized;
 
-                        fc.throttle = Vector3.Dot(RelVel(vessel, target), fc.attitude) < manoeuvringSpeed ? 1 : 0;
-                        complete = FromTo(vessel, target).magnitude < maxRange;
+                        complete = FromTo(vessel, target).magnitude < maxRange || NearIntercept(relVel, minRange, maxRange);
 
                         yield return new WaitForFixedUpdate();
                     }
-
-
-                    /*state = "Manoeuvring (Intercept Target)";
-
-                    while (UnderTimeLimit() && target != null && !complete)
-                    {
-                        relVel = RelVel(vessel, target);
-                        Vector3 targetVec = FromTo(vessel, target);
-
-                        float timeToClosestApproach = ClosestTimeToCPA(targetVec, relVel * -1, target.acceleration - (targetVec.normalized * maxAcceleration), 999);
-                        targetVec = PredictPosition(targetVec, relVel * -1, Vector3.zero, timeToClosestApproach);
-                        targetVec = ToClosestApproach(targetVec, relVel, minRange * 1.2f).normalized;
-                        fc.attitude = targetVec.normalized;
-
-                        fc.throttle = Vector3.Dot(RelVel(vessel, target), fc.attitude) < manoeuvringSpeed ? 1 : 0;
-                        complete = FromTo(vessel, target).magnitude < maxRange;
-
-                        yield return new WaitForFixedUpdate();
-                    }*/
                 }
                 else
                 {
-                    if (relVel.magnitude > firingSpeed)
+                    if (relVel.magnitude > firingSpeed || nearInt)
                     {
                         state = "Manoeuvring (Kill Velocity)";
 
@@ -569,13 +568,6 @@ namespace KerbalCombatSystems
                         fc.attitude = Vector3.zero;
 
                         yield return new WaitForSeconds(updateInterval);
-
-                        /*while (UnderTimeLimit() && target != null)
-                        {
-                            fc.attitude = Vector3.ProjectOnPlane(FromTo(vessel, target).normalized, RelVel(vessel, target));
-
-                            yield return new WaitForFixedUpdate();
-                        }*/
                     }
                 }
             }
@@ -583,7 +575,10 @@ namespace KerbalCombatSystems
             {
                 // Idle
 
-                state = "Idling";
+                if (hasWeapons)
+                    state = "Idle";
+                else
+                    state = "Idle (Unarmed)";
 
                 fc.throttle = 0;
                 fc.attitude = Vector3.zero;
@@ -892,7 +887,7 @@ namespace KerbalCombatSystems
                 && s.alive);
 
             if (!hasWeapons || validEnemies.Count < 1)
-            { 
+            {
                 target = null;
                 targetController = null;
                 return;
@@ -900,8 +895,11 @@ namespace KerbalCombatSystems
 
             // Seperate out withdrawing enemies and enemies with disabled AI and de-prioritise them.
 
-            List<ModuleShipController> withdrawingEnemies = validEnemies.FindAll(s => s.state == "Withdrawing");
+            List<ModuleShipController> withdrawingEnemies = validEnemies.FindAll(s => s.state == "Withdrawing" || s.state == "Idle (Unarmed)");
             validEnemies = validEnemies.Except(withdrawingEnemies).ToList();
+
+            // Remove all possibility of targeting withdrawing enemies who are out of range and can't be intercepted.
+            withdrawingEnemies = withdrawingEnemies.Except(withdrawingEnemies.FindAll(s => FromTo(vessel, s.vessel).magnitude > maxWeaponRange && !CanInterceptShip(s))).ToList();
 
             List<ModuleShipController> offlineEnemies = validEnemies.FindAll(s => !s.controllerRunning);
             validEnemies = validEnemies.Except(offlineEnemies).ToList();
@@ -926,8 +924,15 @@ namespace KerbalCombatSystems
             offlineEnemies = offlineEnemies.OrderBy(s => WeighTarget(s)).ToList();
             validEnemies.AddRange(offlineEnemies);
 
-            // Pick the highest priority target.
+            // Check again in case any withdrawing ships were removed.
+            if (validEnemies.Count < 1)
+            {
+                target = null;
+                targetController = null;
+                return;
+            }
 
+            // Pick the highest priority target.
             targetController = validEnemies.First();
             target = targetController.vessel;
             
@@ -935,7 +940,6 @@ namespace KerbalCombatSystems
             List<Tuple<string, float, float>> targetsWeighted = validEnemies.Select(s => Tuple.Create(s.vessel.GetDisplayName(), WeighTarget(s), VesselDistance(vessel, s.vessel))).ToList();
             
             // Update the stock target to reflect the KCS target.
-
             if (vessel.targetObject == null || vessel.targetObject.GetVessel() != target)
             {
                 vessel.targetObject = target;
@@ -1053,26 +1057,90 @@ namespace KerbalCombatSystems
             return Time.time - lastUpdate < timeLimit;
         }
 
-        private bool NearIntercept(Vector3 relVel, float minRange)
+        private bool NearIntercept(Vector3 relVel, float minRange, float maxRange)
         {
-            float timeToKillVelocity = (relVel.magnitude - firingSpeed) / maxAcceleration;
+            float timeToKillVelocity = relVel.magnitude / maxAcceleration;
 
             float rotDistance = Vector3.Angle(vessel.ReferenceTransform.up, relVel.normalized * -1) * Mathf.Deg2Rad;
             float timeToRotate = SolveTime(rotDistance * 0.75f, maxAngularAcceleration.magnitude) / 0.75f;
 
             Vector3 toClosestApproach = ToClosestApproach(relVel, minRange);
+
+            // Return false if we aren't headed towards the target.
             float velToClosestApproach = Vector3.Dot(relVel, toClosestApproach.normalized);
             if (velToClosestApproach < 1) return false;
-            float timeToClosestApproach = Mathf.Abs(toClosestApproach.magnitude / velToClosestApproach);
+
+            float timeToClosestApproach = ClosestTimeToCPA(toClosestApproach, target.GetObtVelocity() - vessel.GetObtVelocity(), Vector3.zero, 9999);
+            Vector3 closestApproach = PredictPosition(FromTo(vessel, target), target.GetObtVelocity() - vessel.GetObtVelocity(), Vector3.zero, 999);
+            bool hasIntercept = closestApproach.magnitude < maxRange;
+
+            if (!hasIntercept)
+                return false;
+
+            nearInterceptBurnTime = timeToKillVelocity + timeToRotate;
+            nearInterceptApproachTime = timeToClosestApproach;
 
             return timeToClosestApproach < (timeToKillVelocity + timeToRotate);
         }
 
+        private bool CanInterceptShip(ModuleShipController target)
+        {
+            // Is it worth us chasing a withdrawing ship?
+
+            Vector3 toTarget = target.vessel.CoM - vessel.CoM;
+            bool escaping = target.state.Contains("Withdraw") || target.state.Contains("Idle (Unarmed)");
+
+            bool canIntercept = !escaping || // It is not trying to escape.
+                toTarget.magnitude < maxWeaponRange || // It is already in range.
+                maxAcceleration > target.maxAcceleration || // We are faster.
+                Vector3.Dot(target.vessel.GetObtVelocity() - vessel.GetObtVelocity(), toTarget) < 0; // It is getting closer.
+
+            return canIntercept;
+        }
+
+        private bool AwayCheck(float minRange)
+        {
+            // Check if we need to manually burn away from an enemy that's too close or
+            // if it would be better to drift away.
+
+            Vector3 toTarget = FromTo(vessel, target);
+            Vector3 toEscape = toTarget.normalized * -1;
+            Vector3 relVel = target.GetObtVelocity() - vessel.GetObtVelocity();
+
+            float rotDistance = Vector3.Angle(vessel.ReferenceTransform.up, toEscape) * Mathf.Deg2Rad;
+            float timeToRotate = SolveTime(rotDistance / 2, maxAngularAcceleration.magnitude) * 2;
+            float timeToDisplace = SolveTime(minRange - toTarget.magnitude, maxAcceleration, Vector3.Dot(relVel * -1, toEscape));
+            float timeToEscape = timeToRotate * 2 + timeToDisplace;
+
+            Vector3 drift = PredictPosition(toTarget, relVel, Vector3.zero, timeToEscape);
+            bool manualEscape = drift.magnitude < minRange;
+
+            return manualEscape;
+        }
+
         private Vector3 ToClosestApproach(Vector3 toTarget, Vector3 relVel, float minRange)
         {
+            Vector3 relVelInverse = target.GetObtVelocity() - vessel.GetObtVelocity();
+            float timeToIntercept = ClosestTimeToCPA(toTarget, relVelInverse, Vector3.zero, 9999);
+
+            // Minimising the target closest approach to the current closest approach prevents
+            // ships that are targeting each other from fighting over the closest approach based on their min ranges.
+            // todo: allow for trajectory fighting if fuel is high.
+            Vector3 actualClosestApproach = toTarget + Displacement(relVelInverse, Vector3.zero, timeToIntercept);
+            float actualClosestApproachDistance = actualClosestApproach.magnitude;
+
+            // Get a position that is laterally offset from the target by our desired closest approach distance.
             Vector3 rotatedVector = Vector3.ProjectOnPlane(relVel, toTarget.normalized).normalized;
-            //Vector3 toClosestApproach = target.transform.position + (rotatedVector * Mathf.Min(minRange, toTarget.magnitude)) - vessel.transform.position;
-            Vector3 toClosestApproach = toTarget + (rotatedVector * Mathf.Min(minRange, toTarget.magnitude));
+
+            // Lead if the target is accelerating away from us.
+            if (Vector3.Dot(target.acceleration.normalized, toTarget.normalized) > 0)
+                toTarget += Displacement(Vector3.zero, toTarget.normalized * Vector3.Dot(target.acceleration, toTarget.normalized), Mathf.Min(timeToIntercept, 999));
+
+            Vector3 toClosestApproach = toTarget + (rotatedVector * Mathf.Min(minRange, toTarget.magnitude, actualClosestApproachDistance));
+
+            // Need a maximum angle so that we don't end up going further away at close range.
+            toClosestApproach = Vector3.RotateTowards(toTarget, toClosestApproach, 22.5f, float.MaxValue);
+
             return toClosestApproach;
         }
 

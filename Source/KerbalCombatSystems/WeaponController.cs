@@ -270,7 +270,7 @@ namespace KerbalCombatSystems
         [KSPField(isPersistant = true,
             guiActive = true,
             guiActiveEditor = true,
-            guiName = "Fire Mirrored Rockets",
+            guiName = "Fire Symmetrical Rockets",
             groupName = rocketGroupName,
             groupDisplayName = rocketGroupName),
             UI_Toggle(

@@ -36,7 +36,7 @@ namespace KerbalCombatSystems
         private static Vector2 logScrollPosition;
         private const int logScrollHeight = 350;
 
-        private string[] modes = { "Ships", "Weapons", "Log", "Settings" };
+        private readonly string[] modes = { "Ships", "Weapons", "Log", "Settings" };
         private string mode = "Ships";
 
         public static List<ModuleShipController> ships;
@@ -54,8 +54,6 @@ namespace KerbalCombatSystems
 
         static bool hasCC;
         static bool hasPRE;
-
-        static internal float rocketDebugTime = 0;
 
         #endregion
 

@@ -41,7 +41,7 @@ namespace KerbalCombatSystems
         public static KeyCode quickToggleZoomKey = KeyCode.O;
 
         // Final range is multiplied by size.
-        public float[] ranges = { 5, 10, 20, 30, 40, 50, 75, 100, 150, 200 };
+        public float[] ranges = { 5, 10, 20, 30, 40, 50, 75, 100, 150, 200, 300, 400, 500 };
 
         private List<ModuleShipController> ships = new List<ModuleShipController>();
         private ModuleShipController activeController;

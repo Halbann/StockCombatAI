@@ -148,7 +148,7 @@ namespace KerbalCombatSystems
             // Update debug lines.
             Vector3 origin = v.ReferenceTransform.position;
             KCSDebug.PlotLine(new[] { origin, origin + v.ReferenceTransform.up * 50 }, currentVectorLine);
-            KCSDebug.PlotLine(new[] { origin, origin + attitudeLerped * 50 }, targetVectorLine);
+            KCSDebug.PlotLine(new[] { origin, origin + attitude * 50 }, targetVectorLine);
         }
 
         public void Stability(bool enable)
