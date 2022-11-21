@@ -1,12 +1,7 @@
-using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using KSP.UI.Screens;
 using UnityEngine;
-using System.IO;
-using System.Collections;
 using static KerbalCombatSystems.KCS;
 
 namespace KerbalCombatSystems
@@ -46,7 +41,7 @@ namespace KerbalCombatSystems
             if (FireworkLaunchers.Count < 1)
                 part.RemoveModule(part.GetComponent<ModuleFirework>());
             else
-                controller.aimPart = FireworkLaunchers.First().part; 
+                controller.aimPart = FireworkLaunchers.First().part;
         }
 
         public override Vector3 Aim()
@@ -70,7 +65,7 @@ namespace KerbalCombatSystems
 
                 // Update debug lines.
                 Origin = FiringPart.transform.position;
-                KCSDebug.PlotLine(new[] { Origin, Origin + (AimVector * 15)}, AimLine);
+                KCSDebug.PlotLine(new[] { Origin, Origin + (AimVector * 15) }, AimLine);
             }
 
             //once aligned correctly start the firing sequence

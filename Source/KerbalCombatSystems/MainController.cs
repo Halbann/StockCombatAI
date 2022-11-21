@@ -3,8 +3,6 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using UnityEngine;
 using static KerbalCombatSystems.KCS;
 
@@ -85,9 +83,9 @@ namespace KerbalCombatSystems
             GameEvents.onHideUI.Add(OnHideUI);
             GameEvents.onShowUI.Add(OnShowUI);
 
-			foreach (var a in AssemblyLoader.loadedAssemblies)
-			{
-				if (!hasPRE && a.assembly.FullName.Contains("PhysicsRangeExtender"))
+            foreach (var a in AssemblyLoader.loadedAssemblies)
+            {
+                if (!hasPRE && a.assembly.FullName.Contains("PhysicsRangeExtender"))
                 {
                     hasPRE = true;
                     continue;
@@ -153,7 +151,7 @@ namespace KerbalCombatSystems
             {
                 yield return new WaitForSecondsRealtime(2);
             }
-            
+
             UpdateShipList();
         }
 
@@ -171,7 +169,7 @@ namespace KerbalCombatSystems
                 var p = v.FindPartModuleImplementing<ModuleShipController>();
                 if (p != null)
                 {
-                    ships.Add(p);   
+                    ships.Add(p);
                     continue;
                 }
 
@@ -379,7 +377,7 @@ namespace KerbalCombatSystems
 
                 foreach (var controller in ships)
                 {
-                    c = controller; 
+                    c = controller;
                     v = c.vessel;
 
                     string colour = "#ffffff";
@@ -465,7 +463,7 @@ namespace KerbalCombatSystems
         {
             GUILayout.BeginVertical(boxStyle);
             settingsScrollPosition = GUILayout.BeginScrollView(settingsScrollPosition, false, false, GUILayout.Height(scrollViewHeight), GUILayout.Width(windowWidth));
-            
+
             GUILayout.Label("Overlay", titleStyle);
 
             Overlay.useElevationArcs = GUILayout.Toggle(Overlay.useElevationArcs, "Use Elevation Arcs");
@@ -501,7 +499,7 @@ namespace KerbalCombatSystems
             setting = GUILayout.HorizontalSlider((float)Math.Round(setting, 2), min, max);
 
             GUILayout.Label(setting.ToString(), centeredText, GUILayout.Width(windowWidth * 0.25f));
-            
+
             if (setting != settingLast)
                 updateOverlayOpacity = true;
 

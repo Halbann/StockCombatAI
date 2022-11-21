@@ -1,9 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using UnityEngine;
+﻿using UnityEngine;
 
 namespace KerbalCombatSystems
 {
@@ -67,7 +62,7 @@ namespace KerbalCombatSystems
                 return;
             }
 
-            error = Vector3.Angle(controllingVessel.ReferenceTransform.up, attitude); 
+            error = Vector3.Angle(controllingVessel.ReferenceTransform.up, attitude);
 
             UpdateSAS(controllingVessel);
             UpdateThrottle(controllingVessel);
@@ -91,7 +86,7 @@ namespace KerbalCombatSystems
             //    FlightInputHandler.state.mainThrottle = throttleLerped; //so that the on-screen throttle gauge reflects the autopilot throttle
         }
 
-        void UpdateRCS (Vessel v)
+        void UpdateRCS(Vessel v)
         {
             if (RCSVector == Vector3.zero) return;
 
@@ -102,7 +97,7 @@ namespace KerbalCombatSystems
             RCSVectorLerped = Vector3.Lerp(RCSVectorLerped, RCSVector, 5f * Time.fixedDeltaTime * Mathf.Clamp01(RCSVectorLerped.magnitude / RCSPower));
             RCSThrottle = Mathf.Lerp(0, 1.732f, Mathf.InverseLerp(0, RCSPower, RCSVectorLerped.magnitude));
             RCSThrust = RCSVectorLerped.normalized * RCSThrottle;
-            
+
             up = v.ReferenceTransform.forward * -1;
             forward = v.ReferenceTransform.up * -1;
             right = Vector3.Cross(up, forward);
@@ -117,9 +112,9 @@ namespace KerbalCombatSystems
             //KCSDebug.PlotLine(new[] { origin, origin + forward * 10 * v.ctrlState.Z}, rforward);
 
             Vector3 origin = v.ReferenceTransform.position;
-            KCSDebug.PlotLine(new[]{ origin, origin + RCSThrust.normalized * Mathf.Clamp(RCSThrust.magnitude, 0, 15) }, rcsLine);
+            KCSDebug.PlotLine(new[] { origin, origin + RCSThrust.normalized * Mathf.Clamp(RCSThrust.magnitude, 0, 15) }, rcsLine);
         }
-        
+
         void UpdateSAS(Vessel v)
         {
             if (attitude == Vector3.zero || lockAttitude) return;
@@ -137,7 +132,8 @@ namespace KerbalCombatSystems
                 ap.SetMode(VesselAutopilot.AutopilotMode.Normal);
 
             // Lerp attitude while burning to reduce instability.
-            if (lerpAttitude) {
+            if (lerpAttitude)
+            {
                 angleLerp = Mathf.InverseLerp(0, 10, error);
                 lerpRate = Mathf.Lerp(1, 10, angleLerp);
                 attitudeLerped = Vector3.Lerp(attitudeLerped, attitude, lerpRate * Time.deltaTime);

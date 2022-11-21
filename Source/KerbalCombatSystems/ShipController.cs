@@ -2,18 +2,14 @@
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using UnityEngine;
 using static KerbalCombatSystems.KCS;
-using Random = UnityEngine.Random;
-using Expansions.Serenity;
 
 namespace KerbalCombatSystems
 {
     public class ModuleShipController : PartModule
     {
-       const string shipControllerGroupName = "Ship AI";
+        const string shipControllerGroupName = "Ship AI";
 
         // User parameters changed via UI.
 
@@ -125,13 +121,13 @@ namespace KerbalCombatSystems
         public float maxSalvoSize = 5;
 
         [KSPField(
-            isPersistant = true, 
-            guiActive = true, 
-            guiActiveEditor = true, 
+            isPersistant = true,
+            guiActive = true,
+            guiActiveEditor = true,
             guiName = "Withdrawing Enemies",
             groupName = shipControllerGroupName,
             groupDisplayName = shipControllerGroupName),
-            UI_ChooseOption(controlEnabled = true, affectSymCounterparts = UI_Scene.None, 
+            UI_ChooseOption(controlEnabled = true, affectSymCounterparts = UI_Scene.None,
             options = new string[] { "Default", "Chase", "Ignore" })]
         public string withdrawingPriority = "Default";
 
@@ -190,7 +186,7 @@ namespace KerbalCombatSystems
                 fc.throttleLerpRate = 3;
 
                 Vector3 size = vessel.vesselSize;
-                shipLength = (new[] { size.x, size.y, size.z}).ToList().Max();
+                shipLength = (new[] { size.x, size.y, size.z }).ToList().Max();
                 averagedSize = AveragedSize(vessel);
                 initialMass = vessel.GetTotalMass();
                 StartCoroutine(CalculateMaxAcceleration());
@@ -212,7 +208,7 @@ namespace KerbalCombatSystems
 
             Vector3 availableTorque = Vector3.zero;
             var reactionWheels = vessel.FindPartModulesImplementing<ModuleReactionWheel>();
-            foreach(var wheel in reactionWheels)
+            foreach (var wheel in reactionWheels)
             {
                 wheel.GetPotentialTorque(out Vector3 pos, out pos);
                 availableTorque += pos;
@@ -246,7 +242,7 @@ namespace KerbalCombatSystems
             while (true)
             {
                 CheckStatus();
-                if (!alive) 
+                if (!alive)
                 {
                     DeathMessage();
                     StopAI();
@@ -256,7 +252,7 @@ namespace KerbalCombatSystems
 
                 CalculateHeatSignature();
                 UpdateIncoming();
-                
+
                 yield return new WaitForSeconds(updateInterval);
             }
         }
@@ -398,7 +394,7 @@ namespace KerbalCombatSystems
                 Orbit o = vessel.orbit;
                 double UT;
 
-                if (o.ApA < minSafeAltitude) 
+                if (o.ApA < minSafeAltitude)
                 {
                     // Entirety of orbit is inside atmosphere, burn up until apoapsis is outside atmosphere by a 10% margin.
 
@@ -491,7 +487,7 @@ namespace KerbalCombatSystems
                 // Reduce near intercept time by accounting for target acceleration
                 // It should be such that "near intercept" is so close that you would go past them after you stop burning despite their acceleration
                 // Also a chase timeout after which both parties should just use their weapons regardless of range.
-                else if (currentRange > maxRange 
+                else if (currentRange > maxRange
                     && !(nearInt = NearIntercept(relVel, minRange, maxRange))
                     && CanInterceptShip(targetController))
                 {
@@ -752,7 +748,7 @@ namespace KerbalCombatSystems
 
             // Order the available weapons based on the suitability of the their mass compared to the target. 
             var weaponsRanked = weapons.OrderBy(w => Mathf.Abs(targetMass - (w.mass * w.targetMassRatio))).ToList();
-            
+
             // Special case for when we just want to know the preffered missile type.
             if (count < 0)
                 return weaponsRanked.Take(1).ToList();
@@ -851,7 +847,7 @@ namespace KerbalCombatSystems
                 maxDetectionRange = sensors.Max(s => s.detectionRange);
 
             //if the sensors aren't deployed and the AI is running
-            if(!DeployedSensors && controllerRunning)
+            if (!DeployedSensors && controllerRunning)
             {
                 foreach (ModuleObjectTracking Sensor in sensors)
                 {
@@ -880,7 +876,7 @@ namespace KerbalCombatSystems
         private void FindTarget()
         {
             List<ModuleShipController> validEnemies = KCSController.ships.FindAll(
-                s => 
+                s =>
                 s != null
                 && s.vessel != null
                 && s.side != side
@@ -935,10 +931,10 @@ namespace KerbalCombatSystems
             // Pick the highest priority target.
             targetController = validEnemies.First();
             target = targetController.vessel;
-            
+
             // Debugging
             List<Tuple<string, float, float>> targetsWeighted = validEnemies.Select(s => Tuple.Create(s.vessel.GetDisplayName(), WeighTarget(s), VesselDistance(vessel, s.vessel))).ToList();
-            
+
             // Update the stock target to reflect the KCS target.
             if (vessel.targetObject == null || vessel.targetObject.GetVessel() != target)
             {
@@ -959,7 +955,7 @@ namespace KerbalCombatSystems
 
         private bool HasLock()
         {
-           return FromTo(vessel, target).magnitude < maxDetectionRange * Mathf.Clamp((targetController.heatSignature / 1500), 0.5f, 3.0f);
+            return FromTo(vessel, target).magnitude < maxDetectionRange * Mathf.Clamp((targetController.heatSignature / 1500), 0.5f, 3.0f);
         }
 
         private void FindInterceptTarget()
@@ -967,7 +963,7 @@ namespace KerbalCombatSystems
             if (interceptors.Count < 1 || KCSController.weaponsInFlight.Count < 1) return;
 
             weaponsToIntercept = KCSController.weaponsInFlight.FindAll(
-                w => 
+                w =>
                 w != null
                 && w.vessel != null
                 && w.launched
@@ -1051,7 +1047,7 @@ namespace KerbalCombatSystems
 
         private bool UnderTimeLimit(float timeLimit = 0)
         {
-            if (timeLimit == 0) 
+            if (timeLimit == 0)
                 timeLimit = updateInterval;
 
             return Time.time - lastUpdate < timeLimit;
@@ -1228,7 +1224,7 @@ namespace KerbalCombatSystems
             Vector3 relVel;
             bool onCollisionCourse;
 
-            foreach(var incoming in incomingWeapons)
+            foreach (var incoming in incomingWeapons)
             {
                 iv = incoming.vessel;
                 incomingVector = FromTo(vessel, iv);

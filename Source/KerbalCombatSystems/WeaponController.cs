@@ -1,12 +1,8 @@
 ﻿using KSP.UI.Screens;
 using System;
-using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using UnityEngine;
-using Object = UnityEngine.Object;
 using static KerbalCombatSystems.KCS;
 
 namespace KerbalCombatSystems
@@ -155,7 +151,7 @@ namespace KerbalCombatSystems
                   scene = UI_Scene.All
               )]
         public float BombReleaseVelocity = 300f;
-        
+
         [KSPField(isPersistant = true,
               guiActive = true,
               guiActiveEditor = true,
@@ -357,7 +353,7 @@ namespace KerbalCombatSystems
         }
 
         // This needs to exist for the dialog to work.
-        public void Dismiss() {}
+        public void Dismiss() { }
         public void Remove()
         {
             weaponCode = "";
@@ -478,7 +474,7 @@ namespace KerbalCombatSystems
 
             if (decoupler != null)
                 parent = decoupler.part;
-            else 
+            else
                 parent = part.parent;
 
             var parts = parent.FindChildParts<Part>(true).ToList();
@@ -569,13 +565,13 @@ namespace KerbalCombatSystems
 
     public class ModuleWeapon : PartModule
     {
-        virtual public void Fire() {}
+        virtual public void Fire() { }
 
         virtual public Vector3 Aim()
         {
             return Vector3.zero;
         }
 
-        virtual public void Setup() {}
+        virtual public void Setup() { }
     }
 }

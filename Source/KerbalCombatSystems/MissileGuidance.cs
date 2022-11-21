@@ -1,12 +1,7 @@
-using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using KSP.UI.Screens;
 using UnityEngine;
-using System.IO;
-using System.Collections;
 using static KerbalCombatSystems.KCS;
 
 namespace KerbalCombatSystems
@@ -126,7 +121,7 @@ namespace KerbalCombatSystems
                 // pulse to 5 m/s.
                 float burnTime = 0.5f;
                 float driftVelocity = 5;
-                
+
                 fc.throttle = driftVelocity / burnTime / GetMaxAcceleration(vessel);
                 fc.Drive();
 
@@ -151,10 +146,10 @@ namespace KerbalCombatSystems
             {
                 yield return new WaitForSeconds(0.1f);
                 if (target == null) break;
-                
+
                 targetRay.origin = vessel.ReferenceTransform.position;
                 targetRay.direction = target.transform.position - vessel.transform.position;
-                
+
                 if (!clear) // Latch clear once true.
                 {
                     // We don't have line of sight with the target yet, but are we clear of the ship?
@@ -176,7 +171,7 @@ namespace KerbalCombatSystems
                 {
                     // We are clear of the ship but it is blocking line of sight with the target.
                     // Fly towards the target in an arc around the ship until we have line of sight.
-                    
+
                     controller.launched = true; // Trigger early.
 
                     fc.attitude = Vector3.ProjectOnPlane(FromTo(vessel, target).normalized, FromTo(vessel, firer).normalized);
@@ -223,7 +218,7 @@ namespace KerbalCombatSystems
             string missileName = controller.weaponCode == "" ? "Missile" : controller.weaponCode;
             string firerName = ShorternName(firer.vesselName);
             vessel.vesselName = !isInterceptor ? $"{missileName} ({firerName} >> {ShorternName(target.vesselName)})" : $"Interceptor ({firerName})";
-            GameEvents.onVesselRename.Fire(new GameEvents.HostedFromToAction<Vessel,string>(vessel, oldName, vessel.vesselName));
+            GameEvents.onVesselRename.Fire(new GameEvents.HostedFromToAction<Vessel, string>(vessel, oldName, vessel.vesselName));
 
             controller.launched = true;
 
@@ -246,7 +241,7 @@ namespace KerbalCombatSystems
 
         private void UpdateGuidance()
         {
-            if (target == null || (isInterceptor && (targetWeapon == null || targetWeapon.missed))) 
+            if (target == null || (isInterceptor && (targetWeapon == null || targetWeapon.missed)))
             {
                 StopGuidance();
                 return;
@@ -284,11 +279,11 @@ namespace KerbalCombatSystems
             targetVectorNormal = interceptVector.normalized;
 
             accuracy = Vector3.Dot(targetVectorNormal, relVelNrm);
-            if (targetVector.magnitude < shutoffDistance 
-                || ((mainEngine == null 
-                || !mainEngine.isOperational 
+            if (targetVector.magnitude < shutoffDistance
+                || ((mainEngine == null
+                || !mainEngine.isOperational
                 || mainEngine == null
-                || mainEnginePart.vessel != vessel) 
+                || mainEnginePart.vessel != vessel)
                 && accuracy < 0.99))
             {
                 StopGuidance();

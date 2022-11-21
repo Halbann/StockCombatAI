@@ -1,13 +1,5 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using KSP.UI.Screens;
+﻿using Expansions.Serenity;
 using UnityEngine;
-using System.IO;
-using System.Collections;
-using Expansions.Serenity;
 
 namespace KerbalCombatSystems
 {
@@ -15,7 +7,7 @@ namespace KerbalCombatSystems
     class ModuleCombatRobotics : PartModule
     {
         private ModuleRoboticController KAL;
-        
+
         [KSPField(isPersistant = true)]
         public string RoboticsType; //Basic, Ship, Weapon
 

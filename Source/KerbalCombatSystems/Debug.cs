@@ -1,12 +1,7 @@
-﻿using System;
+﻿using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using KSP.UI.Screens;
 using UnityEngine;
-using System.IO;
-using System.Collections;
 
 namespace KerbalCombatSystems
 {
@@ -158,13 +153,13 @@ namespace KerbalCombatSystems
                 if (ship == null || ship.vessel == null)
                     continue;
 
-                VesselLabel("State: " 
-                    + ship.state 
+                VesselLabel("State: "
+                    + ship.state
                     + "\n Burn Time: "
                     + ship.nearInterceptBurnTime.ToString("0.00")
-                    + "\n Intercept Time: " 
+                    + "\n Intercept Time: "
                     + ship.nearInterceptApproachTime.ToString("0.00")
-                    + "\n Lateral Vel: " 
+                    + "\n Lateral Vel: "
                     + ship.lateralVelocity.ToString("0.00"),
                     ship.vessel);
             }

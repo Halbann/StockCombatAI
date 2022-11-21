@@ -2,8 +2,6 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
-using System.Threading.Tasks;
-using KSP.UI.Screens;
 using UnityEngine;
 
 namespace KerbalCombatSystems
@@ -18,7 +16,7 @@ namespace KerbalCombatSystems
 
         [KSPField(
               guiActive = true,
-              guiActiveEditor = true, 
+              guiActiveEditor = true,
               guiName = "Detection Range",
               guiUnits = "m",
               groupName = objectTrackingGroupName,

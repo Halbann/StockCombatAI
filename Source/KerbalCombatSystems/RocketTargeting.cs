@@ -1,7 +1,7 @@
+using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
-using System.Collections;
 using static KerbalCombatSystems.KCS;
 
 
@@ -142,7 +142,7 @@ namespace KerbalCombatSystems
                 if (eng == null) continue;
 
                 engines.Add(eng);
-                
+
                 // Measure total fuel consumption in tons per second.
                 consumptionRate += Mathf.Lerp(eng.minFuelFlow, eng.maxFuelFlow, 1 * 0.01f * eng.thrustPercentage) * eng.flowMultiplier; // throttle = 1
             }
@@ -164,7 +164,7 @@ namespace KerbalCombatSystems
             float thrust = Vector3.Dot(thrustVector, decoupler.transform.up);
             if (thrust < 1)
                 return -1;
-            
+
             float fuelMass = FuelMass(rocketParts);
             float dryMass = DryMass(rocketParts);
             float time = 0;
@@ -251,7 +251,7 @@ namespace KerbalCombatSystems
 
             decoupler.Decouple();
             NextRocket();
-            
+
             yield return new WaitForSeconds(firingInterval);
 
             firing = false;

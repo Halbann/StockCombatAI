@@ -158,7 +158,7 @@ namespace KerbalCombatSystems
             weaponRangeMesh = CreateLine(weaponRangeMat, true);
             elevationLinesMesh = CreateLine(elevationLineMat);
             dashedLinesMesh = CreateLine(dashedLineMat);
-            
+
             // Generate the points for the range rings and range lines and send them to their respective LineMesh components.
             // We only need to do this once because the lines are parented to the centre and they don't need to change shape.
             CreateFixedLines();
@@ -219,31 +219,31 @@ namespace KerbalCombatSystems
         private void CreateMaterials()
         {
             transparentLineMat = new Material(KCSAssets.LineShader);
-            transparentLineMat.SetColor("_Color", new Color(1, 1, 1, rangeRingsOpacity)); 
+            transparentLineMat.SetColor("_Color", new Color(1, 1, 1, rangeRingsOpacity));
             transparentLineMat.SetFloat("_Thickness", 1.3f);
 
             rangeLineMat = new Material(KCSAssets.LineShader);
-            rangeLineMat.SetColor("_Color", new Color(1, 1, 1, rangeLinesOpacity)); 
+            rangeLineMat.SetColor("_Color", new Color(1, 1, 1, rangeLinesOpacity));
             rangeLineMat.SetFloat("_Thickness", 1.3f);
 
             secondaryRangeLineMat = new Material(KCSAssets.LineShader);
-            secondaryRangeLineMat.SetColor("_Color", new Color(1, 1, 1, secondaryRangeLinesOpacity)); 
+            secondaryRangeLineMat.SetColor("_Color", new Color(1, 1, 1, secondaryRangeLinesOpacity));
             secondaryRangeLineMat.SetFloat("_Thickness", 1.3f);
 
             dashedLineMat = new Material(KCSAssets.LineShader);
-            dashedLineMat.SetColor("_Color", new Color(1, 1, 1, dashedLinesOpacity)); 
+            dashedLineMat.SetColor("_Color", new Color(1, 1, 1, dashedLinesOpacity));
             dashedLineMat.SetFloat("_Thickness", 1.7f);
 
             detectionRangeMat = new Material(KCSAssets.LineShader);
-            detectionRangeMat.SetColor("_Color", new Color(1f, 0.6f, 0.3f, weaponRangeOpacity)); 
+            detectionRangeMat.SetColor("_Color", new Color(1f, 0.6f, 0.3f, weaponRangeOpacity));
             detectionRangeMat.SetFloat("_Thickness", 1.7f);
 
             weaponRangeMat = new Material(KCSAssets.LineShader);
-            weaponRangeMat.SetColor("_Color", new Color(1f, 0.3f, 0.3f, weaponRangeOpacity)); 
+            weaponRangeMat.SetColor("_Color", new Color(1f, 0.3f, 0.3f, weaponRangeOpacity));
             weaponRangeMat.SetFloat("_Thickness", 1.7f);
 
             elevationLineMat = new Material(KCSAssets.LineShader);
-            elevationLineMat.SetColor("_Color", new Color(1f, 1f, 1f, elevationLinesOpacity)); 
+            elevationLineMat.SetColor("_Color", new Color(1f, 1f, 1f, elevationLinesOpacity));
             elevationLineMat.SetFloat("_Thickness", 1.3f);
 
             markerMaterial = new Material(Shader.Find("Sprites/Default"));
@@ -277,7 +277,7 @@ namespace KerbalCombatSystems
             if (mainCamera.mode == FlightCamera.Modes.LOCKED)
                 centre.up = FlightGlobals.ActiveVessel.ReferenceTransform.forward;
             else
-                centre.up = mainCamera.getReferenceFrame() * Vector3.up; 
+                centre.up = mainCamera.getReferenceFrame() * Vector3.up;
         }
 
         private void Update()
@@ -300,7 +300,7 @@ namespace KerbalCombatSystems
 
             float cameraDistance = Vector3.Distance(mainCamera.transform.position, centre.position);
             linesOpacity = Mathf.MoveTowards(linesOpacity, cameraDistance > 650 ? 1 : 0, 6 * Time.unscaledDeltaTime);
-            
+
             if (linesOpacity != linesOpacityLast)
             {
                 UpdateOpacity();
@@ -354,7 +354,7 @@ namespace KerbalCombatSystems
 
                 if (!ReferenceEquals(activeController, null))
                 {
-                    if (activeController.maxDetectionRange > 0 && 
+                    if (activeController.maxDetectionRange > 0 &&
                         detectionRange != activeController.maxDetectionRange)
                     {
                         detectionRange = activeController.maxDetectionRange;
@@ -364,7 +364,7 @@ namespace KerbalCombatSystems
                         detectionRangeMesh.SetLinesFromPoints(detectionRangeLines);
                     }
 
-                    if (activeController.maxWeaponRange > 0 && 
+                    if (activeController.maxWeaponRange > 0 &&
                         weaponRange != activeController.maxWeaponRange)
                     {
                         weaponRange = activeController.maxWeaponRange;
@@ -517,7 +517,7 @@ namespace KerbalCombatSystems
         private List<Vector3> SegmentedLine(Vector3 start, Vector3 end, int segments)
         {
             var line = new List<Vector3>();
-            
+
             for (int i = 0; i <= segments; i++)
                 line.Add(Vector3.Lerp(start, end, (float)i / segments));
 
@@ -946,7 +946,7 @@ namespace KerbalCombatSystems
             if (rangeLinesMesh == null)
                 return;
 
-            var linemeshes = new List<LineMesh>() { 
+            var linemeshes = new List<LineMesh>() {
                 rangeLinesMesh,
                 secondaryRangeLinesMesh,
                 rangeRingsMesh,

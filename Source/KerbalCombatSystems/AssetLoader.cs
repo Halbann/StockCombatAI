@@ -46,8 +46,8 @@ namespace KerbalCombatSystems
         {
             if (loaded) return;
 
-            path = KSPUtil.ApplicationRootPath + "GameData" + 
-                Path.DirectorySeparatorChar + "KCS" + 
+            path = KSPUtil.ApplicationRootPath + "GameData" +
+                Path.DirectorySeparatorChar + "KCS" +
                 Path.DirectorySeparatorChar + "AssetBundles";
 
             LoadShaderAssets();
@@ -62,7 +62,7 @@ namespace KerbalCombatSystems
             if (UIbundle == null)
             {
                 Debug.Log("[KCS] Error: Missing UI asset bundle.");
-            } 
+            }
 
             markerPrefab = UIbundle.LoadAsset<GameObject>("Assets/Prefabs/Marker.prefab");
             canvasPrefab = UIbundle.LoadAsset<GameObject>("Assets/Prefabs/KCSCanvas.prefab");

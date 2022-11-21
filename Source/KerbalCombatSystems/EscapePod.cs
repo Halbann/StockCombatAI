@@ -1,12 +1,7 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using KSP.UI.Screens;
-using UnityEngine;
-using System.IO;
 using System.Collections;
+using System.Collections.Generic;
+using UnityEngine;
 using static KerbalCombatSystems.KCS;
 
 namespace KerbalCombatSystems
@@ -161,7 +156,7 @@ namespace KerbalCombatSystems
                     fc.throttle = 1;
                     fc.Drive();
                 }
-                
+
                 yield return new WaitForSeconds(5.0f);
             }
 
@@ -186,18 +181,16 @@ namespace KerbalCombatSystems
         {
             for (int i = AIPartList.Count - 1; i >= 0; i--)
             {
-                    //if part does not exist / on the same ship
-                    if (AIPartList[i] == null || AIPartList[i].vessel.id != part.vessel.id)
+                //if part does not exist / on the same ship
+                if (AIPartList[i] == null || AIPartList[i].vessel.id != part.vessel.id)
                     AIPartList.RemoveAt(i);
             }
 
-            if (AIPartList.Count == 0) 
+            if (AIPartList.Count == 0)
             {
-                 Escaped = true;
-                 BeginEscape();
+                Escaped = true;
+                BeginEscape();
             }
         }
-
-        
     }
 }

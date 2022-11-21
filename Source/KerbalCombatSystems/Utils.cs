@@ -1,8 +1,5 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using UnityEngine;
 
 namespace KerbalCombatSystems
@@ -119,7 +116,7 @@ namespace KerbalCombatSystems
                 //try deploy if not already
                 Animation.DeployModule();
             }
-            else if(!Direction && Animation.isDeployed == true)
+            else if (!Direction && Animation.isDeployed == true)
             {
                 //try retract if not already
                 Animation.RetractModule();
@@ -129,7 +126,7 @@ namespace KerbalCombatSystems
         }
 
         public static List<ModuleDecouple> FindDecouplerChildren(Part Root, string type, bool ignoreTypeRequirement)
-        {   
+        {
             //run through all child parts of the controllers parent for decoupler modules
             List<Part> ChildParts = Root.FindChildParts<Part>(true).ToList();
             //check the parent itself
@@ -143,20 +140,20 @@ namespace KerbalCombatSystems
                 ModuleDecouplerDesignate Module = CurrentPart.GetComponent<ModuleDecouplerDesignate>();
 
                 //check for decoupler modules on the part of the correct type and add to a list
-                if (CurrentPart.GetComponent<ModuleDecouple>() == null)     continue;
+                if (CurrentPart.GetComponent<ModuleDecouple>() == null) continue;
                 if (CurrentPart.GetComponent<ModuleDecouple>().isDecoupled == true) continue;
-                if (Module == null)                                         continue;
+                if (Module == null) continue;
                 if (Module.DecouplerType != type && !ignoreTypeRequirement) continue;
 
                 DecouplerList.Add(CurrentPart.GetComponent<ModuleDecouple>());
             }
-            
+
             return DecouplerList;
         }
 
         public static Vector3 FromTo(Vessel v1, Vessel v2)
         {
-             return v2.transform.position - v1.transform.position;
+            return v2.transform.position - v1.transform.position;
         }
 
         public static Vector3 RelVel(Vessel v1, Vessel v2)
@@ -247,7 +244,7 @@ namespace KerbalCombatSystems
             var ship = KCSController.ships.Find(m => m.vessel == v);
 
             if (ship == null)
-                return v.FindPartModuleImplementing<ModuleShipController>(); 
+                return v.FindPartModuleImplementing<ModuleShipController>();
 
             return ship;
         }
@@ -282,7 +279,7 @@ namespace KerbalCombatSystems
             return totalMass;
         }
     }
-       
+
     /*public class KCSShip
     {
         public Vessel v;
