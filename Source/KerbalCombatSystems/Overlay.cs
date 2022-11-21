@@ -406,7 +406,7 @@ namespace KerbalCombatSystems
             if (ships.Count == KCSController.ships.Count) return;
 
             ships = KCSController.ships;
-            markers.ForEach(m => m.DeleteMarker());
+            markers.FindAll(m => m != null).ForEach(m => m.DeleteMarker());
             markers.Clear();
             CreateMarkers();
         }
@@ -1015,7 +1015,7 @@ namespace KerbalCombatSystems
 
         internal void DeleteMarker()
         {
-            if (deleted) return;
+            if (deleted || gameObject == null) return;
             deleted = true;
             Destroy(gameObject);
         }
