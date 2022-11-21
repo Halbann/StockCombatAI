@@ -34,13 +34,13 @@ namespace KerbalCombatSystems
             return output.ToString();
         }
 
-        public override void OnStart(StartState state)
+        /*public override void OnStart(StartState state)
         {
             if (HighLogic.LoadedSceneIsEditor)
                 GameEvents.onEditorVariantApplied.Add(OnVariantApplied);
 
             SpinAnims = part.FindModulesImplementing<ModuleAnimationGroup>();
-        }
+        }*/
 
         private void OnVariantApplied(Part appliedPart, PartVariant variant)
         {

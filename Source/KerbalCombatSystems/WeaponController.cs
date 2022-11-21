@@ -10,7 +10,7 @@ namespace KerbalCombatSystems
     public class ModuleWeaponController : PartModule
     {
         const string weaponGroupName = "Weapon Settings";
-        const string missileGroupName = "Missile Guidance";
+        const string missileGroupName = "Missile Settings";
         const string rocketGroupName = "Rocket Settings";
         const string FireworkGroupName = "Firework Settings";
         const string MCGroupName = "Mass Cannon Settings";
