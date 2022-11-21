@@ -961,7 +961,7 @@ namespace KerbalCombatSystems
                 linemesh.gameObject.GetComponent<MeshRenderer>().enabled = !hidden;
             }
 
-            markers.ForEach(m => m.gameObject.GetComponent<SpriteRenderer>().enabled = !hidden);
+            markers.FindAll(m => m != null).ForEach(m => m.gameObject.GetComponent<SpriteRenderer>().enabled = !hidden);
         }
     }
 

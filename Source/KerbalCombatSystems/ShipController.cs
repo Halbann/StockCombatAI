@@ -372,7 +372,10 @@ namespace KerbalCombatSystems
                     currentProjectile.Setup();
 
                 if (!currentProjectile.fireSymmetry)
+                {
+                    //originalReferenceTransform = vessel.GetReferenceTransformPart();
                     vessel.SetReferenceTransform(currentProjectile.aimPart);
+                }
 
                 currentProjectile.targetSize = targetController.averagedSize;
 

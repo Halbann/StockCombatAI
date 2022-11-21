@@ -324,12 +324,18 @@ namespace KerbalCombatSystems
 
         [KSPEvent(guiActive = true,
                   guiActiveEditor = true,
-                  guiName = "Set Weapon Code",
+                  guiName = "Weapon Code",
                   groupName = weaponGroupName,
                   groupDisplayName = weaponGroupName,
                   name = "weaponCodeEvent")]
         public void SetWeaponCode()
         {
+            if (part.vesselNaming == null)
+                part.vesselNaming = new VesselNaming();
+
+            part.vesselNaming.vesselName = weaponCode;
+            part.partInfo.showVesselNaming = false;
+
             VesselRenameDialog.SpawnNameFromPart(part, SetWeaponCodeCallback, Dismiss, Remove, false, VesselType.Probe);
         }
 
@@ -341,19 +347,18 @@ namespace KerbalCombatSystems
 
         private void UpdateWeaponCodeUI()
         {
+            part.vesselNaming = null;
+
             var e = Events["SetWeaponCode"];
             var name = weaponCode == "" ? "None" : weaponCode;
-            e.guiName = "Set Weapon Code:                                " + name;
-
-            if (part.vesselNaming == null)
-                part.vesselNaming = new VesselNaming();
-
-            part.vesselNaming.vesselName = weaponCode;
-            part.partInfo.showVesselNaming = false;
+            e.guiName = "Weapon Code:                            " + name;
         }
 
         // This needs to exist for the dialog to work.
-        public void Dismiss() { }
+        public void Dismiss() {
+            part.vesselNaming = null;
+        }
+
         public void Remove()
         {
             weaponCode = "";
@@ -374,23 +379,36 @@ namespace KerbalCombatSystems
 
         private void UpdateUI()
         {
-            //Missile Fields
+            // Missile fields.
             Fields["terminalVelocity"].guiActive = weaponType == "Missile";
             Fields["terminalVelocity"].guiActiveEditor = weaponType == "Missile";
             Fields["useAsInterceptor"].guiActive = weaponType == "Missile";
             Fields["useAsInterceptor"].guiActiveEditor = weaponType == "Missile";
-            //Firework fields
+
+            // Firework fields.
             Fields["FWRoundBurst"].guiActive = weaponType == "Firework";
             Fields["FWRoundBurst"].guiActiveEditor = weaponType == "Firework";
             Fields["FWBurstSpacing"].guiActive = weaponType == "Firework";
             Fields["FWBurstSpacing"].guiActiveEditor = weaponType == "Firework";
             Fields["FWUseAsCIWS"].guiActive = weaponType == "Firework";
             Fields["FWUseAsCIWS"].guiActiveEditor = weaponType == "Firework";
+            
+            // Rocket fields.
+            Fields["firingInterval"].guiActive = weaponType == "Rocket";
+            Fields["firingInterval"].guiActiveEditor = weaponType == "Rocket";
+            Fields["fireCountdown"].guiActive = weaponType == "Rocket";
+            Fields["fireCountdown"].guiActiveEditor = weaponType == "Rocket";
+            Fields["accuracyTolerance"].guiActive = weaponType == "Rocket";
+            Fields["accuracyTolerance"].guiActiveEditor = weaponType == "Rocket";
+            Fields["fireSymmetry"].guiActive = weaponType == "Rocket";
+            Fields["fireSymmetry"].guiActiveEditor = weaponType == "Rocket";
+
             //Mass Cannon Fields
             Fields["MCMuzzleVelocity"].guiActive = weaponType == "Mass Cannon";
             Fields["MCMuzzleVelocity"].guiActiveEditor = weaponType == "Mass Cannon";
             Fields["MCFireTime"].guiActive = weaponType == "Mass Cannon";
             Fields["MCFireTime"].guiActiveEditor = weaponType == "Mass Cannon";
+
             //Bomb Fields
             Fields["BombSafeDistance"].guiActive = weaponType == "Bomb";
             Fields["BombSafeDistance"].guiActiveEditor = weaponType == "Bomb";
