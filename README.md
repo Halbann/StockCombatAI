@@ -1,4 +1,4 @@
-A Kerbal Space Program mod for automated combat between stock space warships in a similar fashion to BD Armory.
+A Kerbal Space Program mod for automated combat between stock space warships.
 
 Developed by Hatbat, Spartwo and MiffedStarfish.
 
