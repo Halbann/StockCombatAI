@@ -1,4 +1,4 @@
-A Kerbal Space Program mod for automated combat between stock space warships.
+A Kerbal Space Program mod for automated combat between space warships built with stock parts.
 
 Developed by Hatbat, Spartwo and MiffedStarfish.
 
