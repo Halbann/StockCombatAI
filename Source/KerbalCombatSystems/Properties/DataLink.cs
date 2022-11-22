@@ -8,13 +8,13 @@ using UnityEngine;
 
 namespace KerbalCombatSystems
 {
-    class ModuleDataLink : PartModule
+    public class ModuleDataLink : PartModule
     {
         public ModuleWeapon typeModule;
 
         public void Setup()
         {
-            if (setup) return;
+            /*if (setup) return;
 
             string moduleName;
             switch (weaponType)
@@ -34,7 +34,7 @@ namespace KerbalCombatSystems
                 typeModule = (ModuleWeapon)part.AddModule(moduleName);
 
             typeModule.Setup();
-            setup = true;
+            setup = true;*/
         }
     }
 
@@ -63,7 +63,7 @@ namespace KerbalCombatSystems
             StringBuilder output = new StringBuilder();
 
             output.Append(Environment.NewLine);
-            output.Append(String.Format("Broadcast Power: {0} m", recieverPower));
+            output.Append(String.Format("Broadcast Power: {0} m", transmitterPower));
 
             return output.ToString();
         }
@@ -71,7 +71,7 @@ namespace KerbalCombatSystems
         public override void OnStart(StartState state)
         {
             scalingFactor = HighLogic.CurrentGame.Parameters.CustomParams<KCSCombat>().DataLinkFactor;
-            transmitterPower = baseTransmissionPower * ScalingFactor;
+            transmitterPower = baseTransmitterPower * scalingFactor;
         }
     }
 
@@ -80,7 +80,7 @@ namespace KerbalCombatSystems
         //all parts with antenna modules(commands pods and antennas afaik) are capable of receiving datalinked target lists
 
         const string DataLinkGroupName = "Target Receiver";
-        private int ScalingFactor;
+        private int scalingFactor;
 
         [KSPField(
               guiActive = true,
