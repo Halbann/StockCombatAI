@@ -12,6 +12,9 @@ namespace KerbalCombatSystems
         public static bool showLines;
         private static List<LineRenderer> lines;
         private static List<float> times;
+
+        //relavent game settings
+        private int RefreshRate;
         private GUIStyle textStyle;
 
         private void Start()
@@ -19,6 +22,8 @@ namespace KerbalCombatSystems
             showLines = false;
             lines = new List<LineRenderer>();
             times = new List<float>();
+
+            RefreshRate = HighLogic.CurrentGame.Parameters.CustomParams<KCSCombat>().RefreshRate;
             StartCoroutine(LineCleaner());
         }
 
@@ -30,6 +35,7 @@ namespace KerbalCombatSystems
                 //switch bool return
                 showLines = !showLines;
 
+                //this block strikes me as redundant to line 91 but not actively harmful
                 if (!showLines)
                 {
                     foreach (var line in lines)
@@ -124,7 +130,7 @@ namespace KerbalCombatSystems
                     lines[i].positionCount = 0;
                 }
 
-                yield return new WaitForSeconds(5);
+                yield return new WaitForSeconds(RefreshRate);
             }
         }
 
