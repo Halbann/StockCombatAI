@@ -152,18 +152,17 @@ namespace KerbalCombatSystems
             if (engines.Count < 1)
                 return -1;
 
-            float cosineLosses;
+            Vector3 thrustVector = GetFireVector(engines, origin) * -1;
+            //Migrated to imported utility function, commented to reference
+            /*float cosineLosses;
             Vector3 thrustDirectionVector;
             Vector3 thrustVector = Vector3.zero;
-            //Will comment out utility based call for the moment until I'm able to 
-            //Vector3 thrustVector = GetFireVector(engines, origin) * -1;
             foreach (var e in engines)
             {
                 thrustDirectionVector = -e.thrustTransforms[0].forward;
                 cosineLosses = Vector3.Dot(-e.thrustTransforms[0].forward, decoupler.transform.up);
-
                 thrustVector += e.MaxThrustOutputVac(true) * cosineLosses * thrustDirectionVector;
-            }
+            }*/
 
             AimVector = thrustVector.normalized;
 
@@ -273,6 +272,11 @@ namespace KerbalCombatSystems
             }
 
             decoupler = decouplers.Last();
+            AssignReference(decoupler.part.GetReferenceTransform(), AimVector);
+        }
+
+        private void AssignReference(Transform Position, Vector3 Direction)
+        {
             Quaternion q = Quaternion.FromToRotation(Vector3.right, AimVector);
             Transform t = decoupler.part.GetReferenceTransform();
             t.transform.rotation = Quaternion.LookRotation(AimVector);
@@ -293,6 +297,7 @@ namespace KerbalCombatSystems
 
             mr.material = sphereMat;
 
+            //sphere doesn't destroy
             prediction.transform.localScale = prediction.transform.localScale * 2;
             Destroy(prediction.GetComponent<SphereCollider>());
 

@@ -14,9 +14,9 @@ namespace KerbalCombatSystems
         // User parameters changed via UI.
 
         public bool controllerRunning = false;
-        public float updateInterval;
+        public float updateInterval = 5f;
         public float emergencyUpdateInterval = 0.5f;
-        public float combatUpdateInterval = 0.5f;
+        public float combatUpdateInterval = 2.5f;
         private bool VeryDishonourable;
         public float firingAngularVelocityLimit = 1; // degrees per second
         public float firingInterval = 7.5f;
