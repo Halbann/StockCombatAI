@@ -99,8 +99,6 @@
     <Compile Include="ClosestTimeToCPA.cs" />
     <Compile Include="LineMesh.cs" />
     <Compile Include="AssetLoader.cs" />
-    <Compile Include="MassCannonTargeting.cs" />
-    <Compile Include="BombGuidance.cs" />
     <Compile Include="Overlay.cs" />
     <Compile Include="RocketTargeting.cs" />
     <Compile Include="FlightController.cs" />
