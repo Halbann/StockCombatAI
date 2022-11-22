@@ -27,6 +27,10 @@ namespace KerbalCombatSystems
         public int ScalingFactor { get { return ScalingFactorDefault; } set { ScalingFactorDefault = value; } }
         private int ScalingFactorDefault = 10;
 
+        [GameParameters.CustomIntParameterUI("Transmission Range Multiplier", minValue = 1, maxValue = 10, stepSize = 1,
+        toolTip = "Multiplier for datalink transmit and receive ranges")]
+        public int DataLinkFactor { get { return DataLinkFactorDefault; } set { DataLinkFactorDefault = value; } }
+        private int DataLinkFactorDefault = 10;
 
         //todo: migrate referesh rate into custom mod settings
         [GameParameters.CustomIntParameterUI("Refresh Rate", minValue = 1, maxValue = 30, stepSize = 1,

@@ -69,12 +69,15 @@ namespace KerbalCombatSystems
                 seperator.Separate();
 
                 // I will think of something smarter in the future time.
+                // I do not agree with this inclusion, just let badly designed missiles explode - Spartwo
                 seperator.part.maxTemp = double.MaxValue;
                 seperator.part.skinMaxTemp = double.MaxValue;
                 seperator.part.tempExplodeChance = 0;
             }
             else
+            {
                 Debug.Log("[KCS]: Couldn't find decoupler.");
+            }
 
             // turn on engines
             engines = vessel.FindPartModulesImplementing<ModuleEngines>();
@@ -91,9 +94,12 @@ namespace KerbalCombatSystems
             fc.RCSPower = 20;
             fc.Drive();
 
-            //get an onboard probe core to control from
-            //FindCommand(vessel).MakeReference();
-            fc.attitude = vessel.ReferenceTransform.up;
+            //get an onboard probe core orientation to control from
+            FindCommand(vessel).MakeReference();
+
+            //just using reference transform would cause issues with irregular part orientations
+            //best option is using the direction of the missiles thrust vector but may be resource intensive
+            //fc.attitude = vessel.ReferenceTransform.up;
 
             //enable RCS for translation
             if (!vessel.ActionGroups[KSPActionGroup.RCS])

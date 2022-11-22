@@ -59,6 +59,39 @@ namespace KerbalCombatSystems
             return engines.Sum(e => e.MaxThrustOutputVac(true));
         }
 
+        public static Vector3 GetFireVector(List<ModuleEngines> engines, Vector3 origin)
+        {
+            //method to get the mean thrust vector of a list of engines 
+
+            //start the expected movement vector at the first child of the decoupler
+            Vector3 thrustVector = origin;
+
+            foreach (ModuleEngines thruster in engines)
+            {
+                thrustVector += GetMeanVector(thruster);
+            }
+
+            return thrustVector;
+        }
+
+        public static Vector3 GetMeanVector(ModuleEngines thruster)
+        {
+            //method to get the thrust vector of a specific part, which in some cases is not the part vector
+
+            Vector3 meanVector = Vector3.zero;
+            List<Transform> positions = thruster.thrustTransforms;
+
+            foreach (Transform thrusterTransform in positions)
+            {
+                Vector3 pos = thrusterTransform.forward;
+                meanVector += pos;
+            }
+
+            //get vector and set length to the thruster power
+            meanVector = (meanVector.normalized * thruster.MaxThrustOutputVac(true));
+            return meanVector;
+        }
+
         #endregion
 
         #region DoAction

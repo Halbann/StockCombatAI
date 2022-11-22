@@ -102,6 +102,7 @@
     <Compile Include="MassCannonTargeting.cs" />
     <Compile Include="BombGuidance.cs" />
     <Compile Include="Overlay.cs" />
+    <Compile Include="Properties\DataLink.cs" />
     <Compile Include="RocketTargeting.cs" />
     <Compile Include="FlightController.cs" />
     <Compile Include="CombatRobotics.cs" />
