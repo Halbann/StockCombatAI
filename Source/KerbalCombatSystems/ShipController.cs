@@ -1306,7 +1306,7 @@ namespace KerbalCombatSystems
             if (noController) reasons.Add("AI controller destroyed");
             string reason = string.Join(", ", reasons);
 
-            //KCSController.Log(string.Format("<b><color={0}>{1}</color> was disabled ({2})</b>", SideColour(), ShorternName(vessel.GetDisplayName()), reason));
+            //KCSController.Log(string.Format("<b><color={0}>{1}</color> was disabled ({2})</b>", SideColour(), ShortenName(vessel.GetDisplayName()), reason));
             KCSController.Log(string.Format("<b>%1 was disabled ({0})</b>", reason), vessel);
         }
 

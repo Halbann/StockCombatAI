@@ -253,7 +253,7 @@ namespace KerbalCombatSystems
             if (c != null && c.alive)
                 colour = c.SideColour();
 
-            text = text.Replace("%1", string.Format("<color={1}>{0}</color>", ShorternName(v1.GetDisplayName()), colour));
+            text = text.Replace("%1", string.Format("<color={1}>{0}</color>", ShortenName(v1.GetDisplayName()), colour));
 
             if (text.Contains("%2"))
             {
@@ -269,7 +269,7 @@ namespace KerbalCombatSystems
                     if (c != null && c.alive)
                         colour = c.SideColour();
 
-                    text = text.Replace("%2", string.Format("<color={1}>{0}</color>", ShorternName(v2.GetDisplayName()), colour));
+                    text = text.Replace("%2", string.Format("<color={1}>{0}</color>", ShortenName(v2.GetDisplayName()), colour));
                 }
             }
 

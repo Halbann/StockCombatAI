@@ -216,8 +216,8 @@ namespace KerbalCombatSystems
 
             string oldName = vessel.vesselName;
             string missileName = controller.weaponCode == "" ? "Missile" : controller.weaponCode;
-            string firerName = ShorternName(firer.vesselName);
-            vessel.vesselName = !isInterceptor ? $"{missileName} ({firerName} >> {ShorternName(target.vesselName)})" : $"Interceptor ({firerName})";
+            string firerName = ShortenName(firer.vesselName);
+            vessel.vesselName = !isInterceptor ? $"{missileName} ({firerName} >> {ShortenName(target.vesselName)})" : $"Interceptor ({firerName})";
             GameEvents.onVesselRename.Fire(new GameEvents.HostedFromToAction<Vessel, string>(vessel, oldName, vessel.vesselName));
 
             controller.launched = true;

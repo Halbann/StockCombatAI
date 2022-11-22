@@ -2,17 +2,17 @@
 {
     public class ModuleDecouplerDesignate : PartModule
     {
-        const string DecouplerDesignationGroupName = "Decoupler Designation";
+        const string DecouplerDesignationGroupName = "Seperator Designation";
 
         [KSPField(
             isPersistant = true,
             guiActive = true,
             guiActiveEditor = true,
-            guiName = "Decoupler Type",
+            guiName = "Seperator Type",
             groupName = DecouplerDesignationGroupName,
             groupDisplayName = DecouplerDesignationGroupName),
             UI_ChooseOption(controlEnabled = true, affectSymCounterparts = UI_Scene.None,
-            options = new string[] { "Default", "Weapon", "Countermeasure", "Escape Pod", "Warhead" })]
+            options = new string[] { "Default", "Weapon", "Countermeasure", "Sub-Vessel", "Escape Pod", "Warhead" })]
         public string DecouplerType = "Default";
     }
 }
