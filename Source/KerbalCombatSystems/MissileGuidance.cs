@@ -92,7 +92,7 @@ namespace KerbalCombatSystems
             fc.Drive();
 
             //get an onboard probe core to control from
-            FindCommand(vessel).MakeReference();
+            //FindCommand(vessel).MakeReference();
             fc.attitude = vessel.ReferenceTransform.up;
 
             //enable RCS for translation

@@ -100,6 +100,10 @@ namespace KerbalCombatSystems
                 if (hasCC && hasPRE)
                     break;
             }
+
+            // Change game settings.
+
+            HighLogic.CurrentGame.Parameters.CustomParams<GameParameters.AdvancedParams>().EnableFullSASInSandbox = true;   
         }
 
         private void Update()
@@ -548,8 +552,8 @@ namespace KerbalCombatSystems
         {
             guiHidden = hide;
 
-            if ((Overlay.hideWithUI || !hide) && HighLogic.LoadedSceneIsFlight)
-                Overlay.SetVisibility(hide);
+            if ((Overlay.hideWithUI || !hide) && HighLogic.LoadedSceneIsFlight && !Overlay.overlayUnavailable)
+                Overlay.SetVisibility(!hide);
         }
 
         #endregion

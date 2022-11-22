@@ -55,6 +55,7 @@ namespace KerbalCombatSystems
 
         private static bool runOnce = true;
         internal static bool hideOverlay = false;
+        internal static bool overlayUnavailable = false;
 
         private static LineMesh rangeLinesMesh;
         private static LineMesh secondaryRangeLinesMesh;
@@ -113,12 +114,6 @@ namespace KerbalCombatSystems
 
         private void Start()
         {
-            if (FlightGlobals.ActiveVessel.situation != Vessel.Situations.ORBITING)
-            {
-                enabled = false;
-                return;
-            }
-
             if (runOnce)
             {
                 runOnce = false;
@@ -167,6 +162,8 @@ namespace KerbalCombatSystems
             // This is necessary to make the overlay invisible to additional cameras by default (multi-cam, hull-cam, docking-cam, etc).
             // Layer 8 is only used by the game in the editor I believe.
             FlightCamera.fetch.mainCamera.cullingMask |= (1 << 8);
+
+            overlayUnavailable = false;
         }
 
         private void CreateFixedLines()
@@ -259,16 +256,14 @@ namespace KerbalCombatSystems
 
         private void FixedUpdate()
         {
-            if (hideOverlay) return;
             if (FlightGlobals.ActiveVessel == null) return;
-
             if (activeVessel != FlightGlobals.ActiveVessel)
             {
                 activeVessel = FlightGlobals.ActiveVessel;
                 activeController = FindController(activeVessel);
             }
 
-            if (activeController == null)
+            if (hideOverlay || activeController == null)
                 return;
 
             if (mainCamera == null)
@@ -282,13 +277,29 @@ namespace KerbalCombatSystems
 
         private void Update()
         {
+            if (activeController == null
+                || MapView.MapIsEnabled 
+                || mainCamera == null 
+                || FlightGlobals.ActiveVessel == null)
+            {
+                if (!overlayUnavailable)
+                {
+                    overlayUnavailable = true;
+                    SetVisibility(false);
+                }
+
+                return;
+            }
+            else
+            {
+                if (overlayUnavailable)
+                {
+                    overlayUnavailable = false;
+                    SetVisibility(true);
+                }
+            }
+
             if (hideOverlay)
-                return;
-
-            if (activeController == null)
-                return;
-
-            if (MapView.MapIsEnabled || mainCamera == null || FlightGlobals.ActiveVessel == null)
                 return;
 
             WatchShipList();
@@ -939,9 +950,9 @@ namespace KerbalCombatSystems
         #endregion
 
         // When the UI is toggled with F2.
-        internal static void SetVisibility(bool hidden)
+        internal static void SetVisibility(bool visible)
         {
-            hideOverlay = hidden;
+            hideOverlay = !visible;
 
             if (rangeLinesMesh == null)
                 return;
@@ -958,10 +969,10 @@ namespace KerbalCombatSystems
 
             foreach (var linemesh in linemeshes)
             {
-                linemesh.gameObject.GetComponent<MeshRenderer>().enabled = !hidden;
+                linemesh.gameObject.GetComponent<MeshRenderer>().enabled = visible;
             }
 
-            markers.FindAll(m => m != null).ForEach(m => m.gameObject.GetComponent<SpriteRenderer>().enabled = !hidden);
+            markers.FindAll(m => m != null).ForEach(m => m.gameObject.GetComponent<SpriteRenderer>().enabled = visible);
         }
     }
 
