@@ -9,6 +9,7 @@ namespace KerbalCombatSystems
     [KSPAddon(KSPAddon.Startup.Flight, false)]
     class ModuleEscapePodGuidance : PartModule
     {
+        #region Fields
         const string EscapeGuidanceGroupName = "Escape Pod Guidance";
 
         private List<Part> AIPartList;
@@ -23,6 +24,9 @@ namespace KerbalCombatSystems
         Seperator seperator;
         private Vessel Parent;
 
+        #endregion
+
+        #region Main
         //escape guidance is called when the button is pressed, when no ship controller can be found onboard the ship, or when the ship controller dictates an evacuation
         [KSPEvent(guiActive = true,
                   guiActiveEditor = false,
@@ -43,6 +47,27 @@ namespace KerbalCombatSystems
         public void ManualEscape(KSPActionParam param)
         {
             BeginEscape();
+        }
+
+        public override void OnStart(StartState state)
+        {
+            if (!HighLogic.LoadedSceneIsFlight) return;
+
+            //create the appropriate lists
+            AIPartList = new List<Part>();
+            List<ModuleShipController> AIModulesList;
+
+            //designate ship that's being escaped from
+            Parent = vessel;
+
+            //find ai parts and add to list
+            AIModulesList = vessel.FindPartModulesImplementing<ModuleShipController>();
+            foreach (var Controller in AIModulesList)
+            {
+                AIPartList.Add(Controller.part);
+            }
+
+            StartCoroutine(StatusRoutine());
         }
 
         private IEnumerator RunEscapeSequence()
@@ -93,27 +118,6 @@ namespace KerbalCombatSystems
             StartCoroutine(EscapeRoutine());
 
             yield break;
-        }
-
-        public override void OnStart(StartState state)
-        {
-            if (!HighLogic.LoadedSceneIsFlight) return;
-
-            //create the appropriate lists
-            AIPartList = new List<Part>();
-            List<ModuleShipController> AIModulesList;
-
-            //designate ship that's being escaped from
-            Parent = vessel;
-
-            //find ai parts and add to list
-            AIModulesList = vessel.FindPartModulesImplementing<ModuleShipController>();
-            foreach (var Controller in AIModulesList)
-            {
-                AIPartList.Add(Controller.part);
-            }
-
-            StartCoroutine(StatusRoutine());
         }
 
         IEnumerator StatusRoutine()
@@ -171,7 +175,9 @@ namespace KerbalCombatSystems
             Destroy(part.gameObject.GetComponent<KCSFlightController>());
             yield break;
         }
+        #endregion
 
+        #region Checks
         private bool CheckOrbitUnsafe()
         {
             Orbit o = vessel.orbit;
@@ -198,5 +204,6 @@ namespace KerbalCombatSystems
                 BeginEscape();
             }
         }
+        #endregion
     }
 }
