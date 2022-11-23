@@ -490,7 +490,8 @@ namespace KerbalCombatSystems
                 // Reduce near intercept time by accounting for target acceleration
                 // It should be such that "near intercept" is so close that you would go past them after you stop burning despite their acceleration
                 // Also a chase timeout after which both parties should just use their weapons regardless of range.
-                else if (currentRange > maxRange
+                else if (hasPropulsion
+                    && currentRange > maxRange
                     && !(nearInt = NearIntercept(relVel, minRange, maxRange))
                     && CanInterceptShip(targetController))
                 {
@@ -529,21 +530,21 @@ namespace KerbalCombatSystems
                 }
                 else
                 {
-                    if (relVel.magnitude > firingSpeed || nearInt)
+                    if (hasPropulsion && (relVel.magnitude > firingSpeed || nearInt))
                     {
                         state = "Manoeuvring (Kill Velocity)";
 
                         while (UnderTimeLimit() && target != null && !complete)
                         {
-                            relVel = RelVel(vessel, target);
-                            fc.attitude = relVel.normalized * -1;
+                            relVel = target.GetObtVelocity() - vessel.GetObtVelocity();
+                            fc.attitude = (relVel + target.acceleration).normalized;
                             complete = relVel.magnitude < firingSpeed / 3;
                             fc.throttle = !complete ? 1 : 0;
 
                             yield return new WaitForFixedUpdate();
                         }
                     }
-                    else if (target != null && currentProjectile != null && AngularVelocity(vessel, target) > firingAngularVelocityLimit)
+                    else if (hasPropulsion && target != null && currentProjectile != null && AngularVelocity(vessel, target) > firingAngularVelocityLimit)
                     {
                         state = "Manoeuvring (Kill Angular Velocity)";
 
@@ -559,12 +560,38 @@ namespace KerbalCombatSystems
                     else
                     {
                         if (hasPropulsion)
-                            state = "Manoeuvring (Drift)";
-                        else
-                            state = "Stranded";
+                        {
+                            if (currentRange < minRange)
+                            {
+                                state = "Manoeuvring (Drift Away)";
 
-                        fc.throttle = 0;
-                        fc.attitude = Vector3.zero;
+                                Vector3 toTarget;
+                                fc.throttle = 0;
+                                fc.attitude = FromTo(vessel, target).normalized;
+
+                                while (UnderTimeLimit() && target != null && !complete)
+                                {
+                                    toTarget = FromTo(vessel, target);
+                                    complete = toTarget.magnitude > minRange;
+                                    fc.attitude = toTarget.normalized;
+
+                                    yield return new WaitForFixedUpdate();
+                                }
+                            }
+                            else
+                            {
+                                state = "Manoeuvring (Drift)";
+                                fc.throttle = 0;
+                                fc.attitude = Vector3.zero;
+                            }
+                        }
+                        else
+                        {
+                            state = "Stranded";
+                            fc.throttle = 0;
+                            fc.attitude = Vector3.zero;
+                        }
+
 
                         yield return new WaitForSeconds(updateInterval);
                     }
@@ -1064,16 +1091,15 @@ namespace KerbalCombatSystems
             float timeToRotate = SolveTime(rotDistance * 0.75f, maxAngularAcceleration.magnitude) / 0.75f;
 
             Vector3 toClosestApproach = ToClosestApproach(relVel, minRange);
+            Vector3 toTarget = FromTo(vessel, target);
 
             // Return false if we aren't headed towards the target.
-            float velToClosestApproach = Vector3.Dot(relVel, toClosestApproach.normalized);
-            if (velToClosestApproach < 1) return false;
+            float velToClosestApproach = Vector3.Dot(relVel, toTarget.normalized);
+            if (velToClosestApproach < 10)
+                return false;
 
-            float timeToClosestApproach = ClosestTimeToCPA(toClosestApproach, target.GetObtVelocity() - vessel.GetObtVelocity(), Vector3.zero, 9999);
-            Vector3 closestApproach = PredictPosition(FromTo(vessel, target), target.GetObtVelocity() - vessel.GetObtVelocity(), Vector3.zero, 999);
-            bool hasIntercept = closestApproach.magnitude < maxRange;
-
-            if (!hasIntercept)
+            float timeToClosestApproach = ClosestTimeToCPA(toClosestApproach, relVel * -1, Vector3.zero, 9999);
+            if (timeToClosestApproach == 0)
                 return false;
 
             nearInterceptBurnTime = timeToKillVelocity + timeToRotate;
