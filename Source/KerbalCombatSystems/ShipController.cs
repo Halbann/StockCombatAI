@@ -567,7 +567,6 @@ namespace KerbalCombatSystems
 
                                 Vector3 toTarget;
                                 fc.throttle = 0;
-                                fc.attitude = FromTo(vessel, target).normalized;
 
                                 while (UnderTimeLimit() && target != null && !complete)
                                 {
