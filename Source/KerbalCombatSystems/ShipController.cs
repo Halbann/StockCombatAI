@@ -226,7 +226,7 @@ namespace KerbalCombatSystems
         {
             GameEvents.onEditorPartEvent.Remove(UpdateAttachment);
 
-            if (HighLogic.LoadedSceneIsFlight && !vessel.packed && alive)
+            if (HighLogic.LoadedSceneIsFlight && vessel != null && !vessel.packed && alive)
             {
                 alive = false;
                 DeathMessage(true);
