@@ -105,7 +105,7 @@ namespace KerbalCombatSystems
                         }
                     }
 
-                    // Create a static pink ball where the hit it predicted to happen.
+                    // Create a static pink ball where the hit is predicted to happen.
                     if (KCSDebug.showLines)
                     {
                         GameObject prediction = CreateSphere();

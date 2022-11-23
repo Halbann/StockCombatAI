@@ -99,9 +99,9 @@ namespace KerbalCombatSystems
             groupName = shipControllerGroupName,
             groupDisplayName = shipControllerGroupName),
             UI_FloatRange(
-                minValue = 0f,
+                minValue = 2f,
                 maxValue = 100f,
-                stepIncrement = 10f,
+                stepIncrement = 1f,
                 scene = UI_Scene.All
             )]
         public float firingSpeed = 20f;
