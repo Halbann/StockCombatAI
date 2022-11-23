@@ -263,16 +263,18 @@ namespace KerbalCombatSystems
                 activeController = FindController(activeVessel);
             }
 
-            if (hideOverlay || activeController == null)
-                return;
-
             if (mainCamera == null)
                 mainCamera = FlightCamera.fetch;
+
+            if (hideOverlay || activeController == null)
+                return;
 
             if (mainCamera.mode == FlightCamera.Modes.LOCKED)
                 centre.up = FlightGlobals.ActiveVessel.ReferenceTransform.forward;
             else
                 centre.up = mainCamera.getReferenceFrame() * Vector3.up;
+
+            centre.position = activeVessel.CoM;
         }
 
         private void Update()
@@ -299,13 +301,13 @@ namespace KerbalCombatSystems
                 }
             }
 
+            if (Input.GetKeyDown(quickToggleZoomKey))
+                DistanceToggle();
+
             if (hideOverlay)
                 return;
 
             WatchShipList();
-
-            if (Input.GetKeyDown(quickToggleZoomKey))
-                DistanceToggle();
 
             // Show the overlay lines only when the camera is zoomed out.
 
