@@ -8,21 +8,21 @@ using UnityEngine;
 
 namespace KerbalCombatSystems
 {
-    class ModuleDataLink : PartModule
+    public class ModuleDataLink : PartModule
     {
         public ModuleWeapon typeModule;
 
         public void Setup()
         {
-            if (setup) return;
+            /*if (setup) return;
 
             string moduleName;
             switch (weaponType)
             {
-                case "Missile":
+                case "transmitter":
                     moduleName = "ModuleDataLinkRelay";
                     break;
-                case "Rocket":
+                case "reciever":
                     moduleName = "ModuleDataLinkAntenna";
                     break;
                 default:
@@ -34,7 +34,7 @@ namespace KerbalCombatSystems
                 typeModule = (ModuleWeapon)part.AddModule(moduleName);
 
             typeModule.Setup();
-            setup = true;
+            setup = true;*/
         }
     }
 
@@ -42,16 +42,16 @@ namespace KerbalCombatSystems
     {
         //relay parts only are capable of sending the target lists
 
-        const string DataLinkGroupName = "Target Broadcaster";
+        const string dataLinkGroupName = "Target Broadcaster";
         private int scalingFactor;
 
         [KSPField(
               guiActive = true,
               guiActiveEditor = true,
-              guiName = "Detection Range",
-              guiUnits = "m",
-              groupName = DataLinkGroupName,
-              groupDisplayName = DataLinkGroupName),
+              guiName = "Transmitter Power",
+              guiUnits = " ",
+              groupName = dataLinkGroupName,
+              groupDisplayName = dataLinkGroupName),
               UI_Label(scene = UI_Scene.All)]
         public float transmitterPower = 0f;
 
@@ -63,15 +63,15 @@ namespace KerbalCombatSystems
             StringBuilder output = new StringBuilder();
 
             output.Append(Environment.NewLine);
-            output.Append(String.Format("Broadcast Power: {0} m", recieverPower));
+            output.Append(String.Format("Transmitter Power: {0}", transmitterPower));
 
             return output.ToString();
         }
 
         public override void OnStart(StartState state)
         {
-            scalingFactor = HighLogic.CurrentGame.Parameters.CustomParams<KCSCombat>().DataLinkFactor;
-            transmitterPower = baseTransmissionPower * ScalingFactor;
+            scalingFactor = HighLogic.CurrentGame.Parameters.CustomParams<KCSCombat>().dataLinkFactor;
+            transmitterPower = baseTransmitterPower * scalingFactor;
         }
     }
 
@@ -79,16 +79,16 @@ namespace KerbalCombatSystems
     {
         //all parts with antenna modules(commands pods and antennas afaik) are capable of receiving datalinked target lists
 
-        const string DataLinkGroupName = "Target Receiver";
-        private int ScalingFactor;
+        const string dataLinkGroupName = "Target Receiver";
+        private int scalingFactor;
 
         [KSPField(
               guiActive = true,
               guiActiveEditor = true,
-              guiName = "Detection Range",
-              guiUnits = "m",
-              groupName = DataLinkGroupName,
-              groupDisplayName = DataLinkGroupName),
+              guiName = "Reciever Power",
+              guiUnits = " ",
+              groupName = dataLinkGroupName,
+              groupDisplayName = dataLinkGroupName),
               UI_Label(scene = UI_Scene.All)]
         public float recieverPower = 0f;
 
@@ -100,7 +100,7 @@ namespace KerbalCombatSystems
             StringBuilder output = new StringBuilder();
 
             output.Append(Environment.NewLine);
-            output.Append(String.Format("Detection Range: {0} m", recieverPower));
+            output.Append(String.Format("Reciever Power: {0}", recieverPower));
 
             return output.ToString();
         }
@@ -108,7 +108,7 @@ namespace KerbalCombatSystems
         public override void OnStart(StartState state)
         {
 
-            scalingFactor = HighLogic.CurrentGame.Parameters.CustomParams<KCSCombat>().DataLinkFactor;
+            scalingFactor = HighLogic.CurrentGame.Parameters.CustomParams<KCSCombat>().dataLinkFactor;
             recieverPower = baseReceiverPower * scalingFactor;
         }
     }
