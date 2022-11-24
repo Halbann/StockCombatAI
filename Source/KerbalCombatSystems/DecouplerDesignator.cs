@@ -12,7 +12,7 @@
             groupName = DecouplerDesignationGroupName,
             groupDisplayName = DecouplerDesignationGroupName),
             UI_ChooseOption(controlEnabled = true, affectSymCounterparts = UI_Scene.None,
-            options = new string[] { "Default","Escape Pod", "Countermeasure", "Warhead" })]
+            options = new string[] { "Default", "Escape Pod", "Warhead" })]
             public string decouplerType = "Default";
     }
 }
