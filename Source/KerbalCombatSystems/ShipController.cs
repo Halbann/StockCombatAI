@@ -14,10 +14,10 @@ namespace KerbalCombatSystems
         // User parameters changed via UI.
 
         public bool controllerRunning = false;
-        public float updateInterval = 5f;
+        public float updateInterval;
         public float emergencyUpdateInterval = 0.5f;
         public float combatUpdateInterval = 2.5f;
-        private bool VeryDishonourable;
+        private bool allowRetreat;
         public float firingAngularVelocityLimit = 1; // degrees per second
         public float firingInterval = 7.5f;
         public float controlTimeout = 10;
@@ -157,9 +157,9 @@ namespace KerbalCombatSystems
             controllerRunning = true;
 
             //persist based settings for ship allowances
-            VeryDishonourable = HighLogic.CurrentGame.Parameters.CustomParams<KCSCombat>().VeryDishonourable;
-            combatUpdateInterval = HighLogic.CurrentGame.Parameters.CustomParams<KCSCombat>().RefreshRate;
-            emergencyUpdateInterval = combatUpdateInterval / 4f;
+            allowRetreat = HighLogic.CurrentGame.Parameters.CustomParams<KCSCombat>().VeryDishonourable;
+            //combatUpdateInterval = HighLogic.CurrentGame.Parameters.CustomParams<KCSCombat>().RefreshRate;
+            //emergencyUpdateInterval = combatUpdateInterval / 4f;
         }
 
         public void StopAI()
@@ -306,7 +306,7 @@ namespace KerbalCombatSystems
             fc.RCSVector = Vector3.zero;
 
             // Movement.
-            if (hasPropulsion && !hasWeapons && CheckWithdraw() && VeryDishonourable)
+            if (hasPropulsion && !hasWeapons && CheckWithdraw() && allowRetreat)
             {
                 if (state != "Withdrawing")
                     KCSController.Log("%1 started to withdraw (out of weapons)", vessel);
