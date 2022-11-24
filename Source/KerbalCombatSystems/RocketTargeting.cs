@@ -264,7 +264,7 @@ namespace KerbalCombatSystems
 
         private void NextRocket()
         {
-            decouplers = FindDecouplerChildren(part.parent, "Weapon", false);
+            decouplers = FindDecouplerChildren(part.parent, "Default", true);
             if (decouplers.Count < 1)
             {
                 controller.canFire = false;
@@ -297,7 +297,7 @@ namespace KerbalCombatSystems
 
             mr.material = sphereMat;
 
-            //sphere doesn't destroy
+            //todo sphere doesn't destroy
             prediction.transform.localScale = prediction.transform.localScale * 2;
             Destroy(prediction.GetComponent<SphereCollider>());
 

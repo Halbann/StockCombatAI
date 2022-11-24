@@ -22,25 +22,26 @@ namespace KerbalCombatSystems
         public override bool HasPresets { get { return true; } }
 
 
-        [GameParameters.CustomIntParameterUI("Scanning Range", minValue = 1, maxValue = 10, stepSize = 1,
-        toolTip = "Multiplier for scanner ranges, default 5km")]
-        public int ScalingFactor { get { return ScalingFactorDefault; } set { ScalingFactorDefault = value; } }
-        private int ScalingFactorDefault = 10;
+        [GameParameters.CustomIntParameterUI("Scanning Range Multiplier", minValue = 1, maxValue = 10, stepSize = 1,
+        toolTip = "Multiplier for scanner ranges, default 5")]
+        public int scalingFactor { get { return scalingFactorDefault; } set { scalingFactorDefault = value; } }
+        private int scalingFactorDefault = 5;
 
         [GameParameters.CustomIntParameterUI("Transmission Range Multiplier", minValue = 1, maxValue = 10, stepSize = 1,
-        toolTip = "Multiplier for datalink transmit and receive ranges")]
-        public int DataLinkFactor { get { return DataLinkFactorDefault; } set { DataLinkFactorDefault = value; } }
-        private int DataLinkFactorDefault = 10;
+        toolTip = "Multiplier for datalink transmittter and receiever power")]
+        public int dataLinkFactor { get { return dataLinkFactorDefault; } set { dataLinkFactorDefault = value; } }
+        private int dataLinkFactorDefault = 5;
 
-        //todo: migrate referesh rate into custom mod settings
-        [GameParameters.CustomIntParameterUI("Refresh Rate", minValue = 1, maxValue = 30, stepSize = 1,
-        toolTip = "How many seconds between intensive but accuracy aiding AI functions")]
-        public int RefreshRate { get { return RefreshRateDefault; } set { RefreshRateDefault = value; } }
-        private int RefreshRateDefault = 5;
+        //todo: migrate referesh rate into mod config tied settings
+        [GameParameters.CustomIntParameterUI("Refresh Rate", minValue = 1, maxValue = 10, stepSize = 1,
+        toolTip = "Multiplier for the time space between intensive but accuracy aiding AI functions")]
+        public int refreshRate { get { return refreshRateDefault; } set { refreshRateDefault = value; } }
+        private int refreshRateDefault = 5;
+        //change inbuilt code to use the minimum functional value
 
         [GameParameters.CustomParameterUI("Allow Withdrawl",
         toolTip = "Whether ships are allowed retreat from battle")]
-        public bool VeryDishonourable = true;
+        public bool allowWithdrawl = true;
 
         public override void SetDifficultyPreset(GameParameters.Preset preset)
         {
@@ -71,7 +72,7 @@ namespace KerbalCombatSystems
 
 
         [GameParameters.CustomParameterUI("Enabled")]
-        public bool SpawningEnabled = false;
+        public bool spawningEnabled = false;
 
 
         public override void SetDifficultyPreset(GameParameters.Preset preset)

@@ -53,7 +53,7 @@ namespace KerbalCombatSystems
         private IEnumerator Launch()
         {
             // find decoupler
-            seperator = FindDecoupler(part, "Weapon", true);
+            seperator = FindDecoupler(part, "Default", false);
 
             bool frontLaunch = Vector3.Dot(seperator.transform.up, vessel.ReferenceTransform.up) > 0.99;
             controller.frontLaunch = frontLaunch;
@@ -95,11 +95,12 @@ namespace KerbalCombatSystems
             fc.Drive();
 
             //get an onboard probe core orientation to control from
-            FindCommand(vessel).MakeReference();
-
-            //just using reference transform would cause issues with irregular part orientations
+            //commented out due to people building dodgy missiles with incorrect probe core orientations
             //best option is using the direction of the missiles thrust vector but may be resource intensive
-            //fc.attitude = vessel.ReferenceTransform.up;
+            //FindCommand(vessel).MakeReference();
+
+            //temporary measure to use simplest version but still one that causes bugs
+            fc.attitude = vessel.ReferenceTransform.up;
 
             //enable RCS for translation
             if (!vessel.ActionGroups[KSPActionGroup.RCS])

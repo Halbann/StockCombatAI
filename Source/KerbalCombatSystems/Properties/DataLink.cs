@@ -70,7 +70,7 @@ namespace KerbalCombatSystems
 
         public override void OnStart(StartState state)
         {
-            scalingFactor = HighLogic.CurrentGame.Parameters.CustomParams<KCSCombat>().DataLinkFactor;
+            scalingFactor = HighLogic.CurrentGame.Parameters.CustomParams<KCSCombat>().dataLinkFactor;
             transmitterPower = baseTransmitterPower * scalingFactor;
         }
     }
@@ -108,7 +108,7 @@ namespace KerbalCombatSystems
         public override void OnStart(StartState state)
         {
 
-            scalingFactor = HighLogic.CurrentGame.Parameters.CustomParams<KCSCombat>().DataLinkFactor;
+            scalingFactor = HighLogic.CurrentGame.Parameters.CustomParams<KCSCombat>().dataLinkFactor;
             recieverPower = baseReceiverPower * scalingFactor;
         }
     }

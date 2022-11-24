@@ -13,16 +13,16 @@ namespace KerbalCombatSystems
         const string EscapeGuidanceGroupName = "Escape Pod Guidance";
 
         private List<Part> AIPartList;
-        private List<ModuleEngines> Engines;
+        private List<ModuleEngines> engines;
         //relavent game settings
-        private int RefreshRate;
+        private int refreshRate;
         //universal flight controller and toggle
         KCSFlightController fc;
-        private bool Escaped = false;
+        private bool escaped = false;
         private double minSafeAltitude;
         //ModuleDecouple Decoupler;
         Seperator seperator;
-        private Vessel Parent;
+        private Vessel parent;
 
         #endregion
 
@@ -37,9 +37,9 @@ namespace KerbalCombatSystems
         {
             //find decoupler
             seperator = FindDecoupler(part, "Escape Pod", false);
-            Debug.Log("[KCS]: Escaping from " + Parent.GetName());
+            Debug.Log("[KCS]: Escaping from " + parent.GetName());
             //set the refresh rate
-            RefreshRate = HighLogic.CurrentGame.Parameters.CustomParams<KCSCombat>().RefreshRate;
+            refreshRate = HighLogic.CurrentGame.Parameters.CustomParams<KCSCombat>().refreshRate;
             StartCoroutine(RunEscapeSequence());
         }
 
@@ -58,7 +58,7 @@ namespace KerbalCombatSystems
             List<ModuleShipController> AIModulesList;
 
             //designate ship that's being escaped from
-            Parent = vessel;
+            parent = vessel;
 
             //find ai parts and add to list
             AIModulesList = vessel.FindPartModulesImplementing<ModuleShipController>();
@@ -93,10 +93,10 @@ namespace KerbalCombatSystems
             FindCommand(vessel).MakeReference();
 
             // turn on engines and create list
-            Engines = vessel.FindPartModulesImplementing<ModuleEngines>();
-            foreach (ModuleEngines Engine in Engines)
+            engines = vessel.FindPartModulesImplementing<ModuleEngines>();
+            foreach (ModuleEngines engine in engines)
             {
-                Engine.Activate();
+                engine.Activate();
             }
 
             // enable autopilot and set target orientation to away from the vessel by default
@@ -107,10 +107,10 @@ namespace KerbalCombatSystems
             fc.Drive();
 
             // turn on engines
-            List<ModuleParachute> Parachutes = vessel.FindPartModulesImplementing<ModuleParachute>();
-            foreach (ModuleParachute Parachute in Parachutes)
+            List<ModuleParachute> parachutes = vessel.FindPartModulesImplementing<ModuleParachute>();
+            foreach (ModuleParachute parachute in parachutes)
             {
-                Parachute.Deploy();
+                parachute.Deploy();
             }
 
             yield return new WaitForSeconds(1f);
@@ -122,12 +122,12 @@ namespace KerbalCombatSystems
 
         IEnumerator StatusRoutine()
         {
-            if (!Escaped)
+            if (!escaped)
             {
                 CheckConnection();
             }
 
-            yield return new WaitForSeconds(RefreshRate);
+            yield return new WaitForSeconds(refreshRate);
             StartCoroutine(StatusRoutine());
             yield break;
         }
@@ -167,7 +167,7 @@ namespace KerbalCombatSystems
                     fc.Drive();
                 }
 
-                yield return new WaitForSeconds(RefreshRate);
+                yield return new WaitForSeconds(refreshRate);
             }
 
             Debug.Log("[KCS]: Escape Sequence Ending on " + vessel.GetName() + " (Escape Pod)");
@@ -200,7 +200,7 @@ namespace KerbalCombatSystems
 
             if (AIPartList.Count == 0)
             {
-                Escaped = true;
+                escaped = true;
                 BeginEscape();
             }
         }

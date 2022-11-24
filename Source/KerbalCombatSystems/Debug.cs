@@ -14,7 +14,7 @@ namespace KerbalCombatSystems
         private static List<float> times;
 
         //relavent game settings
-        private int RefreshRate;
+        private int refreshRate;
         private GUIStyle textStyle;
 
         private void Start()
@@ -23,7 +23,7 @@ namespace KerbalCombatSystems
             lines = new List<LineRenderer>();
             times = new List<float>();
 
-            RefreshRate = HighLogic.CurrentGame.Parameters.CustomParams<KCSCombat>().RefreshRate;
+            refreshRate = HighLogic.CurrentGame.Parameters.CustomParams<KCSCombat>().refreshRate;
             StartCoroutine(LineCleaner());
         }
 
@@ -130,7 +130,7 @@ namespace KerbalCombatSystems
                     lines[i].positionCount = 0;
                 }
 
-                yield return new WaitForSeconds(RefreshRate);
+                yield return new WaitForSeconds(refreshRate);
             }
         }
 

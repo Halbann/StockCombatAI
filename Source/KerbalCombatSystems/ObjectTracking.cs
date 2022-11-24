@@ -38,7 +38,7 @@ namespace KerbalCombatSystems
 
         public override void OnStart(StartState state)
         {
-            scalingFactor = HighLogic.CurrentGame.Parameters.CustomParams<KCSCombat>().ScalingFactor;
+            scalingFactor = HighLogic.CurrentGame.Parameters.CustomParams<KCSCombat>().scalingFactor;
             detectionRange = baseDetectionRange * scalingFactor;
         }
     }

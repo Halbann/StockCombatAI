@@ -157,8 +157,8 @@ namespace KerbalCombatSystems
             controllerRunning = true;
 
             //persist based settings for ship allowances
-            allowRetreat = HighLogic.CurrentGame.Parameters.CustomParams<KCSCombat>().VeryDishonourable;
-            //combatUpdateInterval = HighLogic.CurrentGame.Parameters.CustomParams<KCSCombat>().RefreshRate;
+            allowRetreat = HighLogic.CurrentGame.Parameters.CustomParams<KCSCombat>().allowWithdrawl;
+            //combatUpdateInterval = HighLogic.CurrentGame.Parameters.CustomParams<KCSCombat>().refreshRate;
             //emergencyUpdateInterval = combatUpdateInterval / 4f;
         }
 

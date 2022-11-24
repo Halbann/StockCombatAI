@@ -193,7 +193,7 @@ namespace KerbalCombatSystems
                     module = currentPart.GetComponent<ModuleDecouplerDesignate>();
                     if (module == null) continue;
 
-                    if (module.DecouplerType != type && !ignoreTypeRequirement) continue;
+                    if (module.decouplerType != type && !ignoreTypeRequirement) continue;
 
                     seperator.decoupler = decoupler;
                 }
@@ -239,7 +239,7 @@ namespace KerbalCombatSystems
                 //get the designator module and move to next part if it is not the correct type
                 Module = CurrentPart.GetComponent<ModuleDecouplerDesignate>();
                 if (Module == null) continue;
-                if (Module.DecouplerType != type && !ignoreTypeRequirement) continue;
+                if (Module.decouplerType != type && !ignoreTypeRequirement) continue;
 
                 //cases for if it is a decoupler or a docking port
                 if (Decoupler != null)
