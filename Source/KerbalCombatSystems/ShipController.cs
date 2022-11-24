@@ -17,7 +17,7 @@ namespace KerbalCombatSystems
         public float updateInterval;
         public float emergencyUpdateInterval = 0.5f;
         public float combatUpdateInterval = 2.5f;
-        private bool allowRetreat;
+        private bool allowWithdrawl;
         public float firingAngularVelocityLimit = 1; // degrees per second
         public float firingInterval = 7.5f;
         public float controlTimeout = 10;
@@ -157,7 +157,7 @@ namespace KerbalCombatSystems
             controllerRunning = true;
 
             //persist based settings for ship allowances
-            allowRetreat = HighLogic.CurrentGame.Parameters.CustomParams<KCSCombat>().allowWithdrawl;
+            allowWithdrawl = HighLogic.CurrentGame.Parameters.CustomParams<KCSCombat>().allowWithdrawl;
             //combatUpdateInterval = HighLogic.CurrentGame.Parameters.CustomParams<KCSCombat>().refreshRate;
             //emergencyUpdateInterval = combatUpdateInterval / 4f;
         }
@@ -306,7 +306,7 @@ namespace KerbalCombatSystems
             fc.RCSVector = Vector3.zero;
 
             // Movement.
-            if (hasPropulsion && !hasWeapons && CheckWithdraw() && allowRetreat)
+            if (hasPropulsion && !hasWeapons && CheckWithdraw() && allowWithdrawl)
             {
                 if (state != "Withdrawing")
                     KCSController.Log("%1 started to withdraw (out of weapons)", vessel);
