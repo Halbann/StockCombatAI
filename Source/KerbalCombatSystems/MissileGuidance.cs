@@ -68,11 +68,10 @@ namespace KerbalCombatSystems
             {
                 seperator.Separate();
 
-                // I will think of something smarter in the future time.
-                // I do not agree with this inclusion, just let badly designed missiles explode - Spartwo
+                /*todo: safety checks for thruster backblast
                 seperator.part.maxTemp = double.MaxValue;
                 seperator.part.skinMaxTemp = double.MaxValue;
-                seperator.part.tempExplodeChance = 0;
+                seperator.part.tempExplodeChance = 0;*/
             }
             else
             {

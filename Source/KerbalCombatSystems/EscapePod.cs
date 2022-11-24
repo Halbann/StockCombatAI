@@ -12,7 +12,7 @@ namespace KerbalCombatSystems
         #region Fields
         const string EscapeGuidanceGroupName = "Escape Pod Guidance";
 
-        private List<Part> AIPartList;
+        private List<Part> shipControllerList;
         private List<ModuleEngines> engines;
         //relavent game settings
         private int refreshRate;
@@ -54,7 +54,7 @@ namespace KerbalCombatSystems
             if (!HighLogic.LoadedSceneIsFlight) return;
 
             //create the appropriate lists
-            AIPartList = new List<Part>();
+            shipControllerList = new List<Part>();
             List<ModuleShipController> AIModulesList;
 
             //designate ship that's being escaped from
@@ -64,7 +64,7 @@ namespace KerbalCombatSystems
             AIModulesList = vessel.FindPartModulesImplementing<ModuleShipController>();
             foreach (var Controller in AIModulesList)
             {
-                AIPartList.Add(Controller.part);
+                shipControllerList.Add(Controller.part);
             }
 
             StartCoroutine(StatusRoutine());
@@ -188,14 +188,14 @@ namespace KerbalCombatSystems
         //method to check for the existence of any ship ai onboard
         public void CheckConnection()
         {
-            for (int i = AIPartList.Count - 1; i >= 0; i--)
+            for (int i = shipControllerList.Count - 1; i >= 0; i--)
             {
                 //if part does not exist / on the same ship
-                if (AIPartList[i] == null || AIPartList[i].vessel.id != part.vessel.id)
-                    AIPartList.RemoveAt(i);
+                if (shipControllerList[i] == null || shipControllerList[i].vessel.id != part.vessel.id)
+                    shipControllerList.RemoveAt(i);
             }
 
-            if (AIPartList.Count == 0)
+            if (shipControllerList.Count == 0)
             {
                 escaped = true;
                 BeginEscape();

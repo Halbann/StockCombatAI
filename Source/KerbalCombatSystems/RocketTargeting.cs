@@ -14,7 +14,7 @@ namespace KerbalCombatSystems
         LineRenderer leadLine;
         private List<Seperator> decouplers;
         internal Seperator decoupler;
-        Vector3 AimVector;
+        Vector3 aimVector;
 
         public bool firing = false;
         Vector3 targetVector;
@@ -85,7 +85,7 @@ namespace KerbalCombatSystems
             Vector3 targetRadius = Vector3.ProjectOnPlane(Vector3.up, targetVector.normalized).normalized * (controller.targetSize / 2) * accuracyTolerance;
             float aimTolerance = Vector3.Angle(targetVector, targetVector + targetRadius);
 
-            bool onTarget = Vector3.Angle(leadVector.normalized, AimVector) < aimTolerance;
+            bool onTarget = Vector3.Angle(leadVector.normalized, aimVector) < aimTolerance;
             if (onTarget)
             {
                 // We must remain on target for fireCountdown seconds before we can fire.
@@ -164,7 +164,7 @@ namespace KerbalCombatSystems
                 thrustVector += e.MaxThrustOutputVac(true) * cosineLosses * thrustDirectionVector;
             }*/
 
-            AimVector = thrustVector.normalized;
+            aimVector = thrustVector.normalized;
 
             float thrust = Vector3.Dot(thrustVector, decoupler.transform.up);
             if (thrust < 1)
@@ -272,14 +272,14 @@ namespace KerbalCombatSystems
             }
 
             decoupler = decouplers.Last();
-            AssignReference(decoupler.part.GetReferenceTransform(), AimVector);
+            AssignReference(decoupler.part.GetReferenceTransform(), aimVector);
         }
 
         private void AssignReference(Transform Position, Vector3 Direction)
         {
-            Quaternion q = Quaternion.FromToRotation(Vector3.right, AimVector);
+            Quaternion q = Quaternion.FromToRotation(Vector3.right, aimVector);
             Transform t = decoupler.part.GetReferenceTransform();
-            t.transform.rotation = Quaternion.LookRotation(AimVector);
+            t.transform.rotation = Quaternion.LookRotation(aimVector);
             decoupler.part.SetReferenceTransform(t);
             controller.aimPart = decoupler.part;
         }
