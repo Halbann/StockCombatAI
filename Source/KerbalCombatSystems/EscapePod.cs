@@ -122,14 +122,11 @@ namespace KerbalCombatSystems
 
         IEnumerator StatusRoutine()
         {
-            if (!escaped)
+            while (!escaped)
             {
                 CheckConnection();
+                yield return new WaitForSeconds(refreshRate);
             }
-
-            yield return new WaitForSeconds(refreshRate);
-            StartCoroutine(StatusRoutine());
-            yield break;
         }
 
         IEnumerator EscapeRoutine()

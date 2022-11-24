@@ -39,9 +39,9 @@ namespace KerbalCombatSystems
         private int refreshRateDefault = 5;
         //change inbuilt code to use the minimum functional value
 
-        [GameParameters.CustomParameterUI("Allow Withdrawl",
+        [GameParameters.CustomParameterUI("Allow Withdrawal",
         toolTip = "Whether ships are allowed retreat from battle")]
-        public bool allowWithdrawl = true;
+        public bool allowWithdrawal = true;
 
         public override void SetDifficultyPreset(GameParameters.Preset preset)
         {
