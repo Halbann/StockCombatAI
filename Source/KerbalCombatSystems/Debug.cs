@@ -33,7 +33,7 @@ namespace KerbalCombatSystems
                 //switch bool return
                 showLines = !showLines;
 
-                //this block strikes me as redundant to line 91 but not actively harmful
+                //removes inactive lines not caught fast enough by the generic line clearer
                 if (!showLines)
                 {
                     foreach (var line in lines)
