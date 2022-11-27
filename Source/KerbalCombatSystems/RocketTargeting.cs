@@ -12,8 +12,8 @@ namespace KerbalCombatSystems
         Vessel target;
         ModuleWeaponController controller;
         LineRenderer leadLine;
-        private List<Seperator> decouplers;
-        internal Seperator decoupler;
+        private List<ModuleDecouplerDesignate> decouplers;
+        internal ModuleDecouplerDesignate decoupler;
         Vector3 aimVector;
 
         public bool firing = false;
@@ -48,6 +48,7 @@ namespace KerbalCombatSystems
             fireSymmetry = controller.fireSymmetry;
             accuracyTolerance = controller.accuracyTolerance;
 
+            Debug.Log("[KCS]: decoupler is valid");
             NextRocket();
 
             leadLine = KCSDebug.CreateLine(Color.green);
@@ -153,17 +154,6 @@ namespace KerbalCombatSystems
                 return -1;
 
             Vector3 thrustVector = GetFireVector(engines, origin) * -1;
-            //Migrated to imported utility function, commented to reference
-            /*float cosineLosses;
-            Vector3 thrustDirectionVector;
-            Vector3 thrustVector = Vector3.zero;
-            foreach (var e in engines)
-            {
-                thrustDirectionVector = -e.thrustTransforms[0].forward;
-                cosineLosses = Vector3.Dot(-e.thrustTransforms[0].forward, decoupler.transform.up);
-                thrustVector += e.MaxThrustOutputVac(true) * cosineLosses * thrustDirectionVector;
-            }*/
-
             aimVector = thrustVector.normalized;
 
             float thrust = Vector3.Dot(thrustVector, decoupler.transform.up);
@@ -230,6 +220,9 @@ namespace KerbalCombatSystems
 
         public override void Fire()
         {
+            //bit of a haphazard solution but this implementation of rocket firing is fairly constructed around only the AI being able to fire
+            NextRocket();
+
             firing = true;
             StartCoroutine(FireRocket());
         }
@@ -237,26 +230,25 @@ namespace KerbalCombatSystems
         private IEnumerator FireRocket()
         {
             //run through all child parts of the controllers parent for engine modules
-            List<Part> DecouplerChildParts = decoupler.part.FindChildParts<Part>(true).ToList();
+            List<Part> decouplerChildParts = decoupler.part.FindChildParts<Part>(true).ToList();
 
-            foreach (Part CurrentPart in DecouplerChildParts)
+            foreach (Part currentPart in decouplerChildParts)
             {
-                ModuleEngines Module = CurrentPart.GetComponent<ModuleEngines>();
+                ModuleEngines module = currentPart.GetComponent<ModuleEngines>();
 
                 //check for engine modules on the part and stop if not found
-                if (Module == null) continue;
+                if (module == null) continue;
+                Debug.Log("not null");
 
                 //activate the engine and force it to full capped thrust incase of ship throttle
-                Module.Activate();
-                Module.throttleLocked = true;
+                module.Activate();
+                module.throttleLocked = true;
             }
 
             if (vessel.GetReferenceTransformPart() == controller.aimPart)
                 FindController(vessel).RestoreReferenceTransform();
 
             decoupler.Separate();
-            NextRocket();
-
             yield return new WaitForSeconds(firingInterval);
 
             firing = false;
@@ -264,7 +256,7 @@ namespace KerbalCombatSystems
 
         private void NextRocket()
         {
-            decouplers = FindDecouplerChildren(part.parent, "Default", true);
+            decouplers = FindDecouplerChildren(part.parent, "Default", false);
             if (decouplers.Count < 1)
             {
                 controller.canFire = false;
@@ -272,7 +264,8 @@ namespace KerbalCombatSystems
             }
 
             decoupler = decouplers.Last();
-            AssignReference(decoupler.part.GetReferenceTransform(), aimVector);
+            controller.aimPart = decoupler.part;
+            //AssignReference(decoupler.part.GetReferenceTransform(), aimVector);
         }
 
         private void AssignReference(Transform Position, Vector3 Direction)

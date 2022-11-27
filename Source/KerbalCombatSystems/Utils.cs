@@ -144,10 +144,10 @@ namespace KerbalCombatSystems
         public static ModuleCommand FindCommand(Vessel craft)
         {
             //get a list of onboard control points and return the first found
-            List<ModuleCommand> CommandPoints = craft.FindPartModulesImplementing<ModuleCommand>();
-            if (CommandPoints.Count != 0)
+            List<ModuleCommand> commandPoints = craft.FindPartModulesImplementing<ModuleCommand>();
+            if (commandPoints.Count != 0)
             {
-                return CommandPoints.First();
+                return commandPoints.First();
             }
             //gotta have a command point somewhere so this is just for compiling
             return null;
@@ -163,12 +163,12 @@ namespace KerbalCombatSystems
             return ship;
         }
 
-        public static Seperator FindDecoupler(Part origin, string type, bool ignoreTypeRequirement)
+        public static ModuleDecouplerDesignate FindDecoupler(Part origin, string type, bool ignoreTypeRequirement)
         {
+            // method to search up the part tree to find a single decoupler
+
             Part currentPart;
             Part nextPart = origin.parent;
-            ModuleDecouple decoupler;
-            ModuleDockingNode dockingPort;
             ModuleDecouplerDesignate module;
 
             if (nextPart == null) return null;
@@ -178,90 +178,47 @@ namespace KerbalCombatSystems
                 currentPart = nextPart;
                 nextPart = currentPart.parent;
 
+                // stop looking if there is no next part
                 if (nextPart == null) break;
 
-                decoupler = currentPart.GetComponent<ModuleDecouple>();
-                dockingPort = currentPart.GetComponent<ModuleDockingNode>();
+                // make sure the decoupler designator exists and is the specified type
+                module = currentPart.GetComponent<ModuleDecouplerDesignate>();
+                if (module == null) continue;
+                if (module.decouplerDesignation != type && !ignoreTypeRequirement) continue;
+                //strike any decouplers without any child parts
+                if (!currentPart.FindChildParts<Part>(true).ToList().Any()) continue;
 
-                if (decoupler == null && dockingPort == null) continue;
-                Seperator seperator = new Seperator();
-
-                if (decoupler != null)
-                {
-                    if (currentPart.GetComponent<ModuleDecouple>().isDecoupled == true) continue;
-
-                    module = currentPart.GetComponent<ModuleDecouplerDesignate>();
-                    if (module == null) continue;
-
-                    if (module.decouplerType != type && !ignoreTypeRequirement) continue;
-
-                    seperator.decoupler = decoupler;
-                }
-                else
-                {
-                    seperator.port = dockingPort;
-                    seperator.isDockingPort = true;
-                }
-
-                seperator.part = currentPart;
-                return seperator;
+                return module;
             }
 
             return null;
         }
 
-        public static List<Seperator> FindDecouplerChildren(Part Root, string type, bool ignoreTypeRequirement)
+        public static List<ModuleDecouplerDesignate> FindDecouplerChildren(Part root, string type, bool ignoreTypeRequirement)
         {
-            //run through all child parts of the controllers parent for decoupler modules
-            List<Part> ChildParts = Root.FindChildParts<Part>(true).ToList();
+            // method to search the children of a specified part for decoupler modules
+
+            List<Part> childParts = root.FindChildParts<Part>(true).ToList();
             //check the parent itself
-            ChildParts.Add(Root);
-
+            childParts.Add(root);
             //spawn empty modules list to add to
-            List<Seperator> SeperatorList = new List<Seperator>();
-            ModuleDecouplerDesignate Module;
+            List<ModuleDecouplerDesignate> seperatorList = new List<ModuleDecouplerDesignate>();
+            ModuleDecouplerDesignate module;
 
-            ModuleDecouple Decoupler;
-            ModuleDockingNode DockingPort;
-
-            foreach (Part CurrentPart in ChildParts)
+            foreach (Part currentPart in childParts)
             {
-                Module = CurrentPart.GetComponent<ModuleDecouplerDesignate>();
+                module = currentPart.GetComponent<ModuleDecouplerDesignate>();
 
-                //check current part for either the docking port or the decoupler module
-                Decoupler = CurrentPart.GetComponent<ModuleDecouple>();
-                DockingPort = CurrentPart.GetComponent<ModuleDockingNode>();
+                // make sure the decoupler designator exists and is the specified type
+                if (module == null) continue;
+                if (module.decouplerDesignation != type && !ignoreTypeRequirement) continue;
+                //strike any decouplers without any child parts
+                if (!currentPart.FindChildParts<Part>(true).ToList().Any()) continue;
 
-                //move to next part if neither are found
-                if (Decoupler == null && DockingPort == null) continue;
-                Seperator seperator = new Seperator();
-
-                //get the designator module and move to next part if it is not the correct type
-                Module = CurrentPart.GetComponent<ModuleDecouplerDesignate>();
-                if (Module == null) continue;
-                if (Module.decouplerType != type && !ignoreTypeRequirement) continue;
-
-                //cases for if it is a decoupler or a docking port
-                if (Decoupler != null)
-                {
-                    //ensure it's not already been fired
-                    if (CurrentPart.GetComponent<ModuleDecouple>().isDecoupled == true) continue;
-
-                    seperator.decoupler = Decoupler;
-                }
-                else
-                {
-                    //todo: skip if attached to another parent docking port
-
-                    seperator.port = DockingPort;
-                    seperator.isDockingPort = true;
-                }
-
-                seperator.part = CurrentPart;
-                SeperatorList.Add(seperator);
+                seperatorList.Add(module);
             }
 
-            return SeperatorList;
+            return seperatorList;
         }
         #endregion
 
@@ -366,22 +323,7 @@ namespace KerbalCombatSystems
         B
     }
 
-    public class Seperator
-    {
-        public bool isDockingPort = false;
-        public ModuleDockingNode port;
-        public ModuleDecouple decoupler;
-        public Part part;
-        public Transform transform { get => part.transform; }
-
-        public void Separate()
-        {
-            if (isDockingPort)
-                port.Decouple();
-            else
-                decoupler.Decouple();
-        }
-    }
+    
 
     /*public static class VesselExtensions
     {

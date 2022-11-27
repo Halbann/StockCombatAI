@@ -18,10 +18,13 @@ namespace KerbalCombatSystems
         private int refreshRate;
         //universal flight controller and toggle
         KCSFlightController fc;
+        //current status retained during loads
+        [KSPField(isPersistant = true)]
         private bool escaped = false;
+
         private double minSafeAltitude;
         //ModuleDecouple Decoupler;
-        Seperator seperator;
+        ModuleDecouplerDesignate seperator;
         private Vessel parent;
 
         #endregion
@@ -76,11 +79,11 @@ namespace KerbalCombatSystems
             StopCoroutine(StatusRoutine());
 
             // try to pop decoupler
-            try
+            if (seperator != null)
             {
                 seperator.Separate();
             }
-            catch
+            else
             {
                 //notify of error but launch anyway for pods that have lost decoupler
                 Debug.Log("[KCS]: Couldn't find decoupler on " + vessel.GetName() + " (Escape Pod)");

@@ -38,7 +38,7 @@ namespace KerbalCombatSystems
         // Components
 
         private KCSFlightController fc;
-        private Seperator seperator;
+        private ModuleDecouplerDesignate seperator;
         private ModuleWeaponController controller;
         private List<ModuleEngines> engines;
         private ModuleEngines mainEngine;
@@ -63,7 +63,6 @@ namespace KerbalCombatSystems
             // fuel check
             // propulsion check
 
-            // try to pop decoupler
             if (seperator != null)
             {
                 seperator.Separate();
