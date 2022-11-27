@@ -198,9 +198,10 @@ namespace KerbalCombatSystems
         {
             // method to search the children of a specified part for decoupler modules
 
+
             List<Part> childParts = root.FindChildParts<Part>(true).ToList();
             //check the parent itself
-            childParts.Add(root);
+            childParts.Insert(0, root);
             //spawn empty modules list to add to
             List<ModuleDecouplerDesignate> seperatorList = new List<ModuleDecouplerDesignate>();
             ModuleDecouplerDesignate module;
