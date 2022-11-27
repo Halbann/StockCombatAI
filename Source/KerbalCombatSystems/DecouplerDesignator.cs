@@ -21,7 +21,7 @@ namespace KerbalCombatSystems
             groupName = DecouplerDesignationGroupName,
             groupDisplayName = DecouplerDesignationGroupName),
             UI_ChooseOption(controlEnabled = true, affectSymCounterparts = UI_Scene.None,
-            options = new string[] { "Default", "Escape Pod", "Warhead" })] //re-add "Countermeasure" at later date
+            options = new string[] { "Default", "Warhead", "Escape Pod" })] //re-add "Countermeasure" at later date
             public string decouplerDesignation = "Default";
 
         [KSPEvent(guiActive = true,
