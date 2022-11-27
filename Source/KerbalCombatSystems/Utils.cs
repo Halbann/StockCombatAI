@@ -323,8 +323,6 @@ namespace KerbalCombatSystems
         B
     }
 
-    
-
     /*public static class VesselExtensions
     {
         public static Vector3 Velocity(this Vessel v)

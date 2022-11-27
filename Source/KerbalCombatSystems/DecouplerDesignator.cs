@@ -24,11 +24,6 @@ namespace KerbalCombatSystems
             options = new string[] { "Default", "Warhead", "Escape Pod" })] //re-add "Countermeasure" at later date
             public string decouplerDesignation = "Default";
 
-        [KSPEvent(guiActive = true,
-                      guiActiveEditor = false,
-                      guiName = "test",
-                      groupName = DecouplerDesignationGroupName,
-                      groupDisplayName = DecouplerDesignationGroupName)]
         public void Separate()
         {
             switch(seperatorType)
