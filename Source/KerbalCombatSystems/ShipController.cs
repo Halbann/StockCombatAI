@@ -304,7 +304,7 @@ namespace KerbalCombatSystems
             fc.RCSVector = Vector3.zero;
 
             // Movement.
-            if (hasPropulsion && !hasWeapons && CheckWithdraw() && allowWithdrawal)
+            if (allowWithdrawal && hasPropulsion && !hasWeapons && CheckWithdraw())
             {
                 if (state != "Withdrawing")
                     KCSController.Log("%1 started to withdraw (out of weapons)", vessel);
