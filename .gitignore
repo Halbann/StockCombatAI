@@ -61,3 +61,7 @@ Source/KerbalCombatSystems/bin/
 Source/KerbalCombatSystems/obj/
 
 GameData/KCS/Parts/@thumbs
+
+GameData/KCS/Patches/SciencePartsAddControllers.cfg
+
+GameData/KCS/SciencePartsReplaceModelsAndNames.cfg
