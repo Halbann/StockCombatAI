@@ -12,7 +12,7 @@ namespace KerbalCombatSystems
         [KSPField(isPersistant = true)]
             public bool seperated = false;
 
-        const string DecouplerDesignationGroupName = "Seperator Designation";
+        const string DecouplerDesignationGroupName = "KCS Designation";
         [KSPField(
             isPersistant = true,
             guiActive = true,
