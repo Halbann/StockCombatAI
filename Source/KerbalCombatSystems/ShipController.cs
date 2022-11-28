@@ -152,14 +152,12 @@ namespace KerbalCombatSystems
 
         public void StartAI()
         {
+            updateInterval = combatUpdateInterval;
+            allowWithdrawal = HighLogic.CurrentGame.Parameters.CustomParams<KCSCombat>().allowWithdrawal;
+
             CheckWeapons();
             shipControllerCoroutine = StartCoroutine(ShipController());
             controllerRunning = true;
-
-            //persist based settings for ship allowances
-            allowWithdrawal = HighLogic.CurrentGame.Parameters.CustomParams<KCSCombat>().allowWithdrawal;
-            //combatUpdateInterval = HighLogic.CurrentGame.Parameters.CustomParams<KCSCombat>().refreshRate;
-            //emergencyUpdateInterval = combatUpdateInterval / 4f;
         }
 
         public void StopAI()
