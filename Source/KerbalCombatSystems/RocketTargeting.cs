@@ -238,7 +238,6 @@ namespace KerbalCombatSystems
 
                 //check for engine modules on the part and stop if not found
                 if (module == null) continue;
-                Debug.Log("not null");
 
                 //activate the engine and force it to full capped thrust incase of ship throttle
                 module.Activate();
