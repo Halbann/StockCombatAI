@@ -86,7 +86,7 @@ namespace KerbalCombatSystems
             Vector3 targetRadius = Vector3.ProjectOnPlane(Vector3.up, targetVector.normalized).normalized * (controller.targetSize / 2) * accuracyTolerance;
             float aimTolerance = Vector3.Angle(targetVector, targetVector + targetRadius);
 
-            bool onTarget = Vector3.Angle(leadVector.normalized, aimVector) < aimTolerance;
+            bool onTarget = Vector3.Angle(leadVector.normalized, decoupler.transform.up) < aimTolerance;
             if (onTarget)
             {
                 // We must remain on target for fireCountdown seconds before we can fire.
