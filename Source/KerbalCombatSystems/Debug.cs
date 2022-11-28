@@ -12,6 +12,8 @@ namespace KerbalCombatSystems
         public static bool showLines;
         private static List<LineRenderer> lines;
         private static List<float> times;
+
+        //relavent game settings
         private GUIStyle textStyle;
 
         private void Start()
@@ -19,6 +21,7 @@ namespace KerbalCombatSystems
             showLines = false;
             lines = new List<LineRenderer>();
             times = new List<float>();
+
             StartCoroutine(LineCleaner());
         }
 
@@ -30,6 +33,7 @@ namespace KerbalCombatSystems
                 //switch bool return
                 showLines = !showLines;
 
+                //removes inactive lines not caught fast enough by the generic line clearer
                 if (!showLines)
                 {
                     foreach (var line in lines)
@@ -124,7 +128,7 @@ namespace KerbalCombatSystems
                     lines[i].positionCount = 0;
                 }
 
-                yield return new WaitForSeconds(5);
+                yield return new WaitForSeconds(5f);
             }
         }
 

@@ -100,11 +100,13 @@
     <Compile Include="LineMesh.cs" />
     <Compile Include="AssetLoader.cs" />
     <Compile Include="Overlay.cs" />
+    <Compile Include="DataLink.cs" />
     <Compile Include="RocketTargeting.cs" />
     <Compile Include="FlightController.cs" />
     <Compile Include="CombatRobotics.cs" />
     <Compile Include="DecouplerDesignator.cs" />
     <Compile Include="EscapePod.cs" />
+    <Compile Include="Settings.cs" />
     <Compile Include="Utils.cs" />
     <Compile Include="Debug.cs" />
     <Compile Include="MainController.cs" />

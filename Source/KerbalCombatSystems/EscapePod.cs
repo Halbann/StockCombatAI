@@ -9,20 +9,27 @@ namespace KerbalCombatSystems
     [KSPAddon(KSPAddon.Startup.Flight, false)]
     class ModuleEscapePodGuidance : PartModule
     {
+        #region Fields
         const string EscapeGuidanceGroupName = "Escape Pod Guidance";
 
-        private List<Part> AIPartList;
-        private List<ModuleEngines> Engines;
-
+        private List<Part> shipControllerList;
+        private List<ModuleEngines> engines;
+        //relavent game settings
+        private int refreshRate;
         //universal flight controller and toggle
         KCSFlightController fc;
-        private bool Escaped = false;
+        //current status retained during loads
+        [KSPField(isPersistant = true)]
+        private bool escaped = false;
+
         private double minSafeAltitude;
-
         //ModuleDecouple Decoupler;
-        Seperator seperator;
-        private Vessel Parent;
+        ModuleDecouplerDesignate seperator;
+        private Vessel parent;
 
+        #endregion
+
+        #region Main
         //escape guidance is called when the button is pressed, when no ship controller can be found onboard the ship, or when the ship controller dictates an evacuation
         [KSPEvent(guiActive = true,
                   guiActiveEditor = false,
@@ -33,8 +40,9 @@ namespace KerbalCombatSystems
         {
             //find decoupler
             seperator = FindDecoupler(part, "Escape Pod", false);
-            Debug.Log("[KCS]: Escaping from " + Parent.GetName());
+            Debug.Log("[KCS]: Escaping from " + parent.GetName());
             //set the refresh rate
+            refreshRate = HighLogic.CurrentGame.Parameters.CustomParams<KCSCombat>().refreshRate;
             StartCoroutine(RunEscapeSequence());
         }
 
@@ -44,6 +52,27 @@ namespace KerbalCombatSystems
             BeginEscape();
         }
 
+        public override void OnStart(StartState state)
+        {
+            if (!HighLogic.LoadedSceneIsFlight) return;
+
+            //create the appropriate lists
+            shipControllerList = new List<Part>();
+            List<ModuleShipController> AIModulesList;
+
+            //designate ship that's being escaped from
+            parent = vessel;
+
+            //find ai parts and add to list
+            AIModulesList = vessel.FindPartModulesImplementing<ModuleShipController>();
+            foreach (var Controller in AIModulesList)
+            {
+                shipControllerList.Add(Controller.part);
+            }
+
+            StartCoroutine(StatusRoutine());
+        }
+
         private IEnumerator RunEscapeSequence()
         {
             //stop the status checker temporarily
@@ -51,9 +80,14 @@ namespace KerbalCombatSystems
 
             // try to pop decoupler
             if (seperator != null)
+            {
                 seperator.Separate();
+            }
             else
+            {
+                //notify of error but launch anyway for pods that have lost decoupler
                 Debug.Log("[KCS]: Couldn't find decoupler on " + vessel.GetName() + " (Escape Pod)");
+            }
 
             // set target orientation to away from the vessel by default
             fc = part.gameObject.AddComponent<KCSFlightController>();
@@ -62,10 +96,10 @@ namespace KerbalCombatSystems
             FindCommand(vessel).MakeReference();
 
             // turn on engines and create list
-            Engines = vessel.FindPartModulesImplementing<ModuleEngines>();
-            foreach (ModuleEngines Engine in Engines)
+            engines = vessel.FindPartModulesImplementing<ModuleEngines>();
+            foreach (ModuleEngines engine in engines)
             {
-                Engine.Activate();
+                engine.Activate();
             }
 
             // enable autopilot and set target orientation to away from the vessel by default
@@ -76,10 +110,10 @@ namespace KerbalCombatSystems
             fc.Drive();
 
             // turn on engines
-            List<ModuleParachute> Parachutes = vessel.FindPartModulesImplementing<ModuleParachute>();
-            foreach (ModuleParachute Parachute in Parachutes)
+            List<ModuleParachute> parachutes = vessel.FindPartModulesImplementing<ModuleParachute>();
+            foreach (ModuleParachute parachute in parachutes)
             {
-                Parachute.Deploy();
+                parachute.Deploy();
             }
 
             yield return new WaitForSeconds(1f);
@@ -89,37 +123,13 @@ namespace KerbalCombatSystems
             yield break;
         }
 
-        public override void OnStart(StartState state)
-        {
-            if (!HighLogic.LoadedSceneIsFlight) return;
-
-            //create the appropriate lists
-            AIPartList = new List<Part>();
-            List<ModuleShipController> AIModulesList;
-
-            //designate ship that's being escaped from
-            Parent = vessel;
-
-            //find ai parts and add to list
-            AIModulesList = vessel.FindPartModulesImplementing<ModuleShipController>();
-            foreach (var Controller in AIModulesList)
-            {
-                AIPartList.Add(Controller.part);
-            }
-
-            StartCoroutine(StatusRoutine());
-        }
-
         IEnumerator StatusRoutine()
         {
-            if (!Escaped)
+            while (!escaped)
             {
                 CheckConnection();
+                yield return new WaitForSeconds(refreshRate);
             }
-
-            yield return new WaitForSeconds(5f);
-            StartCoroutine(StatusRoutine());
-            yield break;
         }
 
         IEnumerator EscapeRoutine()
@@ -157,7 +167,7 @@ namespace KerbalCombatSystems
                     fc.Drive();
                 }
 
-                yield return new WaitForSeconds(5.0f);
+                yield return new WaitForSeconds(refreshRate);
             }
 
             Debug.Log("[KCS]: Escape Sequence Ending on " + vessel.GetName() + " (Escape Pod)");
@@ -165,7 +175,9 @@ namespace KerbalCombatSystems
             Destroy(part.gameObject.GetComponent<KCSFlightController>());
             yield break;
         }
+        #endregion
 
+        #region Checks
         private bool CheckOrbitUnsafe()
         {
             Orbit o = vessel.orbit;
@@ -179,18 +191,19 @@ namespace KerbalCombatSystems
         //method to check for the existence of any ship ai onboard
         public void CheckConnection()
         {
-            for (int i = AIPartList.Count - 1; i >= 0; i--)
+            for (int i = shipControllerList.Count - 1; i >= 0; i--)
             {
                 //if part does not exist / on the same ship
-                if (AIPartList[i] == null || AIPartList[i].vessel.id != part.vessel.id)
-                    AIPartList.RemoveAt(i);
+                if (shipControllerList[i] == null || shipControllerList[i].vessel.id != part.vessel.id)
+                    shipControllerList.RemoveAt(i);
             }
 
-            if (AIPartList.Count == 0)
+            if (shipControllerList.Count == 0)
             {
-                Escaped = true;
+                escaped = true;
                 BeginEscape();
             }
         }
+        #endregion
     }
 }

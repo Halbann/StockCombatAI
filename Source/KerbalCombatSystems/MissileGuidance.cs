@@ -38,7 +38,7 @@ namespace KerbalCombatSystems
         // Components
 
         private KCSFlightController fc;
-        private Seperator seperator;
+        private ModuleDecouplerDesignate seperator;
         private ModuleWeaponController controller;
         private List<ModuleEngines> engines;
         private ModuleEngines mainEngine;
@@ -53,7 +53,7 @@ namespace KerbalCombatSystems
         private IEnumerator Launch()
         {
             // find decoupler
-            seperator = FindDecoupler(part, "Weapon", true);
+            seperator = FindDecoupler(part, "Default", false);
 
             bool frontLaunch = Vector3.Dot(seperator.transform.up, vessel.ReferenceTransform.up) > 0.99;
             controller.frontLaunch = frontLaunch;
@@ -63,18 +63,19 @@ namespace KerbalCombatSystems
             // fuel check
             // propulsion check
 
-            // try to pop decoupler
             if (seperator != null)
             {
                 seperator.Separate();
 
-                // I will think of something smarter in the future time.
+                /*todo: safety checks for thruster backblast
                 seperator.part.maxTemp = double.MaxValue;
                 seperator.part.skinMaxTemp = double.MaxValue;
-                seperator.part.tempExplodeChance = 0;
+                seperator.part.tempExplodeChance = 0;*/
             }
             else
+            {
                 Debug.Log("[KCS]: Couldn't find decoupler.");
+            }
 
             // turn on engines
             engines = vessel.FindPartModulesImplementing<ModuleEngines>();
@@ -91,8 +92,12 @@ namespace KerbalCombatSystems
             fc.RCSPower = 20;
             fc.Drive();
 
-            //get an onboard probe core to control from
+            //get an onboard probe core orientation to control from
+            //commented out due to people building dodgy missiles with incorrect probe core orientations
+            //best option is using the direction of the missiles thrust vector but may be resource intensive
             //FindCommand(vessel).MakeReference();
+
+            //temporary measure to use simplest version but still one that causes bugs
             fc.attitude = vessel.ReferenceTransform.up;
 
             //enable RCS for translation
@@ -216,8 +221,8 @@ namespace KerbalCombatSystems
 
             string oldName = vessel.vesselName;
             string missileName = controller.weaponCode == "" ? "Missile" : controller.weaponCode;
-            string firerName = ShorternName(firer.vesselName);
-            vessel.vesselName = !isInterceptor ? $"{missileName} ({firerName} >> {ShorternName(target.vesselName)})" : $"Interceptor ({firerName})";
+            string firerName = ShortenName(firer.vesselName);
+            vessel.vesselName = !isInterceptor ? $"{missileName} ({firerName} >> {ShortenName(target.vesselName)})" : $"Interceptor ({firerName})";
             GameEvents.onVesselRename.Fire(new GameEvents.HostedFromToAction<Vessel, string>(vessel, oldName, vessel.vesselName));
 
             controller.launched = true;

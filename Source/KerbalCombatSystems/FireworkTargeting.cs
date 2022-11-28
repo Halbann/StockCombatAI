@@ -13,7 +13,7 @@ namespace KerbalCombatSystems
         Vessel Target;
         public Vector3 LeadVector;
         Part FiringPart;
-        Vector3 AimVector;
+        Vector3 aimVector;
         Vector3 Origin;
 
         // Debugging line variables.
@@ -60,16 +60,16 @@ namespace KerbalCombatSystems
 
                 FiringPart = firstLauncher.part;
                 controller.aimPart = FiringPart;
-                AimVector = FiringPart.transform.up;
+                aimVector = FiringPart.transform.up;
                 LeadVector = TargetLead(Target, FiringPart, 100f).normalized;
 
                 // Update debug lines.
                 Origin = FiringPart.transform.position;
-                KCSDebug.PlotLine(new[] { Origin, Origin + (AimVector * 15) }, AimLine);
+                KCSDebug.PlotLine(new[] { Origin, Origin + (aimVector * 15) }, AimLine);
             }
 
             //once aligned correctly start the firing sequence
-            if (!firing && ((Vector3.Angle(AimVector, LeadVector) < 1f) || Target == null))
+            if (!firing && ((Vector3.Angle(aimVector, LeadVector) < 1f) || Target == null))
             {
                 Fire();
             }

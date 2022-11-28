@@ -12,8 +12,9 @@ namespace KerbalCombatSystems
         Vessel target;
         ModuleWeaponController controller;
         LineRenderer leadLine;
-        private List<ModuleDecouple> decouplers;
-        internal ModuleDecouple decoupler;
+        private List<ModuleDecouplerDesignate> decouplers;
+        internal ModuleDecouplerDesignate decoupler;
+        Vector3 aimVector;
 
         public bool firing = false;
         Vector3 targetVector;
@@ -47,6 +48,7 @@ namespace KerbalCombatSystems
             fireSymmetry = controller.fireSymmetry;
             accuracyTolerance = controller.accuracyTolerance;
 
+            Debug.Log("[KCS]: decoupler is valid");
             NextRocket();
 
             leadLine = KCSDebug.CreateLine(Color.green);
@@ -56,7 +58,7 @@ namespace KerbalCombatSystems
 
         public override Vector3 Aim()
         {
-            if (decouplers.Count < 1 || decoupler == null || decoupler.vessel != vessel || target == null)
+            if (decouplers.Count < 1 || decoupler == null || decoupler.part.vessel != vessel || target == null)
                 return Vector3.zero;
 
             float timeSinceLastCalculated = Time.time - lastCalculated;
@@ -136,6 +138,7 @@ namespace KerbalCombatSystems
             // Find the engines.
             var engines = new List<ModuleEngines>();
             ModuleEngines eng;
+
             foreach (var p in rocketParts)
             {
                 eng = p.FindModuleImplementing<ModuleEngines>();
@@ -150,16 +153,8 @@ namespace KerbalCombatSystems
             if (engines.Count < 1)
                 return -1;
 
-            float cosineLosses;
-            Vector3 thrustDirectionVector;
-            Vector3 thrustVector = Vector3.zero;
-            foreach (var e in engines)
-            {
-                thrustDirectionVector = -e.thrustTransforms[0].forward;
-                cosineLosses = Vector3.Dot(-e.thrustTransforms[0].forward, decoupler.transform.up);
-
-                thrustVector += e.MaxThrustOutputVac(true) * cosineLosses * thrustDirectionVector;
-            }
+            Vector3 thrustVector = GetFireVector(engines, origin) * -1;
+            aimVector = thrustVector.normalized;
 
             float thrust = Vector3.Dot(thrustVector, decoupler.transform.up);
             if (thrust < 1)
@@ -225,6 +220,9 @@ namespace KerbalCombatSystems
 
         public override void Fire()
         {
+            //bit of a haphazard solution but this implementation of rocket firing is fairly constructed around only the AI being able to fire
+            NextRocket();
+
             firing = true;
             StartCoroutine(FireRocket());
         }
@@ -232,26 +230,24 @@ namespace KerbalCombatSystems
         private IEnumerator FireRocket()
         {
             //run through all child parts of the controllers parent for engine modules
-            List<Part> DecouplerChildParts = decoupler.part.FindChildParts<Part>(true).ToList();
+            List<Part> decouplerChildParts = decoupler.part.FindChildParts<Part>(true).ToList();
 
-            foreach (Part CurrentPart in DecouplerChildParts)
+            foreach (Part currentPart in decouplerChildParts)
             {
-                ModuleEngines Module = CurrentPart.GetComponent<ModuleEngines>();
+                ModuleEngines module = currentPart.GetComponent<ModuleEngines>();
 
                 //check for engine modules on the part and stop if not found
-                if (Module == null) continue;
+                if (module == null) continue;
 
                 //activate the engine and force it to full capped thrust incase of ship throttle
-                Module.Activate();
-                Module.throttleLocked = true;
+                module.Activate();
+                module.throttleLocked = true;
             }
 
             if (vessel.GetReferenceTransformPart() == controller.aimPart)
                 FindController(vessel).RestoreReferenceTransform();
 
-            decoupler.Decouple();
-            NextRocket();
-
+            decoupler.Separate();
             yield return new WaitForSeconds(firingInterval);
 
             firing = false;
@@ -259,7 +255,7 @@ namespace KerbalCombatSystems
 
         private void NextRocket()
         {
-            decouplers = FindDecouplerChildren(part.parent, "Weapon", true);
+            decouplers = FindDecouplerChildren(part.parent, "Default", false);
             if (decouplers.Count < 1)
             {
                 controller.canFire = false;
@@ -267,6 +263,16 @@ namespace KerbalCombatSystems
             }
 
             decoupler = decouplers.Last();
+            controller.aimPart = decoupler.part;
+            //AssignReference(decoupler.part.GetReferenceTransform(), aimVector);
+        }
+
+        private void AssignReference(Transform Position, Vector3 Direction)
+        {
+            Quaternion q = Quaternion.FromToRotation(Vector3.right, aimVector);
+            Transform t = decoupler.part.GetReferenceTransform();
+            t.transform.rotation = Quaternion.LookRotation(aimVector);
+            decoupler.part.SetReferenceTransform(t);
             controller.aimPart = decoupler.part;
         }
 
@@ -283,6 +289,7 @@ namespace KerbalCombatSystems
 
             mr.material = sphereMat;
 
+            //todo sphere doesn't destroy
             prediction.transform.localScale = prediction.transform.localScale * 2;
             Destroy(prediction.GetComponent<SphereCollider>());
 

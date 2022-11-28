@@ -14,9 +14,10 @@ namespace KerbalCombatSystems
         // User parameters changed via UI.
 
         public bool controllerRunning = false;
-        public float updateInterval = 2f;
-        public float combatUpdateInterval = 2.0f;
+        public float updateInterval;
         public float emergencyUpdateInterval = 0.5f;
+        public float combatUpdateInterval = 2.5f;
+        private bool allowWithdrawal;
         public float firingAngularVelocityLimit = 1; // degrees per second
         public float firingInterval = 7.5f;
         public float controlTimeout = 10;
@@ -151,6 +152,9 @@ namespace KerbalCombatSystems
 
         public void StartAI()
         {
+            updateInterval = combatUpdateInterval;
+            allowWithdrawal = HighLogic.CurrentGame.Parameters.CustomParams<KCSCombat>().allowWithdrawal;
+
             CheckWeapons();
             shipControllerCoroutine = StartCoroutine(ShipController());
             controllerRunning = true;
@@ -300,7 +304,7 @@ namespace KerbalCombatSystems
             fc.RCSVector = Vector3.zero;
 
             // Movement.
-            if (hasPropulsion && !hasWeapons && CheckWithdraw())
+            if (allowWithdrawal && hasPropulsion && !hasWeapons && CheckWithdraw())
             {
                 if (state != "Withdrawing")
                     KCSController.Log("%1 started to withdraw (out of weapons)", vessel);
@@ -1331,7 +1335,7 @@ namespace KerbalCombatSystems
             if (noController) reasons.Add("AI controller destroyed");
             string reason = string.Join(", ", reasons);
 
-            //KCSController.Log(string.Format("<b><color={0}>{1}</color> was disabled ({2})</b>", SideColour(), ShorternName(vessel.GetDisplayName()), reason));
+            //KCSController.Log(string.Format("<b><color={0}>{1}</color> was disabled ({2})</b>", SideColour(), ShortenName(vessel.GetDisplayName()), reason));
             KCSController.Log(string.Format("<b>%1 was disabled ({0})</b>", reason), vessel);
         }
 

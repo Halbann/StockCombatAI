@@ -861,7 +861,7 @@ namespace KerbalCombatSystems
 
                 // Create a shorterned ship name with a bold prefix.
 
-                string name = ShorternName(ship.vessel.GetDisplayName());
+                string name = ShortenName(ship.vessel.GetDisplayName());
                 string[] nameWords = name.Split(' ');
                 bool endPrefix = false;
                 bool allCaps;
