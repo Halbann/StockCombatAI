@@ -194,7 +194,7 @@ namespace KerbalCombatSystems
               groupName = FireworkGroupName,
               groupDisplayName = FireworkGroupName),
               UI_FloatRange(
-                  minValue = 0f,
+                  minValue = 0.05f,
                   maxValue = 1f,
                   stepIncrement = 0.05f,
                   scene = UI_Scene.All

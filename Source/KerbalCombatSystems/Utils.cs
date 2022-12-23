@@ -45,30 +45,52 @@ namespace KerbalCombatSystems
         public static float GetMaxThrust(Vessel v)
         {
             List<ModuleEngines> engines = v.FindPartModulesImplementing<ModuleEngines>();
-            engines.RemoveAll(e => !e.EngineIgnited || !e.isOperational);
-            float thrust = engines.Sum(e => e.MaxThrustOutputVac(true));
-
-            //for the last time hatbat, the basic ModuleRCS is depreciated and doesn't work properly with multiple nozzle rcs parts
+            //The basic ModuleRCS is depreciated and doesn't work properly with multiple nozzle rcs parts
             List<ModuleRCSFX> RCS = v.FindPartModulesImplementing<ModuleRCSFX>();
-            foreach (ModuleRCS thruster in RCS)
-            {
-                if (thruster.useThrottle)
-                    thrust += thruster.thrusterPower;
-            }
 
-            return engines.Sum(e => e.MaxThrustOutputVac(true));
+            return GetFireVector(engines, RCS, v.transform.position).magnitude;
         }
 
-        public static Vector3 GetFireVector(List<ModuleEngines> engines, Vector3 origin)
+        public static Vector3 GetFireVector(List<ModuleEngines> engines, List<ModuleRCSFX> RCS, Vector3 origin)
         {
-            //method to get the mean thrust vector of a list of engines 
+            //method to get the mean thrust vector of a list of engines and throttle enabled RCS
 
             //start the expected movement vector at the first child of the decoupler
             Vector3 thrustVector = origin;
 
-            foreach (ModuleEngines thruster in engines)
+            engines.RemoveAll(e => !e.EngineIgnited || !e.isOperational);
+            RCS.RemoveAll(r => !r.useThrottle || !r.isEnabled);
+            //place linears first to establish a direction
+            RCS.Sort((a, b) => a.thrusterTransforms.Count().CompareTo(b.thrusterTransforms.Count()));
+
+            foreach (ModuleEngines engine in engines)
             {
-                thrustVector += GetMeanVector(thruster);
+                if (engines.First() == engine)
+                    thrustVector = GetMeanVector(engine);
+                thrustVector += GetMeanVector(engine);
+            }
+
+            foreach (ModuleRCSFX thruster in RCS)
+            {
+                thrustVector = GetRCSVector(thruster, thrustVector);
+            }
+
+            return thrustVector;
+        }
+
+        public static Vector3 GetRCSVector(ModuleRCSFX thruster, Vector3 thrustVector)
+        {
+            //method to get the thrust vector of a specified rcs thruster
+            Vector3 meanVector = Vector3.zero;
+            List<Transform> positions = thruster.thrusterTransforms;
+
+            foreach (Transform thrusterTransform in positions)
+            {
+                Vector3 pos = thrusterTransform.forward;
+                float angle = Vector3.Angle(thrustVector, pos);
+                // rcs will fire if facing in any degree forwards so include them only
+                if (angle > 90)
+                    thrustVector += (pos.normalized * thruster.thrusterPower);
             }
 
             return thrustVector;
@@ -76,14 +98,16 @@ namespace KerbalCombatSystems
 
         public static Vector3 GetMeanVector(ModuleEngines thruster)
         {
-            //method to get the thrust vector of a specific part, which in some cases is not the part vector
-
+            //method to get the thrust vector of a specific part, 
+            //which in some cases is not the part vector
             Vector3 meanVector = Vector3.zero;
             List<Transform> positions = thruster.thrustTransforms;
 
             foreach (Transform thrusterTransform in positions)
             {
                 Vector3 pos = thrusterTransform.forward;
+                if (positions.First() == thrusterTransform)
+                    meanVector = pos;
                 meanVector += pos;
             }
 
@@ -138,12 +162,32 @@ namespace KerbalCombatSystems
             //do nothing otherwise
         }
 
+        public static void AlignReference(ModuleCommand commander, Vector3 direction)
+        {
+            //align a command modules point of reference with a given vector
+            ControlPoint control = commander.GetControlPoint("dynamic");
+            commander.SetControlPoint("dynamic");
+
+            //check that one doesn't already exist
+            if (control == null)
+            {
+                //switch over to default as a backup
+                control = commander.GetControlPoint("_default");
+                commander.SetControlPoint("_default");
+            }
+
+            //generate a new vector to act as the upwards direction
+            Vector3 perpendicular = new Vector3(1f, 1f, -(direction.x + direction.y) / direction.z);
+            //rotate the control point to be inline with the direction with perpendicular acting as the second pin
+            control.transform.rotation = Quaternion.LookRotation(perpendicular, direction);
+        }
+
         #endregion
 
         #region Finders
         public static ModuleCommand FindCommand(Vessel craft)
         {
-            //get a list of onboard control points and return the first found
+            //get a list of onboard command pods and return one
             List<ModuleCommand> commandPoints = craft.FindPartModulesImplementing<ModuleCommand>();
             if (commandPoints.Count != 0)
             {
@@ -312,6 +356,7 @@ namespace KerbalCombatSystems
 
             return false;
         }
+
         #endregion
     }
 

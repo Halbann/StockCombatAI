@@ -41,13 +41,14 @@ namespace KerbalCombatSystems
         private ModuleDecouplerDesignate seperator;
         private ModuleWeaponController controller;
         private List<ModuleEngines> engines;
+        private List<ModuleRCSFX> rcsList;
         private ModuleEngines mainEngine;
         private Part mainEnginePart;
         private int partCount = -1;
 
         // Debugging line variables.
 
-        LineRenderer targetLine, rvLine, interceptLine;
+        LineRenderer targetLine, rvLine, interceptLine, thrustLine;
         //GameObject prediction;
 
         private IEnumerator Launch()
@@ -77,6 +78,9 @@ namespace KerbalCombatSystems
                 Debug.Log("[KCS]: Couldn't find decoupler.");
             }
 
+            //wait for seperation to take effect
+            yield return new WaitForEndOfFrame();
+
             // turn on engines
             engines = vessel.FindPartModulesImplementing<ModuleEngines>();
             engines.ForEach(e => e.Activate());
@@ -92,21 +96,20 @@ namespace KerbalCombatSystems
             fc.RCSPower = 20;
             fc.Drive();
 
-            //get an onboard probe core orientation to control from
-            //commented out due to people building dodgy missiles with incorrect probe core orientations
-            //best option is using the direction of the missiles thrust vector but may be resource intensive
-            //FindCommand(vessel).MakeReference();
+            //get and enable rcs thrusters
+            rcsList = vessel.FindPartModulesImplementing<ModuleRCSFX>();
+            rcsList.ForEach(t => t.rcsEnabled = true);
 
-            //temporary measure to use simplest version but still one that causes bugs
+            //get probe core and modify it's reference transform
+            ModuleCommand commander = FindCommand(vessel);
+            AlignReference(commander, -GetFireVector(engines, rcsList, commander.transform.position));
+            commander.MakeReference();
+
             fc.attitude = vessel.ReferenceTransform.up;
 
             //enable RCS for translation
             if (!vessel.ActionGroups[KSPActionGroup.RCS])
                 vessel.ActionGroups.SetGroup(KSPActionGroup.RCS, true);
-
-            // turn on rcs thrusters
-            var Thrusters = vessel.FindPartModulesImplementing<ModuleRCS>();
-            Thrusters.ForEach(t => t.rcsEnabled = true);
 
             // Turn on reaction wheels.
             var wheels = vessel.FindPartModulesImplementing<ModuleReactionWheel>();
@@ -210,6 +213,7 @@ namespace KerbalCombatSystems
             targetLine = KCSDebug.CreateLine(Color.magenta);
             rvLine = KCSDebug.CreateLine(Color.green);
             interceptLine = KCSDebug.CreateLine(Color.cyan);
+            thrustLine = KCSDebug.CreateLine(new Color(255f / 255f, 165f / 255f, 0f, 1f)); //orange
 
             // enable autopilot
             engageAutopilot = true;
@@ -309,6 +313,8 @@ namespace KerbalCombatSystems
             // Update debug lines.
             Vector3 origin = vessel.CoM;
             KCSDebug.PlotLine(new[] { origin, origin + (relVelNrm * 15) }, rvLine);
+            KCSDebug.PlotLine(new Vector3[] { origin, origin -GetFireVector(engines, rcsList, origin) }, thrustLine);
+
 
             if (isInterceptor)
                 KCSDebug.PlotLine(new[] { origin, origin + targetVector }, interceptLine);
@@ -360,6 +366,7 @@ namespace KerbalCombatSystems
             KCSDebug.DestroyLine(rvLine);
             KCSDebug.DestroyLine(targetLine);
             KCSDebug.DestroyLine(interceptLine);
+            KCSDebug.DestroyLine(thrustLine);
             Destroy(fc);
             //Destroy(prediction);
         }
