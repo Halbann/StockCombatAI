@@ -311,18 +311,20 @@ namespace KerbalCombatSystems
             fc.Drive();
 
             // Update debug lines.
-            Vector3 origin = vessel.CoM;
-            KCSDebug.PlotLine(new[] { origin, origin + (relVelNrm * 15) }, rvLine);
-            KCSDebug.PlotLine(new Vector3[] { origin, origin -GetFireVector(engines, rcsList, origin) }, thrustLine);
+            if (KCSDebug.showLines)
+            {
+                Vector3 origin = vessel.CoM;
+                KCSDebug.PlotLine(new[] { origin, origin + (relVelNrm * 15) }, rvLine);
+                KCSDebug.PlotLine(new Vector3[] { origin, origin + (GetFireVector(engines, rcsList, origin) * -1) }, thrustLine);
 
 
-            if (isInterceptor)
-                KCSDebug.PlotLine(new[] { origin, origin + targetVector }, interceptLine);
-            else
-                KCSDebug.PlotLine(new[] { origin, origin + targetVector }, targetLine);
-
-            //if (isInterceptor)
-            //    prediction.transform.position = predictedPosWorld;
+                if (isInterceptor)
+                    KCSDebug.PlotLine(new[] { origin, origin + targetVector }, interceptLine);
+                else
+                    KCSDebug.PlotLine(new[] { origin, origin + targetVector }, targetLine);
+                //if (isInterceptor)
+                //    prediction.transform.position = predictedPosWorld;
+            }
         }
 
         public override void Setup()
