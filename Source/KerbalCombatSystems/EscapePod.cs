@@ -39,7 +39,7 @@ namespace KerbalCombatSystems
         public void BeginEscape()
         {
             //find decoupler
-            seperator = FindDecoupler(part, "Escape Pod", false);
+            seperator = FindDecoupler(part, "Escape Pod");
             Debug.Log("[KCS]: Escaping from " + parent.GetName());
             //set the refresh rate
             refreshRate = HighLogic.CurrentGame.Parameters.CustomParams<KCSCombat>().refreshRate;

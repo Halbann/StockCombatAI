@@ -467,7 +467,7 @@ namespace KerbalCombatSystems
 
             if (decoupler == null)
             {
-                var module = KCS.FindDecoupler(part, "Weapon", true); // todo: set to false later
+                var module = KCS.FindDecoupler(part, "Weapon"); // todo: set to false later
                 if (module == null) return 1.0f;
                 decoupler = module.part;
             }
@@ -488,7 +488,7 @@ namespace KerbalCombatSystems
         private void CountChildDecouplers()
         {
             Part parent;
-            var decoupler = FindDecoupler(part, "Weapon", true); // todo: set to false later
+            var decoupler = FindDecoupler(part, "Weapon"); // todo: set to false later
 
             if (decoupler != null)
                 parent = decoupler.part;
@@ -502,7 +502,7 @@ namespace KerbalCombatSystems
         public float CalculateAcceleration(Part decoupler = null)
         {
             if (decoupler == null)
-                decoupler = FindDecoupler(part, "Weapon", true).part;
+                decoupler = FindDecoupler(part, "Weapon").part;
 
             var children = decoupler.FindChildParts<Part>(true).ToList();
 
