@@ -321,7 +321,6 @@ namespace KerbalCombatSystems
                 KCSDebug.PlotLine(new[] { origin, origin + (relVelNrm * 15) }, rvLine);
                 KCSDebug.PlotLine(new Vector3[] { origin, origin + vessel.transform.TransformDirection(propulsionVector)}, thrustLine);
 
-
                 if (isInterceptor)
                     KCSDebug.PlotLine(new[] { origin, origin + targetVector }, interceptLine);
                 else
