@@ -41,6 +41,7 @@ namespace KerbalCombatSystems
         private KCSFlightController fc;
         private ModuleDecouplerDesignate seperator;
         private ModuleWeaponController controller;
+        private List<ModuleRCSFX> rcsThrusters;
         private List<ModuleEngines> engines;
         private ModuleEngines mainEngine;
         private Part mainEnginePart;
