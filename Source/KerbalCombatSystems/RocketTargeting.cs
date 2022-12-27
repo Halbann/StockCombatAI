@@ -137,15 +137,15 @@ namespace KerbalCombatSystems
 
             // Find the engines.
             var engines = new List<ModuleEngines>();
-            var thrusters = new List<ModuleRCSFX>(); //list isn't used in rockets but the util requires it
             ModuleEngines eng;
 
             foreach (var p in rocketParts)
             {
                 eng = p.FindModuleImplementing<ModuleEngines>();
+                if (eng == null)
+                    continue;
 
-                if (eng == null) continue;
-                    engines.Add(eng);
+                engines.Add(eng);
 
                 // Measure total fuel consumption in tons per second.
                 consumptionRate += Mathf.Lerp(eng.minFuelFlow, eng.maxFuelFlow, 1 * 0.01f * eng.thrustPercentage) * eng.flowMultiplier; // throttle = 1
@@ -154,7 +154,7 @@ namespace KerbalCombatSystems
             if (engines.Count < 1)
                 return -1;
 
-            Vector3 thrustVector = GetFireVector(engines, thrusters, origin) * -1;
+            Vector3 thrustVector = GetFireVector(origin, engines) * -1;
             aimVector = thrustVector.normalized;
 
             float thrust = Vector3.Dot(thrustVector, decoupler.transform.up);
@@ -267,8 +267,6 @@ namespace KerbalCombatSystems
             controller.aimPart = decoupler.part;
         }
 
-        
-
         public void OnDestroy() =>
             KCSDebug.DestroyLine(leadLine);
 
@@ -278,7 +276,7 @@ namespace KerbalCombatSystems
             var mr = prediction.GetComponent<MeshRenderer>();
 
             Material sphereMat = new Material(Shader.Find("Unlit/Color"));
-            sphereMat.color = new Color(1f, 0f, 1f, 0.4f);//was hoping this would come up opaque tbh
+            sphereMat.color = new Color(1f, 0f, 1f, 0.4f);
             mr.material = sphereMat;
 
             //todo sphere doesn't destroy

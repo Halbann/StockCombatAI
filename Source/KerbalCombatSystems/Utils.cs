@@ -48,12 +48,15 @@ namespace KerbalCombatSystems
             //The basic ModuleRCS is depreciated and doesn't work properly with multiple nozzle rcs parts
             List<ModuleRCSFX> RCS = v.FindPartModulesImplementing<ModuleRCSFX>();
 
-            return GetFireVector(engines, RCS, v.transform.position).magnitude;
+            return GetFireVector(v.transform.position, engines, RCS).magnitude;
         }
 
-        public static Vector3 GetFireVector(List<ModuleEngines> engines, List<ModuleRCSFX> RCS, Vector3 origin)
+        public static Vector3 GetFireVector(Vector3 origin, List<ModuleEngines> engines, List<ModuleRCSFX> RCS = null)
         {
             //method to get the mean thrust vector of a list of engines and throttle enabled RCS
+
+            if (RCS == null)
+                RCS = new List<ModuleRCSFX>();
 
             //start the expected movement vector at the first child of the decoupler
             Vector3 thrustVector = origin;
@@ -170,6 +173,7 @@ namespace KerbalCombatSystems
             GameObject tc = new GameObject("dynamic");
             Transform transform = tc.transform;
             transform.SetParent(commander.transform);
+            transform.position = commander.transform.position;
 
             // Create a new control point with the transform.
             ControlPoint dynamic = new ControlPoint("dynamic", "Dynamic", transform, Vector3.zero);

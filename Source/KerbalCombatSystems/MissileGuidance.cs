@@ -34,6 +34,7 @@ namespace KerbalCombatSystems
         public float maxAcceleration;
         private Vector3 rcs;
         private float targetSize;
+        private Vector3 propulsionVector;
 
         // Components
 
@@ -41,7 +42,6 @@ namespace KerbalCombatSystems
         private ModuleDecouplerDesignate seperator;
         private ModuleWeaponController controller;
         private List<ModuleEngines> engines;
-        private List<ModuleRCSFX> rcsList;
         private ModuleEngines mainEngine;
         private Part mainEnginePart;
         private int partCount = -1;
@@ -96,14 +96,18 @@ namespace KerbalCombatSystems
             fc.RCSPower = 20;
             fc.Drive();
 
-            //get and enable rcs thrusters
-            rcsList = vessel.FindPartModulesImplementing<ModuleRCSFX>();
-            rcsList.ForEach(t => t.rcsEnabled = true);
+            // Get and enable RCS thrusters.
+            List<ModuleRCSFX> rcsThrusters = vessel.FindPartModulesImplementing<ModuleRCSFX>();
+            rcsThrusters.ForEach(t => t.rcsEnabled = true);
 
-            //get probe core and modify it's reference transform
+            // Get a probe core and align its reference transform with the propulsion vector.
             ModuleCommand commander = FindCommand(vessel);
-            AlignReference(commander, -GetFireVector(engines, rcsList, commander.transform.position));
+            propulsionVector = -GetFireVector(commander.transform.position, engines, rcsThrusters);
+            AlignReference(commander, propulsionVector);
             commander.MakeReference();
+
+            // Store the propulsion vector for debugging.
+            propulsionVector = vessel.transform.InverseTransformDirection(propulsionVector);
 
             fc.attitude = vessel.ReferenceTransform.up;
 
@@ -315,7 +319,7 @@ namespace KerbalCombatSystems
             {
                 Vector3 origin = vessel.CoM;
                 KCSDebug.PlotLine(new[] { origin, origin + (relVelNrm * 15) }, rvLine);
-                KCSDebug.PlotLine(new Vector3[] { origin, origin + (GetFireVector(engines, rcsList, origin) * -1) }, thrustLine);
+                KCSDebug.PlotLine(new Vector3[] { origin, origin + vessel.transform.TransformDirection(propulsionVector)}, thrustLine);
 
 
                 if (isInterceptor)
