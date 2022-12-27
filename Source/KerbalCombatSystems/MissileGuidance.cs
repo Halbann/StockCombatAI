@@ -98,7 +98,7 @@ namespace KerbalCombatSystems
             fc.Drive();
 
             // Get and enable RCS thrusters.
-            List<ModuleRCSFX> rcsThrusters = vessel.FindPartModulesImplementing<ModuleRCSFX>();
+            rcsThrusters = vessel.FindPartModulesImplementing<ModuleRCSFX>();
             rcsThrusters.ForEach(t => t.rcsEnabled = true);
 
             // Get a probe core and align its reference transform with the propulsion vector.
