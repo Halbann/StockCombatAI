@@ -256,7 +256,7 @@ namespace KerbalCombatSystems
 
         private void NextRocket()
         {
-            decouplers = FindDecouplerChildren(part.parent, "Default");
+            decouplers = FindDecouplerChildren(part.parent);
             if (decouplers.Count < 1)
             {
                 controller.canFire = false;

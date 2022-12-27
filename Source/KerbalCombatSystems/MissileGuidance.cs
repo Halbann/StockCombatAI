@@ -54,7 +54,7 @@ namespace KerbalCombatSystems
         private IEnumerator Launch()
         {
             // find decoupler
-            seperator = FindDecoupler(part, "Default");
+            seperator = FindDecoupler(part);
 
             bool frontLaunch = Vector3.Dot(seperator.transform.up, vessel.ReferenceTransform.up) > 0.99;
             controller.frontLaunch = frontLaunch;
@@ -207,7 +207,7 @@ namespace KerbalCombatSystems
             fc.alignmentToleranceforBurn = previousTolerance;
 
             // Remove end cap. todo: will need to change to support cluster missiles.
-            List<ModuleDecouplerDesignate> decouplers = FindDecouplerChildren(vessel.rootPart, "Default");
+            List<ModuleDecouplerDesignate> decouplers = FindDecouplerChildren(vessel.rootPart);
             decouplers.ForEach(d => d.Separate());
 
             List<ModuleProceduralFairing> fairings = vessel.FindPartModulesImplementing<ModuleProceduralFairing>();

@@ -467,7 +467,7 @@ namespace KerbalCombatSystems
 
             if (decoupler == null)
             {
-                var module = KCS.FindDecoupler(part, "Weapon"); // todo: set to false later
+                var module = KCS.FindDecoupler(part, "Weapon");
                 if (module == null) return 1.0f;
                 decoupler = module.part;
             }
@@ -488,7 +488,7 @@ namespace KerbalCombatSystems
         private void CountChildDecouplers()
         {
             Part parent;
-            var decoupler = FindDecoupler(part, "Weapon"); // todo: set to false later
+            var decoupler = FindDecoupler(part, "Weapon");
 
             if (decoupler != null)
                 parent = decoupler.part;
