@@ -54,7 +54,7 @@ namespace KerbalCombatSystems
         private IEnumerator Launch()
         {
             // find decoupler
-            seperator = FindDecoupler(part, "Default");
+            seperator = FindDecoupler(part);
 
             bool frontLaunch = Vector3.Dot(seperator.transform.up, vessel.ReferenceTransform.up) > 0.99;
             controller.frontLaunch = frontLaunch;
@@ -102,7 +102,7 @@ namespace KerbalCombatSystems
 
             //get probe core and modify it's reference transform
             ModuleCommand commander = FindCommand(vessel);
-            AlignReference(commander, -GetFireVector(engines, rcsList, commander.transform.position));
+            AlignReference(commander, -GetFireVector(commander.transform.position, engines, rcsList));
             commander.MakeReference();
 
             fc.attitude = vessel.ReferenceTransform.up;
@@ -203,7 +203,7 @@ namespace KerbalCombatSystems
             fc.alignmentToleranceforBurn = previousTolerance;
 
             // Remove end cap. todo: will need to change to support cluster missiles.
-            List<ModuleDecouplerDesignate> decouplers = FindDecouplerChildren(vessel.rootPart, "Default");
+            List<ModuleDecouplerDesignate> decouplers = FindDecouplerChildren(vessel.rootPart);
             decouplers.ForEach(d => d.Separate());
 
             List<ModuleProceduralFairing> fairings = vessel.FindPartModulesImplementing<ModuleProceduralFairing>();
@@ -315,7 +315,7 @@ namespace KerbalCombatSystems
             {
                 Vector3 origin = vessel.CoM;
                 KCSDebug.PlotLine(new[] { origin, origin + (relVelNrm * 15) }, rvLine);
-                KCSDebug.PlotLine(new Vector3[] { origin, origin + (GetFireVector(engines, rcsList, origin) * -1) }, thrustLine);
+                KCSDebug.PlotLine(new Vector3[] { origin, origin + (GetFireVector(origin, engines, rcsList) * -1) }, thrustLine);
 
 
                 if (isInterceptor)

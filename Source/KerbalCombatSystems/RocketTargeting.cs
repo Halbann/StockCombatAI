@@ -154,7 +154,7 @@ namespace KerbalCombatSystems
             if (engines.Count < 1)
                 return -1;
 
-            Vector3 thrustVector = GetFireVector(engines, thrusters, origin) * -1;
+            Vector3 thrustVector = GetFireVector(origin, engines, thrusters) * -1;
             aimVector = thrustVector.normalized;
 
             float thrust = Vector3.Dot(thrustVector, decoupler.transform.up);
@@ -256,7 +256,7 @@ namespace KerbalCombatSystems
 
         private void NextRocket()
         {
-            decouplers = FindDecouplerChildren(part.parent, "Default");
+            decouplers = FindDecouplerChildren(part.parent);
             if (decouplers.Count < 1)
             {
                 controller.canFire = false;
