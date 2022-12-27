@@ -162,24 +162,25 @@ namespace KerbalCombatSystems
             //do nothing otherwise
         }
 
+        // Create and set a new control point for a command module (commander) pointing along a world space vector (direction).
+        // Uses: controlling missiles from the the average engine direction to allow for mistaken/unconventional probe core orientation.
         public static void AlignReference(ModuleCommand commander, Vector3 direction)
         {
-            //align a command modules point of reference with a given vector
-            ControlPoint control = commander.GetControlPoint("dynamic");
+            // Create a new transform named dynamic.
+            GameObject tc = new GameObject("dynamic");
+            Transform transform = tc.transform;
+            transform.SetParent(commander.transform);
+
+            // Create a new control point with the transform.
+            ControlPoint dynamic = new ControlPoint("dynamic", "Dynamic", transform, Vector3.zero);
+
+            // Orient the control point towards direction (finger) with perpendicular as the up vector (thumb).
+            Vector3 perpendicular = Vector3.ProjectOnPlane(commander.transform.forward, direction);
+            dynamic.transform.rotation = Quaternion.LookRotation(perpendicular, direction); // VAB orientation.
+
+            // Add the control point to the command module and set it as active.
+            commander.controlPoints.Add("dynamic", dynamic);
             commander.SetControlPoint("dynamic");
-
-            //check that one doesn't already exist
-            if (control == null)
-            {
-                //switch over to default as a backup
-                control = commander.GetControlPoint("_default");
-                commander.SetControlPoint("_default");
-            }
-
-            //generate a new vector to act as the upwards direction
-            Vector3 perpendicular = new Vector3(1f, 1f, -(direction.x + direction.y) / direction.z);
-            //rotate the control point to be inline with the direction with perpendicular acting as the second pin
-            control.transform.rotation = Quaternion.LookRotation(perpendicular, direction);
         }
 
         #endregion
