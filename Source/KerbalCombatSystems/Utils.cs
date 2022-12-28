@@ -169,27 +169,21 @@ namespace KerbalCombatSystems
         // Uses: controlling missiles from the the average engine direction to allow for mistaken/unconventional probe core orientation.
         public static void AlignReference(ModuleCommand commander, Vector3 direction)
         {
-            ControlPoint dynamic = commander.GetControlPoint("dynamic");
+            // Create a new transform named dynamic.
+            GameObject tc = new GameObject("dynamic");
+            Transform transform = tc.transform;
+            transform.SetParent(commander.transform);
+            transform.position = commander.transform.position;
 
-            if (dynamic == null)
-            {
-                // Create a new transform named dynamic.
-                GameObject tc = new GameObject("dynamic");
-                Transform transform = tc.transform;
-                transform.SetParent(commander.transform);
-                transform.position = commander.transform.position;
-
-                // Create a new control point with the transform.
-                dynamic = new ControlPoint("dynamic", "Dynamic", transform, Vector3.zero);
-
-                // Add the control point to the command module.
-                commander.controlPoints.Add("dynamic", dynamic);
-            }
+            // Create a new control point with the transform.
+            ControlPoint dynamic = new ControlPoint("dynamic", "Dynamic", transform, Vector3.zero);
 
             // Orient the control point towards direction (finger) with perpendicular as the up vector (thumb).
             Vector3 perpendicular = Vector3.ProjectOnPlane(commander.transform.forward, direction);
             dynamic.transform.rotation = Quaternion.LookRotation(perpendicular, direction); // VAB orientation.
 
+            // Add the control point to the command module and set it as active.
+            commander.controlPoints.Add("dynamic", dynamic);
             commander.SetControlPoint("dynamic");
         }
 
@@ -221,9 +215,6 @@ namespace KerbalCombatSystems
         // Search up the part tree to find a separator.
         public static ModuleDecouplerDesignate FindDecoupler(Part origin, string type = "Default")
         {
-            if (type == null)
-                type = "Default";
-
             Part currentPart;
             Part nextPart = origin.parent;
             ModuleDecouplerDesignate module;
@@ -250,9 +241,6 @@ namespace KerbalCombatSystems
         // Search the children of a specified part for separators.
         public static List<ModuleDecouplerDesignate> FindDecouplerChildren(Part root, string type = "Default")
         {
-            if (type == null)
-                type = "Default";
-
             List<Part> childParts = root.FindChildParts<Part>(true).ToList();
             childParts.Insert(0, root); //check the parent itself
 
