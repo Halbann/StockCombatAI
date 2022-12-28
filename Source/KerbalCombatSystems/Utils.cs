@@ -241,7 +241,7 @@ namespace KerbalCombatSystems
         public static List<ModuleDecouplerDesignate> FindDecouplerChildren(Part root, string type = "Default")
         {
             List<Part> childParts = root.FindChildParts<Part>(true).ToList();
-            childParts.Insert(0, root);
+            childParts.Insert(0, root); //check the parent itself
 
             List<ModuleDecouplerDesignate> seperatorList = new List<ModuleDecouplerDesignate>();
             ModuleDecouplerDesignate module;
