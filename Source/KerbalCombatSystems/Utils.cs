@@ -227,6 +227,7 @@ namespace KerbalCombatSystems
                 // make sure the decoupler designator exists and is the specified type
                 module = currentPart.GetComponent<ModuleDecouplerDesignate>();
                 if (module == null) continue;
+                //"" is shorthand for ignoring the type requirement and firing any decoupler
                 if (type != "" && module.decouplerDesignation != type) continue;
                 //strike any decouplers without any child parts
                 if (!currentPart.FindChildParts<Part>(true).ToList().Any()) continue;
