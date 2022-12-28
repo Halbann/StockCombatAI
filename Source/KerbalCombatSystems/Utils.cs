@@ -48,15 +48,12 @@ namespace KerbalCombatSystems
             //The basic ModuleRCS is depreciated and doesn't work properly with multiple nozzle rcs parts
             List<ModuleRCSFX> RCS = v.FindPartModulesImplementing<ModuleRCSFX>();
 
-            return GetFireVector(v.transform.position, engines, RCS).magnitude;
+            return GetFireVector(engines, RCS, v.transform.position).magnitude;
         }
 
-        public static Vector3 GetFireVector(Vector3 origin, List<ModuleEngines> engines, List<ModuleRCSFX> RCS = null)
+        public static Vector3 GetFireVector(List<ModuleEngines> engines, List<ModuleRCSFX> RCS, Vector3 origin)
         {
             //method to get the mean thrust vector of a list of engines and throttle enabled RCS
-            //default list insertion
-            if (RCS == null)
-                RCS = new List<ModuleRCSFX>();
 
             //start the expected movement vector at the first child of the decoupler
             Vector3 thrustVector = origin;
@@ -210,7 +207,7 @@ namespace KerbalCombatSystems
             return ship;
         }
 
-        public static ModuleDecouplerDesignate FindDecoupler(Part origin, string type = "Default")
+        public static ModuleDecouplerDesignate FindDecoupler(Part origin, string type)
         {
             // method to search up the part tree to find a single decoupler
             bool defaultCoupler = (type != "" || type != null || type != "Default");
@@ -237,7 +234,7 @@ namespace KerbalCombatSystems
             return null;
         }
 
-        public static List<ModuleDecouplerDesignate> FindDecouplerChildren(Part root, string type = "Default")
+        public static List<ModuleDecouplerDesignate> FindDecouplerChildren(Part root, string type)
         {
             // method to search the children of a specified part for decoupler modules
             bool defaultCoupler = (type != "" || type != null || type != "Default");
