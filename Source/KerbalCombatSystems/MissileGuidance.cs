@@ -34,14 +34,15 @@ namespace KerbalCombatSystems
         public float maxAcceleration;
         private Vector3 rcs;
         private float targetSize;
+        private Vector3 propulsionVector;
 
         // Components
 
         private KCSFlightController fc;
         private ModuleDecouplerDesignate seperator;
         private ModuleWeaponController controller;
+        private List<ModuleRCSFX> rcsThrusters;
         private List<ModuleEngines> engines;
-        private List<ModuleRCSFX> rcsList;
         private ModuleEngines mainEngine;
         private Part mainEnginePart;
         private int partCount = -1;
@@ -54,7 +55,7 @@ namespace KerbalCombatSystems
         private IEnumerator Launch()
         {
             // find decoupler
-            seperator = FindDecoupler(part, "Default");
+            seperator = FindDecoupler(part);
 
             bool frontLaunch = Vector3.Dot(seperator.transform.up, vessel.ReferenceTransform.up) > 0.99;
             controller.frontLaunch = frontLaunch;
@@ -96,14 +97,18 @@ namespace KerbalCombatSystems
             fc.RCSPower = 20;
             fc.Drive();
 
-            //get and enable rcs thrusters
-            rcsList = vessel.FindPartModulesImplementing<ModuleRCSFX>();
-            rcsList.ForEach(t => t.rcsEnabled = true);
+            // Get and enable RCS thrusters.
+            rcsThrusters = vessel.FindPartModulesImplementing<ModuleRCSFX>();
+            rcsThrusters.ForEach(t => t.rcsEnabled = true);
 
-            //get probe core and modify it's reference transform
+            // Get a probe core and align its reference transform with the propulsion vector.
             ModuleCommand commander = FindCommand(vessel);
-            AlignReference(commander, -GetFireVector(engines, rcsList, commander.transform.position));
+            propulsionVector = -GetFireVector(commander.transform.position, engines, rcsThrusters);
+            AlignReference(commander, propulsionVector);
             commander.MakeReference();
+
+            // Store the propulsion vector for debugging.
+            propulsionVector = vessel.transform.InverseTransformDirection(propulsionVector);
 
             fc.attitude = vessel.ReferenceTransform.up;
 
@@ -203,7 +208,7 @@ namespace KerbalCombatSystems
             fc.alignmentToleranceforBurn = previousTolerance;
 
             // Remove end cap. todo: will need to change to support cluster missiles.
-            List<ModuleDecouplerDesignate> decouplers = FindDecouplerChildren(vessel.rootPart, "Default");
+            List<ModuleDecouplerDesignate> decouplers = FindDecouplerChildren(vessel.rootPart);
             decouplers.ForEach(d => d.Separate());
 
             List<ModuleProceduralFairing> fairings = vessel.FindPartModulesImplementing<ModuleProceduralFairing>();
@@ -315,8 +320,7 @@ namespace KerbalCombatSystems
             {
                 Vector3 origin = vessel.CoM;
                 KCSDebug.PlotLine(new[] { origin, origin + (relVelNrm * 15) }, rvLine);
-                KCSDebug.PlotLine(new Vector3[] { origin, origin + (GetFireVector(engines, rcsList, origin) * -1) }, thrustLine);
-
+                KCSDebug.PlotLine(new Vector3[] { origin, origin + vessel.transform.TransformDirection(propulsionVector)}, thrustLine);
 
                 if (isInterceptor)
                     KCSDebug.PlotLine(new[] { origin, origin + targetVector }, interceptLine);

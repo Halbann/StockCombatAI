@@ -48,12 +48,15 @@ namespace KerbalCombatSystems
             //The basic ModuleRCS is depreciated and doesn't work properly with multiple nozzle rcs parts
             List<ModuleRCSFX> RCS = v.FindPartModulesImplementing<ModuleRCSFX>();
 
-            return GetFireVector(engines, RCS, v.transform.position).magnitude;
+            return GetFireVector(v.transform.position, engines, RCS).magnitude;
         }
 
-        public static Vector3 GetFireVector(List<ModuleEngines> engines, List<ModuleRCSFX> RCS, Vector3 origin)
+        public static Vector3 GetFireVector(Vector3 origin, List<ModuleEngines> engines, List<ModuleRCSFX> RCS = null)
         {
             //method to get the mean thrust vector of a list of engines and throttle enabled RCS
+
+            if (RCS == null)
+                RCS = new List<ModuleRCSFX>();
 
             //start the expected movement vector at the first child of the decoupler
             Vector3 thrustVector = origin;
@@ -162,24 +165,26 @@ namespace KerbalCombatSystems
             //do nothing otherwise
         }
 
+        // Create and set a new control point for a command module (commander) pointing along a world space vector (direction).
+        // Uses: controlling missiles from the the average engine direction to allow for mistaken/unconventional probe core orientation.
         public static void AlignReference(ModuleCommand commander, Vector3 direction)
         {
-            //align a command modules point of reference with a given vector
-            ControlPoint control = commander.GetControlPoint("dynamic");
+            // Create a new transform named dynamic.
+            GameObject tc = new GameObject("dynamic");
+            Transform transform = tc.transform;
+            transform.SetParent(commander.transform);
+            transform.position = commander.transform.position;
+
+            // Create a new control point with the transform.
+            ControlPoint dynamic = new ControlPoint("dynamic", "Dynamic", transform, Vector3.zero);
+
+            // Orient the control point towards direction (finger) with perpendicular as the up vector (thumb).
+            Vector3 perpendicular = Vector3.ProjectOnPlane(commander.transform.forward, direction);
+            dynamic.transform.rotation = Quaternion.LookRotation(perpendicular, direction); // VAB orientation.
+
+            // Add the control point to the command module and set it as active.
+            commander.controlPoints.Add("dynamic", dynamic);
             commander.SetControlPoint("dynamic");
-
-            //check that one doesn't already exist
-            if (control == null)
-            {
-                //switch over to default as a backup
-                control = commander.GetControlPoint("_default");
-                commander.SetControlPoint("_default");
-            }
-
-            //generate a new vector to act as the upwards direction
-            Vector3 perpendicular = new Vector3(1f, 1f, -(direction.x + direction.y) / direction.z);
-            //rotate the control point to be inline with the direction with perpendicular acting as the second pin
-            control.transform.rotation = Quaternion.LookRotation(perpendicular, direction);
         }
 
         #endregion
@@ -207,11 +212,9 @@ namespace KerbalCombatSystems
             return ship;
         }
 
-        public static ModuleDecouplerDesignate FindDecoupler(Part origin, string type)
+        // Search up the part tree to find a separator.
+        public static ModuleDecouplerDesignate FindDecoupler(Part origin, string type = "Default")
         {
-            // method to search up the part tree to find a single decoupler
-            bool defaultCoupler = (type != "" || type != null || type != "Default");
-
             Part currentPart;
             Part nextPart = origin.parent;
             ModuleDecouplerDesignate module;
@@ -224,7 +227,8 @@ namespace KerbalCombatSystems
                 // make sure the decoupler designator exists and is the specified type
                 module = currentPart.GetComponent<ModuleDecouplerDesignate>();
                 if (module == null) continue;
-                if (module.decouplerDesignation != type && !defaultCoupler) continue;
+                //"" is shorthand for ignoring the type requirement and firing any decoupler
+                if (type != "" && module.decouplerDesignation != type) continue;
                 //strike any decouplers without any child parts
                 if (!currentPart.FindChildParts<Part>(true).ToList().Any()) continue;
 
@@ -234,15 +238,12 @@ namespace KerbalCombatSystems
             return null;
         }
 
-        public static List<ModuleDecouplerDesignate> FindDecouplerChildren(Part root, string type)
+        // Search the children of a specified part for separators.
+        public static List<ModuleDecouplerDesignate> FindDecouplerChildren(Part root, string type = "Default")
         {
-            // method to search the children of a specified part for decoupler modules
-            bool defaultCoupler = (type != "" || type != null || type != "Default");
-
             List<Part> childParts = root.FindChildParts<Part>(true).ToList();
-            //check the parent itself
-            childParts.Insert(0, root);
-            //spawn empty modules list to add to
+            childParts.Insert(0, root); //check the parent itself
+
             List<ModuleDecouplerDesignate> seperatorList = new List<ModuleDecouplerDesignate>();
             ModuleDecouplerDesignate module;
 
@@ -252,7 +253,8 @@ namespace KerbalCombatSystems
 
                 // make sure the decoupler designator exists and is the specified type
                 if (module == null) continue;
-                if (module.decouplerDesignation != type && !defaultCoupler) continue;
+                //"" is shorthand for ignoring the type requirement and firing any decoupler
+                if (type != "" && module.decouplerDesignation != type) continue;
                 //strike any decouplers without any child parts
                 if (!currentPart.FindChildParts<Part>(true).ToList().Any()) continue;
 
