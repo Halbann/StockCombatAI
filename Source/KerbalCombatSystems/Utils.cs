@@ -48,10 +48,10 @@ namespace KerbalCombatSystems
             //The basic ModuleRCS is depreciated and doesn't work properly with multiple nozzle rcs parts
             List<ModuleRCSFX> RCS = v.FindPartModulesImplementing<ModuleRCSFX>();
 
-            return GetFireVector(v.transform.position, engines, RCS).magnitude;
+            return GetFireVector(engines, RCS).magnitude;
         }
 
-        public static Vector3 GetFireVector(Vector3 origin, List<ModuleEngines> engines, List<ModuleRCSFX> RCS = null)
+        public static Vector3 GetFireVector(List<ModuleEngines> engines, List<ModuleRCSFX> RCS = null)
         {
             //method to get the mean thrust vector of a list of engines and throttle enabled RCS
 
@@ -59,7 +59,7 @@ namespace KerbalCombatSystems
                 RCS = new List<ModuleRCSFX>();
 
             //start the expected movement vector at the first child of the decoupler
-            Vector3 thrustVector = origin;
+            Vector3 thrustVector = new Vector3(0,0,0);
 
             engines.RemoveAll(e => !e.EngineIgnited || !e.isOperational);
             RCS.RemoveAll(r => !r.useThrottle || !r.isEnabled);

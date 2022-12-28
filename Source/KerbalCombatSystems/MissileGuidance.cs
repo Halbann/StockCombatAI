@@ -103,7 +103,7 @@ namespace KerbalCombatSystems
 
             // Get a probe core and align its reference transform with the propulsion vector.
             ModuleCommand commander = FindCommand(vessel);
-            propulsionVector = -GetFireVector(commander.transform.position, engines, rcsThrusters);
+            propulsionVector = -GetFireVector(engines, rcsThrusters);
             AlignReference(commander, propulsionVector);
             commander.MakeReference();
 
