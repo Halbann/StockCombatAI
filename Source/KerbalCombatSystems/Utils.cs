@@ -51,31 +51,33 @@ namespace KerbalCombatSystems
             return GetFireVector(engines, RCS).magnitude;
         }
 
-        public static Vector3 GetFireVector(List<ModuleEngines> engines, List<ModuleRCSFX> RCS = null)
+        public static Vector3 GetFireVector(List<ModuleEngines> engines, List<ModuleRCSFX> RCS = null, Vector3 thrustVector = default(Vector3))
         {
             //method to get the mean thrust vector of a list of engines and throttle enabled RCS
 
-            if (RCS == null)
-                RCS = new List<ModuleRCSFX>();
-
-            //start the expected movement vector at the first child of the decoupler
-            Vector3 thrustVector = new Vector3(0,0,0);
-
             engines.RemoveAll(e => !e.EngineIgnited || !e.isOperational);
-            RCS.RemoveAll(r => !r.useThrottle || !r.isEnabled);
-            //place linears first to establish a direction
-            RCS.Sort((a, b) => a.thrusterTransforms.Count().CompareTo(b.thrusterTransforms.Count()));
 
-            foreach (ModuleEngines engine in engines)
+            RCS.RemoveAll(r => !r.useThrottle || !r.isEnabled || r.flameout);
+            // Place linears first to establish a direction, not currently needed
+            //RCS.Sort((a, b) => a.thrusterTransforms.Count().CompareTo(b.thrusterTransforms.Count()));
+
+            if (engines != null && engines.Any())
             {
-                if (engines.First() == engine)
-                    thrustVector = GetMeanVector(engine);
-                thrustVector += GetMeanVector(engine);
+                foreach (ModuleEngines engine in engines)
+                {
+                    // If there are engines we can override any potential provided vector
+                    if (engines.First() == engine)
+                        thrustVector = GetMeanVector(engine);
+                    thrustVector += GetMeanVector(engine);
+                }
             }
 
-            foreach (ModuleRCSFX thruster in RCS)
+            if (RCS != null && RCS.Any())
             {
-                thrustVector = GetRCSVector(thruster, thrustVector);
+                foreach (ModuleRCSFX thruster in RCS)
+                {
+                    thrustVector += GetRCSVector(thruster, thrustVector);
+                }
             }
 
             return thrustVector;
@@ -91,9 +93,8 @@ namespace KerbalCombatSystems
             {
                 Vector3 pos = thrusterTransform.forward;
                 float angle = Vector3.Angle(thrustVector, pos);
-                // rcs will fire if facing in any degree forwards so include them only
-                if (angle > 90)
-                    thrustVector += (pos.normalized * thruster.thrusterPower);
+                // rcs will fire if facing in any degree forwards
+                if (angle > 90) thrustVector += pos.normalized * thruster.thrusterPower;
             }
 
             return thrustVector;
@@ -101,8 +102,7 @@ namespace KerbalCombatSystems
 
         public static Vector3 GetMeanVector(ModuleEngines thruster)
         {
-            //method to get the thrust vector of a specific part, 
-            //which in some cases is not the part vector
+            //method to get the thrust vector of a specified engine
             Vector3 meanVector = Vector3.zero;
             List<Transform> positions = thruster.thrustTransforms;
 

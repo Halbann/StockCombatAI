@@ -43,8 +43,6 @@ namespace KerbalCombatSystems
         private ModuleWeaponController controller;
         private List<ModuleRCSFX> rcsThrusters;
         private List<ModuleEngines> engines;
-        private ModuleEngines mainEngine;
-        private Part mainEnginePart;
         private int partCount = -1;
 
         // Debugging line variables.
@@ -85,17 +83,6 @@ namespace KerbalCombatSystems
             // turn on engines
             engines = vessel.FindPartModulesImplementing<ModuleEngines>();
             engines.ForEach(e => e.Activate());
-            mainEngine = engines.First();
-            mainEnginePart = mainEngine.part;
-
-            // Setup flight controller.
-            fc = part.gameObject.AddComponent<KCSFlightController>();
-            fc.alignmentToleranceforBurn = isInterceptor ? 60 : 20;
-            fc.lerpAttitude = false;
-            fc.throttleLerpRate = 99;
-            fc.RCSVector = vessel.ReferenceTransform.up;
-            fc.RCSPower = 20;
-            fc.Drive();
 
             // Get and enable RCS thrusters.
             rcsThrusters = vessel.FindPartModulesImplementing<ModuleRCSFX>();
@@ -103,14 +90,22 @@ namespace KerbalCombatSystems
 
             // Get a probe core and align its reference transform with the propulsion vector.
             ModuleCommand commander = FindCommand(vessel);
-            propulsionVector = -GetFireVector(engines, rcsThrusters);
-            AlignReference(commander, propulsionVector);
             commander.MakeReference();
+            propulsionVector = -GetFireVector(engines, rcsThrusters, -vessel.ReferenceTransform.up);
+            AlignReference(commander, propulsionVector);
+
+            // Setup flight controller.
+            fc = part.gameObject.AddComponent<KCSFlightController>();
+            fc.alignmentToleranceforBurn = isInterceptor ? 60 : 20;
+            fc.attitude = vessel.ReferenceTransform.up;
+            fc.lerpAttitude = false;
+            fc.throttleLerpRate = 99;
+            fc.RCSVector = vessel.ReferenceTransform.up;
+            fc.RCSPower = 20;
+            fc.Drive();
 
             // Store the propulsion vector for debugging.
             propulsionVector = vessel.transform.InverseTransformDirection(propulsionVector);
-
-            fc.attitude = vessel.ReferenceTransform.up;
 
             //enable RCS for translation
             if (!vessel.ActionGroups[KSPActionGroup.RCS])
@@ -120,7 +115,8 @@ namespace KerbalCombatSystems
             var wheels = vessel.FindPartModulesImplementing<ModuleReactionWheel>();
             wheels.ForEach(w => w.wheelState = ModuleReactionWheel.WheelState.Active);
 
-            maxThrust = GetMaxThrust(vessel);
+            Debug.Log(propulsionVector.magnitude);
+            maxThrust = propulsionVector.magnitude;
             maxAcceleration = maxThrust / vessel.GetTotalMass();
 
             vessel.targetObject = target;
@@ -207,7 +203,7 @@ namespace KerbalCombatSystems
 
             fc.alignmentToleranceforBurn = previousTolerance;
 
-            // Remove end cap. todo: will need to change to support cluster missiles.
+            // Remove end cap
             List<ModuleDecouplerDesignate> decouplers = FindDecouplerChildren(vessel.rootPart);
             decouplers.ForEach(d => d.Separate());
 
@@ -292,13 +288,12 @@ namespace KerbalCombatSystems
 
             targetVectorNormal = interceptVector.normalized;
 
+            //remove engines and thrusters that have been enabled and are dry, destroyed, or disconnected
+            engines.RemoveAll(e => (e.EngineIgnited && e.flameout) || e.vessel != vessel || e == null);
+            rcsThrusters.RemoveAll(r => !r.useThrottle || (r.isEnabled && r.flameout) || r.vessel != vessel || r == null);
+
             accuracy = Vector3.Dot(targetVectorNormal, relVelNrm);
-            if (targetVector.magnitude < shutoffDistance
-                || ((mainEngine == null
-                || !mainEngine.isOperational
-                || mainEngine == null
-                || mainEnginePart.vessel != vessel)
-                && accuracy < 0.99))
+            if (targetVector.magnitude < shutoffDistance || (!engines.Any() && !rcsThrusters.Any()) && accuracy < 0.99)
             {
                 StopGuidance();
                 return;
