@@ -115,7 +115,6 @@ namespace KerbalCombatSystems
             var wheels = vessel.FindPartModulesImplementing<ModuleReactionWheel>();
             wheels.ForEach(w => w.wheelState = ModuleReactionWheel.WheelState.Active);
 
-            Debug.Log(propulsionVector.magnitude);
             maxThrust = propulsionVector.magnitude;
             maxAcceleration = maxThrust / vessel.GetTotalMass();
 
@@ -289,8 +288,8 @@ namespace KerbalCombatSystems
             targetVectorNormal = interceptVector.normalized;
 
             //remove engines and thrusters that have been enabled and are dry, destroyed, or disconnected
-            engines.RemoveAll(e => (e.EngineIgnited && e.flameout) || e.vessel != vessel || e == null);
-            rcsThrusters.RemoveAll(r => !r.useThrottle || (r.isEnabled && r.flameout) || r.vessel != vessel || r == null);
+            engines.RemoveAll(e => e == null || (e.EngineIgnited && e.flameout) || e.vessel != vessel);
+            rcsThrusters.RemoveAll(r =>  r == null || !r.useThrottle || (r.isEnabled && r.flameout) || r.vessel != vessel);
 
             accuracy = Vector3.Dot(targetVectorNormal, relVelNrm);
             if (targetVector.magnitude < shutoffDistance || (!engines.Any() && !rcsThrusters.Any()) && accuracy < 0.99)
