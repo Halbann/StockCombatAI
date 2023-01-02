@@ -1,0 +1,17 @@
+v0.1.2
+
+Patch notes:
+Changed accuracy threshold for fireworks from a fixed angle to a multiple of the target radius.
+Added a setting for engine ignition delay time to missiles.
+Added a setting to toggle the automatic playing of animations on scanners.
+Ships will no longer move away from their target when below minimum range if their current weapon is a projectile.
+Ships will now ignore target intercept adjustments of less than a second.
+Renamed some settings for clarity.
+RCS with throttle enabled now counts towards ship propulsion status.
+
+Code Changes:
+Hid unused settings.
+Simplified FindCommand.
+Fixed bugs in the rocket module.
+Fixed a ship movement bug caused by max weapon range exceeding lock range.
+Fixed object tracking info panels in part menu displaying 0.

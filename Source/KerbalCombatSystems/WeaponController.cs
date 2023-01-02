@@ -82,8 +82,8 @@ namespace KerbalCombatSystems
         [KSPField(isPersistant = true,
               guiActive = true,
               guiActiveEditor = true,
-              guiName = "Terminal Velocity",
-              guiUnits = "m/s",
+              guiName = "Speed Limit",
+              guiUnits = " m/s",
               groupName = missileGroupName,
               groupDisplayName = missileGroupName),
               UI_FloatRange(
@@ -93,6 +93,21 @@ namespace KerbalCombatSystems
                   scene = UI_Scene.All
               )]
         public float terminalVelocity = 2000f;
+
+        [KSPField(isPersistant = true,
+              guiActive = true,
+              guiActiveEditor = true,
+              guiName = "Ignition Delay",
+              guiUnits = " s",
+              groupName = missileGroupName,
+              groupDisplayName = missileGroupName),
+              UI_FloatRange(
+                  minValue = 0f,
+                  maxValue = 1f,
+                  stepIncrement = 0.01f,
+                  scene = UI_Scene.All
+              )]
+        public float igniteDelay = 0.2f;
 
         [KSPField(isPersistant = true,
             guiActive = true,
@@ -202,6 +217,22 @@ namespace KerbalCombatSystems
         public float FWBurstSpacing = 0.25f;
 
         [KSPField(isPersistant = true,
+              guiActive = true,
+              guiActiveEditor = true,
+              guiName = "Aim Tolerance",
+              guiUnits = " Target Rad.",
+              groupName = FireworkGroupName,
+              groupDisplayName = FireworkGroupName),
+              UI_FloatRange(
+                  minValue = 0.1f,
+                  maxValue = 2f,
+                  stepIncrement = 0.1f,
+                  scene = UI_Scene.All
+              )]
+        public float FWaccuracyTolerance = 1f;
+
+        // Hidden until implementation.
+        /*[KSPField(isPersistant = true,
             guiActive = true,
             guiActiveEditor = true,
             guiName = "Use for Flak",
@@ -212,7 +243,7 @@ namespace KerbalCombatSystems
                 disabledText = "Disabled",
                 scene = UI_Scene.All
             )]
-        public bool FWUseAsCIWS = false;
+        public bool FWUseAsCIWS = false;*/
 
         #endregion
 
@@ -251,14 +282,14 @@ namespace KerbalCombatSystems
         [KSPField(isPersistant = true,
               guiActive = true,
               guiActiveEditor = true,
-              guiName = "Aiming Tolerance",
-              guiUnits = " Target Radius",
+              guiName = "Aim Tolerance",
+              guiUnits = " Target Rad.",
               groupName = rocketGroupName,
               groupDisplayName = rocketGroupName),
               UI_FloatRange(
                   minValue = 0.1f,
                   maxValue = 2f,
-                  stepIncrement = 0.01f,
+                  stepIncrement = 0.1f,
                   scene = UI_Scene.All
               )]
         public float accuracyTolerance = 0.5f;
@@ -384,14 +415,18 @@ namespace KerbalCombatSystems
             Fields["terminalVelocity"].guiActiveEditor = weaponType == "Missile";
             Fields["useAsInterceptor"].guiActive = weaponType == "Missile";
             Fields["useAsInterceptor"].guiActiveEditor = weaponType == "Missile";
+            Fields["igniteDelay"].guiActive = weaponType == "Missile";
+            Fields["igniteDelay"].guiActiveEditor = weaponType == "Missile";
 
             // Firework fields.
             Fields["FWRoundBurst"].guiActive = weaponType == "Firework";
             Fields["FWRoundBurst"].guiActiveEditor = weaponType == "Firework";
             Fields["FWBurstSpacing"].guiActive = weaponType == "Firework";
             Fields["FWBurstSpacing"].guiActiveEditor = weaponType == "Firework";
-            Fields["FWUseAsCIWS"].guiActive = weaponType == "Firework";
-            Fields["FWUseAsCIWS"].guiActiveEditor = weaponType == "Firework";
+            //Fields["FWUseAsCIWS"].guiActive = weaponType == "Firework";
+            //Fields["FWUseAsCIWS"].guiActiveEditor = weaponType == "Firework";
+            Fields["FWaccuracyTolerance"].guiActive = weaponType == "Firework";
+            Fields["FWaccuracyTolerance"].guiActiveEditor = weaponType == "Firework";
             
             // Rocket fields.
             Fields["firingInterval"].guiActive = weaponType == "Rocket";
@@ -496,7 +531,7 @@ namespace KerbalCombatSystems
                 parent = part.parent;
 
             var parts = parent.FindChildParts<Part>(true).ToList();
-            childDecouplers = parts.FindAll(p => p.HasModuleImplementing<ModuleDecouple>()).Count;
+            childDecouplers = parts.FindAll(p => p.HasModuleImplementing<ModuleDecouple>()).Count; // todo: add ModuleAnchoredDecoupler 
         }
 
         public float CalculateAcceleration(Part decoupler = null)
@@ -565,6 +600,11 @@ namespace KerbalCombatSystems
             return typeModule.Aim();
         }
 
+        public void UpdateSettings()
+        {
+            typeModule.UpdateSettings();
+        }
+
         // 'Fire' button.
 
         [KSPEvent(guiActive = true,
@@ -591,5 +631,7 @@ namespace KerbalCombatSystems
         }
 
         virtual public void Setup() { }
+
+        virtual public void UpdateSettings() { }
     }
 }

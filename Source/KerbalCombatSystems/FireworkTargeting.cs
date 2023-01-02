@@ -8,6 +8,8 @@ namespace KerbalCombatSystems
 {
     public class ModuleFirework : ModuleWeapon
     {
+        public static float fireworkSpeed = 100f;
+
         // Firework Targetting variables.
         public bool firing = false;
         Vessel Target;
@@ -22,6 +24,7 @@ namespace KerbalCombatSystems
         // stored settings
         private int RoundBurst;
         private float BurstSpacing;
+        float accuracyTolerance;
 
         //list of valid launcher modules with ammo
         private List<ModulePartFirework> FireworkLaunchers;
@@ -61,7 +64,7 @@ namespace KerbalCombatSystems
                 FiringPart = firstLauncher.part;
                 controller.aimPart = FiringPart;
                 aimVector = FiringPart.transform.up;
-                LeadVector = TargetLead(Target, FiringPart, 100f).normalized;
+                LeadVector = TargetLead(Target, FiringPart, fireworkSpeed).normalized;
 
                 // Update debug lines.
                 Origin = FiringPart.transform.position;
@@ -69,7 +72,7 @@ namespace KerbalCombatSystems
             }
 
             //once aligned correctly start the firing sequence
-            if (!firing && ((Vector3.Angle(aimVector, LeadVector) < 1f) || Target == null))
+            if (!firing && OnTarget(LeadVector, aimVector, Target.CoM - FiringPart.transform.position, controller.targetSize, accuracyTolerance))
             {
                 Fire();
             }
@@ -102,7 +105,7 @@ namespace KerbalCombatSystems
                 // Change firework settings.
                 Launcher.variationOnShellDirection = false;
                 float oldVel = Launcher.shellVelocity;
-                Launcher.shellVelocity = 100f;
+                Launcher.shellVelocity = fireworkSpeed;
 
                 // Launch shell.
                 Launcher.LaunchShell();
@@ -149,12 +152,13 @@ namespace KerbalCombatSystems
             KCSDebug.DestroyLine(AimLine);
         }
 
-        public void UpdateSettings()
+        public override void UpdateSettings()
         {
             controller = part.FindModuleImplementing<ModuleWeaponController>();
             Target = controller.target;
             RoundBurst = (int)controller.FWRoundBurst;
             BurstSpacing = controller.FWBurstSpacing;
+            accuracyTolerance = controller.accuracyTolerance;
         }
     }
 }

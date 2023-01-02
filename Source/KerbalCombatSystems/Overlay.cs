@@ -26,7 +26,7 @@ namespace KerbalCombatSystems
         public static float markerOpacity = 0.3f;
         public static float rangeNumberOpacity = 0.2f;
         public static float shipnameOpacity = 0.6f;
-        public static float globalOpacity = 1.2f;
+        public static float globalOpacity = 1.6f;
 
         public static float markerScale = 10;
         public static float iconSize = 25;
@@ -273,8 +273,6 @@ namespace KerbalCombatSystems
                 centre.up = FlightGlobals.ActiveVessel.ReferenceTransform.forward;
             else
                 centre.up = mainCamera.getReferenceFrame() * Vector3.up;
-
-            centre.position = activeVessel.CoM;
         }
 
         private void Update()
@@ -307,6 +305,7 @@ namespace KerbalCombatSystems
             if (hideOverlay)
                 return;
 
+            centre.position = activeVessel.CoM;
             WatchShipList();
 
             // Show the overlay lines only when the camera is zoomed out.
@@ -706,7 +705,7 @@ namespace KerbalCombatSystems
 
         private void OnGUI()
         {
-            if (MapView.MapIsEnabled || PauseMenu.isOpen || hideOverlay)
+            if (MapView.MapIsEnabled || PauseMenu.isOpen || hideOverlay || Camera.main == null)
                 return;
 
             if (Event.current.type.Equals(EventType.Repaint))
@@ -827,15 +826,18 @@ namespace KerbalCombatSystems
             {
                 shipNameStyle = new GUIStyle(GUI.skin.label);
 
-                Font calibriliFont = Resources.FindObjectsOfTypeAll<Font>().ToList().Find(f => f.name == "calibrili");
+                Font calibriliFont = Resources.FindObjectsOfTypeAll<Font>().ToList().Find(f => f.name == "calibril");
                 if (calibriliFont != null)
+                {
                     shipNameStyle.font = calibriliFont;
+                    shipNameStyle.fontStyle = FontStyle.Bold;
+                }
             }
 
             if (shipNameStyle.fontSize != shipFontSize)
                 shipNameStyle.fontSize = shipFontSize;
 
-            Vector2 textSize = shipNameStyle.CalcSize(new GUIContent("DD-02 PAS Rigel Kentaurus Class Battlecruiser"));
+            Vector2 textSize = shipNameStyle.CalcSize(new GUIContent("DD-02 PAS Rigel Kentaurus Class Battlecruiser")); // Max Name Length
             Rect textRect = new Rect(0, 0, textSize.x, textSize.y);
             Vector3 screenPos;
 
@@ -854,15 +856,18 @@ namespace KerbalCombatSystems
 
                 screenPos = Camera.main.WorldToScreenPoint(ship.vessel.CoM);
 
-                textRect.x = screenPos.x + 18;
-                textRect.y = (Screen.height - screenPos.y) - (textSize.y / 2);
-
+                textRect.x = screenPos.x + 18; // Shift right of centre.
+                textRect.y = (Screen.height - screenPos.y) - (textSize.y / 2); // Vertically align middle of text with centre.
+    
                 if (textRect.x > Screen.width || textRect.y > Screen.height || screenPos.z < 0) continue;
 
                 // Create a shorterned ship name with a bold prefix.
 
                 string name = ShortenName(ship.vessel.GetDisplayName());
-                string[] nameWords = name.Split(' ');
+
+                // Bold prefix disabled for now.
+                
+                /*string[] nameWords = name.Split(' ');
                 bool endPrefix = false;
                 bool allCaps;
 
@@ -877,13 +882,13 @@ namespace KerbalCombatSystems
                     nameWords[i] = allCaps && !endPrefix ? $"<b>{w}</b>" : $"<i>{w}</i>";
                 }
 
-                name = string.Join(" ", nameWords);
+                name = string.Join(" ", nameWords);*/
 
                 // Draw the ship name.
 
                 shipNameColour.a = shipnameOpacity * alpha * globalOpacity;
                 GUI.color = shipNameColour;
-                GUI.Label(textRect, name, shipNameStyle);
+                GUI.Label(textRect, "  " + name, shipNameStyle);
             }
         }
 

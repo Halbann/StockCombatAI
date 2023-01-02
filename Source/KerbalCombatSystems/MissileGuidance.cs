@@ -14,6 +14,7 @@ namespace KerbalCombatSystems
         private float maxThrust;
         private Vessel target;
         private Vessel firer;
+        private float igniteDelay;
         private float terminalVelocity;
         private ModuleWeaponController targetWeapon;
         private bool isInterceptor;
@@ -119,7 +120,7 @@ namespace KerbalCombatSystems
 
             // wait to try to prevent destruction of decoupler.
             // todo: could increase heat tolerance temporarily or calculate a lower throttle.
-            yield return new WaitForSeconds(0.2f);
+            yield return new WaitForSeconds(igniteDelay);
 
             if (!isInterceptor)
             {
@@ -330,6 +331,7 @@ namespace KerbalCombatSystems
             isInterceptor = controller.isInterceptor;
             targetWeapon = controller.targetWeapon;
             firer = vessel;
+            igniteDelay = controller.igniteDelay;
         }
 
         public override void Fire()

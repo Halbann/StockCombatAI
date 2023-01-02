@@ -40,15 +40,9 @@ namespace KerbalCombatSystems
         public override void Setup()
         {
             controller = part.FindModuleImplementing<ModuleWeaponController>();
-
             if (controller.target == null && vessel.targetObject == null) return;
-            target = controller.target ?? vessel.targetObject.GetVessel();
-            firingInterval = controller.firingInterval;
-            fireCountdown = controller.fireCountdown;
-            fireSymmetry = controller.fireSymmetry;
-            accuracyTolerance = controller.accuracyTolerance;
 
-            Debug.Log("[KCS]: decoupler is valid");
+            UpdateSettings();
             NextRocket();
 
             leadLine = KCSDebug.CreateLine(Color.green);
@@ -56,9 +50,24 @@ namespace KerbalCombatSystems
                 prediction = CreateSphere();
         }
 
+        public override void UpdateSettings()
+        {
+            target = controller.target ?? vessel.targetObject.GetVessel();
+            firingInterval = controller.firingInterval;
+            fireCountdown = controller.fireCountdown;
+            fireSymmetry = controller.fireSymmetry;
+            accuracyTolerance = controller.accuracyTolerance;
+        }
+
         public override Vector3 Aim()
         {
-            if (decouplers.Count < 1 || decoupler == null || decoupler.part.vessel != vessel || target == null)
+            if (decoupler == null || decoupler.part.vessel != vessel)
+            {
+                NextRocket();
+                return Vector3.zero;
+            }
+
+            if (decouplers.Count < 1 || target == null)
                 return Vector3.zero;
 
             float timeSinceLastCalculated = Time.time - lastCalculated;
@@ -82,11 +91,7 @@ namespace KerbalCombatSystems
 
             KCSDebug.PlotLine(new Vector3[] { origin, origin + leadVector }, leadLine);
 
-            // Scale the accuracy requirement (in degrees) based on the distance and size of the target.
-            Vector3 targetRadius = Vector3.ProjectOnPlane(Vector3.up, targetVector.normalized).normalized * (controller.targetSize / 2) * accuracyTolerance;
-            float aimTolerance = Vector3.Angle(targetVector, targetVector + targetRadius);
-
-            bool onTarget = Vector3.Angle(leadVector.normalized, decoupler.transform.up) < aimTolerance;
+            bool onTarget = OnTarget(leadVector.normalized, decoupler.transform.up, targetVector, controller.targetSize, accuracyTolerance);
             if (onTarget)
             {
                 // We must remain on target for fireCountdown seconds before we can fire.

@@ -75,13 +75,13 @@ namespace KerbalCombatSystems
         public bool alive = true;
 
         [KSPField(isPersistant = true)]
-        private bool DeployedSensors;
+        private bool deployedSensors;
 
         [KSPField(isPersistant = true,
             guiActive = true,
             guiActiveEditor = true,
             guiName = "Manoeuvring Speed",
-            guiUnits = "m/s",
+            guiUnits = " m/s",
             groupName = shipControllerGroupName,
             groupDisplayName = shipControllerGroupName),
             UI_FloatRange(
@@ -95,8 +95,8 @@ namespace KerbalCombatSystems
         [KSPField(isPersistant = true,
             guiActive = true,
             guiActiveEditor = true,
-            guiName = "Firing Speed",
-            guiUnits = "m/s",
+            guiName = "Strafing Speed Limit",
+            guiUnits = " m/s",
             groupName = shipControllerGroupName,
             groupDisplayName = shipControllerGroupName),
             UI_FloatRange(
@@ -382,6 +382,7 @@ namespace KerbalCombatSystems
                 }
 
                 currentProjectile.targetSize = targetController.averagedSize;
+                currentProjectile.UpdateSettings();
 
                 while (UnderTimeLimit() && target != null && currentProjectile.canFire)
                 {
@@ -467,13 +468,15 @@ namespace KerbalCombatSystems
 
                 ModuleWeaponController currentWeapon = GetPreferredWeapon(target, weapons);
                 float minRange = currentWeapon.MinMaxRange.x;
-                float maxRange = currentWeapon.MinMaxRange.y;
+                float minRangeProjectile = currentWeapon.MinMaxRange.x * 0.25f;
+                float maxRange = Mathf.Min(currentWeapon.MinMaxRange.y, TargetLockRange());
                 float currentRange = VesselDistance(vessel, target);
                 bool complete = false;
                 bool nearInt = false;
                 Vector3 relVel = RelVel(vessel, target);
+                bool usingProjectile = ModuleWeaponController.projectileTypes.Contains(currentWeapon.weaponType);
 
-                if (currentRange < minRange && AwayCheck(minRange))
+                if (currentRange < (!usingProjectile ? minRange : minRangeProjectile) && AwayCheck(minRange))
                 {
                     state = "Manoeuvring (Away)";
                     fc.throttle = 1;
@@ -484,7 +487,7 @@ namespace KerbalCombatSystems
                     {
                         fc.attitude = FromTo(vessel, target).normalized * -1;
                         fc.throttle = Vector3.Dot(RelVel(vessel, target), fc.attitude) < manoeuvringSpeed ? 1 : 0;
-                        complete = FromTo(vessel, target).magnitude > minRange;
+                        complete = FromTo(vessel, target).magnitude > minRange || !AwayCheck(minRange);
 
                         yield return new WaitForFixedUpdate();
                     }
@@ -520,6 +523,9 @@ namespace KerbalCombatSystems
                         lateralVelocity = lateral.magnitude;
 
                         float throttle = Vector3.Dot(RelVel(vessel, target), toTarget.normalized) < manoeuvringSpeed ? 1 : 0;
+                        if (burn.magnitude / maxAcceleration < 1 && fc.throttle == 0)
+                            throttle = 0;
+
                         fc.throttle = throttle * Mathf.Clamp(burn.magnitude / maxAcceleration, 0.2f, 1);
 
                         if (fc.throttle > 0)
@@ -754,12 +760,6 @@ namespace KerbalCombatSystems
             }
         }
 
-        public IEnumerator CheckWeaponsDelayed()
-        {
-            yield return new WaitForFixedUpdate();
-            CheckWeapons();
-        }
-
         public ModuleShipController GetNearestEnemy()
         {
             var enemiesByDistance = KCSController.ships.FindAll(s => s != null && s.alive && s.side != side);
@@ -794,9 +794,10 @@ namespace KerbalCombatSystems
 
             foreach (var selectedWeapon in weaponsRanked)
                 identicalWeapons.AddRange(weapons.FindAll(w => Mathf.Approximately(selectedWeapon.mass, w.mass) && !weaponsRanked.Contains(w) && !identicalWeapons.Contains(w)));
+            
+            weaponsRanked.AddRange(identicalWeapons);
 
             // Make doubly sure there aren't any duplicate entries.
-            weaponsRanked.AddRange(identicalWeapons);
             weaponsRanked = weaponsRanked.Distinct().ToList();
 
             // Group and order the identical missiles by their orientation to the target. More lined-up is better. 
@@ -842,7 +843,9 @@ namespace KerbalCombatSystems
 
         public bool CheckStatus()
         {
-            hasPropulsion = vessel.FindPartModulesImplementing<ModuleEngines>().FindAll(e => e.EngineIgnited && e.isOperational).Count > 0;
+            bool hasRCSFore = vessel.FindPartModulesImplementing<ModuleRCSFX>().FindAll(e => e.rcsEnabled && !e.flameout && e.useThrottle).Count > 0;
+
+            hasPropulsion = hasRCSFore || vessel.FindPartModulesImplementing<ModuleEngines>().FindAll(e => e.EngineIgnited && e.isOperational).Count > 0;
             hasWeapons = vessel.FindPartModulesImplementing<ModuleWeaponController>().FindAll(w => w.canFire).Count > 0;
 
             bool spunOut = false;
@@ -880,30 +883,35 @@ namespace KerbalCombatSystems
                 maxDetectionRange = sensors.Max(s => s.detectionRange);
 
             //if the sensors aren't deployed and the AI is running
-            if (!DeployedSensors && controllerRunning)
+            if (!deployedSensors && controllerRunning)
             {
-                foreach (ModuleObjectTracking Sensor in sensors)
+                foreach (ModuleObjectTracking sensor in sensors)
                 {
-                    //try deploy animations, not all scanners will have them 
-                    var anim = Sensor.part.FindModuleImplementing<ModuleAnimationGroup>();
+                    if (!sensor.animate) continue;
+
+                    //try deploy animations, not all scanners will have them
+                    var anim = sensor.part.FindModuleImplementing<ModuleAnimationGroup>();
                     if (anim == null) continue;
                     TryToggle(true, anim);
                 }
-                DeployedSensors = true;
+                deployedSensors = true;
             }
 
             //if the sensors are deployed and the AI isn't runnning
-            if (DeployedSensors && !controllerRunning)
+            if (deployedSensors && !controllerRunning)
             {
-                foreach (ModuleObjectTracking Sensor in sensors)
+                foreach (ModuleObjectTracking sensor in sensors)
                 {
+                    if (!sensor.animate) continue;
+
                     //try retract animations, not all scanners will have them 
-                    var anim = Sensor.part.FindModuleImplementing<ModuleAnimationGroup>();
+                    var anim = sensor.part.FindModuleImplementing<ModuleAnimationGroup>();
                     if (anim == null) continue;
                     TryToggle(false, anim);
                 }
-                DeployedSensors = false;
+                deployedSensors = false;
             }
+
         }
 
         private void FindTarget()
@@ -986,9 +994,14 @@ namespace KerbalCombatSystems
             return distance * (1 - massComparison);
         }
 
+        private float TargetLockRange()
+        {
+            return maxDetectionRange * Mathf.Clamp(targetController.heatSignature / 1500, 0.5f, 3.0f);
+        }
+
         private bool HasLock()
         {
-            return FromTo(vessel, target).magnitude < maxDetectionRange * Mathf.Clamp((targetController.heatSignature / 1500), 0.5f, 3.0f);
+            return FromTo(vessel, target).magnitude < TargetLockRange();
         }
 
         private void FindInterceptTarget()

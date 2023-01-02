@@ -145,12 +145,8 @@ namespace KerbalCombatSystems
         {
             //get a list of onboard control points and return the first found
             List<ModuleCommand> commandPoints = craft.FindPartModulesImplementing<ModuleCommand>();
-            if (commandPoints.Count != 0)
-            {
-                return commandPoints.First();
-            }
-            //gotta have a command point somewhere so this is just for compiling
-            return null;
+
+            return commandPoints.FirstOrDefault();
         }
 
         public static ModuleShipController FindController(Vessel v)
@@ -241,6 +237,15 @@ namespace KerbalCombatSystems
                 MoI.z.Equals(0) ? float.MaxValue : torque.z / MoI.z);
         }
 
+        public static bool OnTarget(Vector3 targetAim, Vector3 currentAim, Vector3 relativePosition, float targetSize, float tolerance)
+        {
+            // Scale the accuracy requirement (in degrees) based on the distance and size of the target.
+            Vector3 targetRadius = Vector3.ProjectOnPlane(Vector3.up, relativePosition.normalized).normalized * (targetSize / 2) * tolerance;
+            float aimTolerance = Vector3.Angle(relativePosition, relativePosition + targetRadius);
+
+            return Vector3.Angle(targetAim.normalized, currentAim) < aimTolerance;
+        }
+
         public static float AngularVelocity(Vessel v, Vessel t)
         {
             Vector3 tv1 = FromTo(v, t);
@@ -278,21 +283,16 @@ namespace KerbalCombatSystems
             return (vel * time) + 0.5f * acceleration * Mathf.Pow(time, 2);
         }
 
-        public static Vector3 TargetLead(Vessel Target, Part Firer, float TravelVelocity)
+        public static Vector3 TargetLead(Vessel target, Part firer, float travelVelocity)
         {
-            Vector3 RelPos = Target.CoM - Firer.transform.position;
-            Vector3 RelVel = Target.GetObtVelocity() - Firer.vessel.GetObtVelocity();
+            Vector3 relPos = target.CoM - firer.transform.position;
+            Vector3 relVel = target.GetObtVelocity() - firer.vessel.GetObtVelocity();
+            Vector3 relAcc = target.acceleration - firer.vessel.acceleration;
 
-            // Quadratic equation coefficients a*t^2 + b*t + c = 0
-            float a = Vector3.Dot(RelVel, RelVel) - TravelVelocity * TravelVelocity;
-            float b = 2f * Vector3.Dot(RelVel, RelPos);
-            float c = Vector3.Dot(RelPos, RelPos);
+            float timeToHit = ClosestTimeToCPA(relPos, relVel + (relPos.normalized * travelVelocity * -1), relAcc, 60);
+            Vector3 leadPosition = PredictPosition(relPos, relVel, relAcc, timeToHit);
 
-            float desc = b * b - 4f * a * c;
-            float ForwardDelta = 2f * c / (Mathf.Sqrt(desc) - b);
-
-            Vector3 leadPosition = Target.CoM + RelVel * ForwardDelta;
-            return leadPosition - Firer.transform.position;
+            return leadPosition;
         }
 
         public static float VesselDistance(Vessel v1, Vessel v2)
