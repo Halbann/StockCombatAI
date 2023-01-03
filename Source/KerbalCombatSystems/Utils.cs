@@ -54,30 +54,38 @@ namespace KerbalCombatSystems
         public static Vector3 GetFireVector(List<ModuleEngines> engines, List<ModuleRCSFX> RCS = null, Vector3 thrustVector = default(Vector3))
         {
             //method to get the mean thrust vector of a list of engines and throttle enabled RCS
-
-            engines.RemoveAll(e => !e.EngineIgnited || !e.isOperational);
-
+            engines.RemoveAll(e => !e.EngineIgnited || e.flameout);
             RCS.RemoveAll(r => !r.useThrottle || !r.isEnabled || r.flameout);
             // Place linears first to establish a direction, not currently needed
             //RCS.Sort((a, b) => a.thrusterTransforms.Count().CompareTo(b.thrusterTransforms.Count()));
 
-            if (engines != null && engines.Any())
+            if (engines?.Any() == true)
             {
-                foreach (ModuleEngines engine in engines)
+                // If there are engines we can override any potential provided vector
+                thrustVector = GetMeanVector(engines.First());
+                foreach (ModuleEngines engine in engines.Skip(1))
                 {
-                    // If there are engines we can override any potential provided vector
-                    if (engines.First() == engine)
-                        thrustVector = GetMeanVector(engine);
                     thrustVector += GetMeanVector(engine);
                 }
-            }
-
-            if (RCS != null && RCS.Any())
-            {
-                foreach (ModuleRCSFX thruster in RCS)
+                if (RCS?.Any() == true)
                 {
-                    thrustVector += GetRCSVector(thruster, thrustVector);
+                    // If there are engines we can add RCS on top
+                    foreach (ModuleRCSFX thruster in RCS)
+                    {
+                        thrustVector += GetRCSVector(thruster, thrustVector);
+                    }
                 }
+            }
+            else if (RCS?.Any() == true)
+            {
+                // If there are no engines we have to plot the RCS along the provided vector
+                Vector3 rcsVector = GetRCSVector(RCS.First(), thrustVector);
+                foreach (ModuleRCSFX thruster in RCS.Skip(1))
+                {
+                    rcsVector += GetRCSVector(thruster, thrustVector);
+                }
+                //replace thrustVector with RCS Vector
+                thrustVector = rcsVector;
             }
 
             return thrustVector;
@@ -86,18 +94,18 @@ namespace KerbalCombatSystems
         public static Vector3 GetRCSVector(ModuleRCSFX thruster, Vector3 thrustVector)
         {
             //method to get the thrust vector of a specified rcs thruster
-            Vector3 meanVector = Vector3.zero;
             List<Transform> positions = thruster.thrusterTransforms;
+            Vector3 meanVector = Vector3.zero;
 
             foreach (Transform thrusterTransform in positions)
             {
-                Vector3 pos = thrusterTransform.forward;
-                float angle = Vector3.Angle(thrustVector, pos);
-                // rcs will fire if facing in any degree forwards
-                if (angle > 90) thrustVector += pos.normalized * thruster.thrusterPower;
+                Vector3 pos = thrusterTransform.up * thruster.thrusterPower;
+                // rcs will fire if thrust goes in the forward direction by any degree, this is reduced with angle offset
+                if ( Vector3.Dot(thrustVector.normalized, pos.normalized) > 0)
+                    meanVector += pos * Vector3.Dot(thrustVector.normalized, pos.normalized);
             }
 
-            return thrustVector;
+            return meanVector;
         }
 
         public static Vector3 GetMeanVector(ModuleEngines thruster)
@@ -109,8 +117,6 @@ namespace KerbalCombatSystems
             foreach (Transform thrusterTransform in positions)
             {
                 Vector3 pos = thrusterTransform.forward;
-                if (positions.First() == thrusterTransform)
-                    meanVector = pos;
                 meanVector += pos;
             }
 

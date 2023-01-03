@@ -77,7 +77,7 @@ namespace KerbalCombatSystems
                 Debug.Log("[KCS]: Couldn't find decoupler.");
             }
 
-            //wait for seperation to take effect
+            // Wait for seperation to take effect
             yield return new WaitForEndOfFrame();
 
             // turn on engines
@@ -88,11 +88,18 @@ namespace KerbalCombatSystems
             rcsThrusters = vessel.FindPartModulesImplementing<ModuleRCSFX>();
             rcsThrusters.ForEach(t => t.rcsEnabled = true);
 
+            // Enable RCS group
+            if (!vessel.ActionGroups[KSPActionGroup.RCS])
+                vessel.ActionGroups.SetGroup(KSPActionGroup.RCS, true);
+
             // Get a probe core and align its reference transform with the propulsion vector.
             ModuleCommand commander = FindCommand(vessel);
             commander.MakeReference();
             propulsionVector = -GetFireVector(engines, rcsThrusters, -vessel.ReferenceTransform.up);
             AlignReference(commander, propulsionVector);
+
+            // Invert and store the propulsion vector for debugging.
+            propulsionVector = vessel.transform.InverseTransformDirection(propulsionVector);
 
             // Setup flight controller.
             fc = part.gameObject.AddComponent<KCSFlightController>();
@@ -104,13 +111,6 @@ namespace KerbalCombatSystems
             fc.RCSPower = 20;
             fc.Drive();
 
-            // Store the propulsion vector for debugging.
-            propulsionVector = vessel.transform.InverseTransformDirection(propulsionVector);
-
-            //enable RCS for translation
-            if (!vessel.ActionGroups[KSPActionGroup.RCS])
-                vessel.ActionGroups.SetGroup(KSPActionGroup.RCS, true);
-
             // Turn on reaction wheels.
             var wheels = vessel.FindPartModulesImplementing<ModuleReactionWheel>();
             wheels.ForEach(w => w.wheelState = ModuleReactionWheel.WheelState.Active);
@@ -118,6 +118,7 @@ namespace KerbalCombatSystems
             maxThrust = propulsionVector.magnitude;
             maxAcceleration = maxThrust / vessel.GetTotalMass();
 
+            Debug.Log("[KCS]: Forward Thrust: " + maxThrust + "Kn");
             vessel.targetObject = target;
 
             // wait to try to prevent destruction of decoupler.
@@ -308,6 +309,8 @@ namespace KerbalCombatSystems
             fc.RCSVector = rcs;
 
             fc.Drive();
+
+            
 
             // Update debug lines.
             if (KCSDebug.showLines)
