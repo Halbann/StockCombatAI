@@ -530,8 +530,7 @@ namespace KerbalCombatSystems
             else
                 parent = part.parent;
 
-            var parts = parent.FindChildParts<Part>(true).ToList();
-            childDecouplers = parts.FindAll(p => p.HasModuleImplementing<ModuleDecouple>()).Count; // todo: add ModuleAnchoredDecoupler 
+            childDecouplers = FindDecouplerChildren(parent, "Default", true).Count;
         }
 
         public float CalculateAcceleration(Part decoupler = null)

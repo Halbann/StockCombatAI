@@ -56,6 +56,13 @@ namespace KerbalCombatSystems
         {
             scalingFactor = HighLogic.CurrentGame.Parameters.CustomParams<KCSCombat>().scalingFactor;
             detectionRange = baseDetectionRange * scalingFactor;
+
+            // Hide the animation option for the ship controller.
+            if (part.partInfo.category == PartCategories.Control)
+            {
+                Fields["animate"].guiActiveEditor = false;
+                Fields["animate"].guiActive = false;
+            }
         }
     }
 }

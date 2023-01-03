@@ -312,6 +312,27 @@ namespace KerbalCombatSystems
 
             return false;
         }
+
+        public static bool CylinderIntersectsVessel(Vessel v, Ray r, float diameter, int sides = 4)
+        {
+            Ray edgeRay = new Ray(r.origin, r.direction);
+            Vector3 cylinderEdge = Vector3.ProjectOnPlane(Vector3.up, r.direction).normalized * diameter;
+
+            for (int i = 0; i < sides; i++)
+            {
+                edgeRay.origin = r.origin + (Quaternion.AngleAxis(360f * (i / (float)sides), r.direction) * cylinderEdge);
+                
+                foreach (Part p in v.parts)
+                {
+                    foreach (Bounds b in p.GetColliderBounds())
+                    {
+                        if (b.IntersectRay(edgeRay)) return true;
+                    }
+                }
+            }
+
+            return false;
+        }
         #endregion
     }
 

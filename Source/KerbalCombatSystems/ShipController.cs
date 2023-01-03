@@ -29,7 +29,7 @@ namespace KerbalCombatSystems
 
         // Ship AI variables.
 
-        private KCSFlightController fc;
+        internal KCSFlightController fc;
 
         public Vessel target;
         private ModuleShipController targetController;
@@ -636,6 +636,9 @@ namespace KerbalCombatSystems
                 lastFired = Time.time;
                 bool checkWeapons = false;
                 float targetMass = (float)target.totalMass;
+
+                // Decide how many missiles to use based on the mass of the missile we want to use, the mass of the target,
+                // and the mass of the weapons already on their way to the target.
 
                 if (targetController.incomingWeapons.Count > 0)
                 {

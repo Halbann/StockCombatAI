@@ -149,7 +149,13 @@ namespace KerbalCombatSystems
                 if (missile == null || missile.vessel == null)
                     continue;
 
-                VesselLabel("ETA: " + missile.timeToHit.ToString("0.00"), missile.vessel);
+                VesselLabel("ETA: " 
+                    + missile.timeToHit.ToString("0.00")
+                    + "\n Launched: "
+                    + missile.launched.ToString()
+                    + "\n Missed: "
+                    + missile.missed.ToString(),
+                    missile.vessel);
             }
 
             foreach (ModuleShipController ship in KCSController.ships)
@@ -163,8 +169,8 @@ namespace KerbalCombatSystems
                     + ship.nearInterceptBurnTime.ToString("0.00")
                     + "\n Intercept Time: "
                     + ship.nearInterceptApproachTime.ToString("0.00")
-                    + "\n Lateral Vel: "
-                    + ship.lateralVelocity.ToString("0.00"),
+                    + "\n Throttle: "
+                    + ship.fc.throttleLerped.ToString("0.00"),
                     ship.vessel);
             }
         }

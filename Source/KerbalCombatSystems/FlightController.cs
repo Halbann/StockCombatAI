@@ -15,7 +15,7 @@ namespace KerbalCombatSystems
         private bool facingDesiredRotation;
         public float throttle;
         public float throttleActual;
-        private float throttleLerped;
+        internal float throttleLerped;
         public float throttleLerpRate = 1;
         public float alignmentToleranceforBurn = 5;
 
@@ -39,6 +39,7 @@ namespace KerbalCombatSystems
             currentVectorLine = KCSDebug.CreateLine(Color.yellow);
             targetVectorLine = KCSDebug.CreateLine(Color.red);
             rcsLine = KCSDebug.CreateLine(Color.white);
+
             //rright = KCSDebug.CreateLine(Color.red);
             //rup = KCSDebug.CreateLine(Color.green);
             //rforward = KCSDebug.CreateLine(Color.blue);
@@ -49,6 +50,7 @@ namespace KerbalCombatSystems
             KCSDebug.DestroyLine(currentVectorLine);
             KCSDebug.DestroyLine(targetVectorLine);
             KCSDebug.DestroyLine(rcsLine);
+
             //KCSDebug.DestroyLine(rup);
             //KCSDebug.DestroyLine(rright);
             //KCSDebug.DestroyLine(rforward);
@@ -94,6 +96,7 @@ namespace KerbalCombatSystems
                 RCSVectorLerped = RCSVector;
 
             // This system works for now but it's convuluted and isn't very stable.
+            // todo: redo all of this.
             RCSVectorLerped = Vector3.Lerp(RCSVectorLerped, RCSVector, 5f * Time.fixedDeltaTime * Mathf.Clamp01(RCSVectorLerped.magnitude / RCSPower));
             RCSThrottle = Mathf.Lerp(0, 1.732f, Mathf.InverseLerp(0, RCSPower, RCSVectorLerped.magnitude));
             RCSThrust = RCSVectorLerped.normalized * RCSThrottle;
@@ -108,8 +111,8 @@ namespace KerbalCombatSystems
 
             //Vector3 origin = v.ReferenceTransform.position;
             //KCSDebug.PlotLine(new[] { origin, origin + right * 10 * v.ctrlState.X }, rright);
-            //KCSDebug.PlotLine(new[] { origin, origin + up * 10 *  v.ctrlState.Y}, rup);
-            //KCSDebug.PlotLine(new[] { origin, origin + forward * 10 * v.ctrlState.Z}, rforward);
+            //KCSDebug.PlotLine(new[] { origin, origin + up * 10 * v.ctrlState.Y }, rup);
+            //KCSDebug.PlotLine(new[] { origin, origin + forward * 10 * v.ctrlState.Z }, rforward);
 
             Vector3 origin = v.ReferenceTransform.position;
             KCSDebug.PlotLine(new[] { origin, origin + RCSThrust.normalized * Mathf.Clamp(RCSThrust.magnitude, 0, 15) }, rcsLine);
