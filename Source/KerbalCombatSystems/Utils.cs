@@ -300,23 +300,27 @@ namespace KerbalCombatSystems
             return (v1.transform.position - v2.transform.position).magnitude;
         }
 
-        public static bool RayIntersectsVessel(Vessel v, Ray r)
+        public static bool RayIntersectsVessel(Vessel v, Ray r, Color color = default)
         {
+            RaycastHit hitInfo;
+
             foreach (Part p in v.parts)
             {
-                foreach (Bounds b in p.GetColliderBounds())
+                foreach (Collider c in p.GetPartColliders())
                 {
-                    if (b.IntersectRay(r)) return true;
+                    if (c.Raycast(r, out hitInfo, 50f))
+                        return true;
                 }
             }
 
             return false;
         }
 
-        public static bool CylinderIntersectsVessel(Vessel v, Ray r, float diameter, int sides = 4)
+        public static bool CylinderIntersectsVessel(Vessel v, Ray r, float radius, int sides = 4)
         {
             Ray edgeRay = new Ray(r.origin, r.direction);
-            Vector3 cylinderEdge = Vector3.ProjectOnPlane(Vector3.up, r.direction).normalized * diameter;
+            Vector3 cylinderEdge = Vector3.ProjectOnPlane(Vector3.up, r.direction).normalized * radius;
+            RaycastHit hitInfo;
 
             for (int i = 0; i < sides; i++)
             {
@@ -324,9 +328,10 @@ namespace KerbalCombatSystems
                 
                 foreach (Part p in v.parts)
                 {
-                    foreach (Bounds b in p.GetColliderBounds())
+                    foreach (Collider c in p.GetPartColliders())
                     {
-                        if (b.IntersectRay(edgeRay)) return true;
+                        if (c.Raycast(edgeRay, out hitInfo, 50f))
+                            return true;
                     }
                 }
             }

@@ -139,17 +139,15 @@ namespace KerbalCombatSystems
             {
                 Vector3 horizontal = firer.ReferenceTransform.forward;
                 bool foundExit = false;
+                Vector3 start = Vector3.ProjectOnPlane(firer.ReferenceTransform.forward, vessel.ReferenceTransform.up);
 
                 // First check directions at 90 degrees to the firer's roll direction.
                 for (int i = 0; i < 4; i++)
                 {
-                    //horizontal = Vector3.Cross(horizontal, vessel.ReferenceTransform.up);
-                    horizontal = Quaternion.AngleAxis(360 * i / 4, vessel.ReferenceTransform.up) * firer.ReferenceTransform.forward;
+                    horizontal = Quaternion.AngleAxis(360f * (i / 4f), vessel.ReferenceTransform.up) * start;
                     launchRay.direction = horizontal;
 
-                    foundExit = !RayIntersectsVessel(firer, launchRay);
-
-                    if (foundExit)
+                    if (foundExit = !RayIntersectsVessel(firer, launchRay))
                         break;
                 }
 
@@ -162,24 +160,19 @@ namespace KerbalCombatSystems
                         horizontal = Quaternion.AngleAxis(360 * i / 4 + 45, vessel.ReferenceTransform.up) * firer.ReferenceTransform.forward;
                         launchRay.direction = horizontal;
 
-                        foundExit = !RayIntersectsVessel(firer, launchRay);
-
-                        if (foundExit)
+                        if (!RayIntersectsVessel(firer, launchRay))
                             break;
                     }
                 }
 
-                fc.RCSVector = horizontal.normalized * 200000f;
-                fc.Drive();
+                fc.RCSVector = horizontal.normalized * 200000f; // idk
                 float checkInterval = 0.1f;
                 float lastChecked = 0;
 
                 while (horizontalLaunch)
                 {
-                    //yield return new WaitForSeconds(0.1f);
                     yield return new WaitForFixedUpdate();
 
-                    fc.RCSVector = horizontal.normalized * 200000f;
                     fc.Drive();
 
                     if (Time.time - lastChecked > checkInterval)
@@ -188,8 +181,7 @@ namespace KerbalCombatSystems
 
                         launchRay.origin = vessel.ReferenceTransform.position;
                         launchRay.direction = vessel.ReferenceTransform.up;
-                        //horizontalLaunch = RayIntersectsVessel(firer, launchRay);
-                        horizontalLaunch = CylinderIntersectsVessel(firer, launchRay, 1.5f);
+                        horizontalLaunch = CylinderIntersectsVessel(firer, launchRay, 1.25f / 2);
                     }
                 }
 
