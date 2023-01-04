@@ -249,7 +249,7 @@ namespace KerbalCombatSystems
               guiActive = true,
               guiActiveEditor = true,
               guiName = "Burst Round Spacing",
-              guiUnits = " Seconds",
+              guiUnits = " s",
               groupName = FireworkGroupName,
               groupDisplayName = FireworkGroupName),
               UI_FloatRange(
@@ -259,6 +259,21 @@ namespace KerbalCombatSystems
                   scene = UI_Scene.All
               )]
         public float FWBurstSpacing = 0.25f;
+
+        [KSPField(isPersistant = true,
+              guiActive = true,
+              guiActiveEditor = true,
+              guiName = "Burst Interval",
+              guiUnits = " s",
+              groupName = FireworkGroupName,
+              groupDisplayName = FireworkGroupName),
+              UI_FloatRange(
+                  minValue = 0f,
+                  maxValue = 5f,
+                  stepIncrement = 0.05f,
+                  scene = UI_Scene.All
+              )]
+        public float FWBurstInterval = 0.5f;
 
         [KSPField(isPersistant = true,
               guiActive = true,
@@ -461,6 +476,14 @@ namespace KerbalCombatSystems
             Fields["useAsInterceptor"].guiActiveEditor = weaponType == "Missile";
             Fields["igniteDelay"].guiActive = weaponType == "Missile";
             Fields["igniteDelay"].guiActiveEditor = weaponType == "Missile";
+            Fields["pulseThrottle"].guiActive = weaponType == "Missile";
+            Fields["pulseThrottle"].guiActiveEditor = weaponType == "Missile"; 
+            Fields["salvoSpacing"].guiActive = weaponType == "Missile";
+            Fields["salvoSpacing"].guiActiveEditor = weaponType == "Missile"; 
+            Fields["pulseDuration"].guiActive = weaponType == "Missile";
+            Fields["pulseDuration"].guiActiveEditor = weaponType == "Missile"; 
+            Fields["igniteDelay"].guiActive = weaponType == "Missile";
+            Fields["igniteDelay"].guiActiveEditor = weaponType == "Missile"; 
 
             // Firework fields.
             Fields["FWRoundBurst"].guiActive = weaponType == "Firework";
@@ -471,6 +494,8 @@ namespace KerbalCombatSystems
             //Fields["FWUseAsCIWS"].guiActiveEditor = weaponType == "Firework";
             Fields["FWaccuracyTolerance"].guiActive = weaponType == "Firework";
             Fields["FWaccuracyTolerance"].guiActiveEditor = weaponType == "Firework";
+            Fields["FWBurstInterval"].guiActive = weaponType == "Firework";
+            Fields["FWBurstInterval"].guiActiveEditor = weaponType == "Firework";
             
             // Rocket fields.
             Fields["firingInterval"].guiActive = weaponType == "Rocket";
