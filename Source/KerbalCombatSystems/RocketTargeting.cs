@@ -142,7 +142,8 @@ namespace KerbalCombatSystems
             foreach (var p in rocketParts)
             {
                 eng = p.FindModuleImplementing<ModuleEngines>();
-                if (eng == null) continue;
+                if (eng == null)
+                    continue;
 
                 engines.Add(eng);
 
@@ -153,7 +154,7 @@ namespace KerbalCombatSystems
             if (engines.Count < 1)
                 return -1;
 
-            Vector3 thrustVector = GetFireVector(engines, origin) * -1;
+            Vector3 thrustVector = GetFireVector(engines) * -1;
             aimVector = thrustVector.normalized;
 
             float thrust = Vector3.Dot(thrustVector, decoupler.transform.up);
@@ -255,7 +256,7 @@ namespace KerbalCombatSystems
 
         private void NextRocket()
         {
-            decouplers = FindDecouplerChildren(part.parent, "Default", false);
+            decouplers = FindDecouplerChildren(part.parent);
             if (decouplers.Count < 1)
             {
                 controller.canFire = false;
@@ -263,16 +264,6 @@ namespace KerbalCombatSystems
             }
 
             decoupler = decouplers.Last();
-            controller.aimPart = decoupler.part;
-            //AssignReference(decoupler.part.GetReferenceTransform(), aimVector);
-        }
-
-        private void AssignReference(Transform Position, Vector3 Direction)
-        {
-            Quaternion q = Quaternion.FromToRotation(Vector3.right, aimVector);
-            Transform t = decoupler.part.GetReferenceTransform();
-            t.transform.rotation = Quaternion.LookRotation(aimVector);
-            decoupler.part.SetReferenceTransform(t);
             controller.aimPart = decoupler.part;
         }
 
@@ -285,8 +276,7 @@ namespace KerbalCombatSystems
             var mr = prediction.GetComponent<MeshRenderer>();
 
             Material sphereMat = new Material(Shader.Find("Unlit/Color"));
-            sphereMat.color = Color.magenta;
-
+            sphereMat.color = new Color(1f, 0f, 1f, 0.4f);
             mr.material = sphereMat;
 
             //todo sphere doesn't destroy

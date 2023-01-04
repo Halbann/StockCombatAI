@@ -17,7 +17,7 @@ namespace KerbalCombatSystems
             isPersistant = true,
             guiActive = true,
             guiActiveEditor = true,
-            guiName = "Seperator Type",
+            guiName = "Separator Type",
             groupName = DecouplerDesignationGroupName,
             groupDisplayName = DecouplerDesignationGroupName),
             UI_ChooseOption(controlEnabled = true, affectSymCounterparts = UI_Scene.None,
@@ -35,7 +35,10 @@ namespace KerbalCombatSystems
                     part.GetComponent<ModuleDecouple>().Decouple();
                     break;
                 case "port":
-                    part.GetComponent<ModuleDockingNode>().Undock();
+                    ModuleDockingNode node = part.GetComponent<ModuleDockingNode>();
+                    if (node.state != "Ready") // Undocking a free docking port throws an error.
+                        node.Undock();
+
                     break;
                 default:
                     Debug.Log("[KCS]: Improper Decoupler Designation");

@@ -34,26 +34,26 @@ namespace KerbalCombatSystems
         public float maxAcceleration;
         private Vector3 rcs;
         private float targetSize;
+        private Vector3 propulsionVector;
 
         // Components
 
         private KCSFlightController fc;
         private ModuleDecouplerDesignate seperator;
         private ModuleWeaponController controller;
+        private List<ModuleRCSFX> rcsThrusters;
         private List<ModuleEngines> engines;
-        private ModuleEngines mainEngine;
-        private Part mainEnginePart;
         private int partCount = -1;
 
         // Debugging line variables.
 
-        LineRenderer targetLine, rvLine, interceptLine;
+        LineRenderer targetLine, rvLine, interceptLine, thrustLine;
         //GameObject prediction;
 
         private IEnumerator Launch()
         {
             // find decoupler
-            seperator = FindDecoupler(part, "Default", false);
+            seperator = FindDecoupler(part);
 
             bool frontLaunch = Vector3.Dot(seperator.transform.up, vessel.ReferenceTransform.up) > 0.99;
             controller.frontLaunch = frontLaunch;
@@ -77,44 +77,48 @@ namespace KerbalCombatSystems
                 Debug.Log("[KCS]: Couldn't find decoupler.");
             }
 
+            // Wait for seperation to take effect
+            yield return new WaitForEndOfFrame();
+
             // turn on engines
             engines = vessel.FindPartModulesImplementing<ModuleEngines>();
             engines.ForEach(e => e.Activate());
-            mainEngine = engines.First();
-            mainEnginePart = mainEngine.part;
+
+            // Get and enable RCS thrusters.
+            rcsThrusters = vessel.FindPartModulesImplementing<ModuleRCSFX>();
+            rcsThrusters.ForEach(t => t.rcsEnabled = true);
+
+            // Enable RCS group
+            if (!vessel.ActionGroups[KSPActionGroup.RCS])
+                vessel.ActionGroups.SetGroup(KSPActionGroup.RCS, true);
+
+            // Get a probe core and align its reference transform with the propulsion vector.
+            ModuleCommand commander = FindCommand(vessel);
+            commander.MakeReference();
+            propulsionVector = -GetFireVector(engines, rcsThrusters, -vessel.ReferenceTransform.up);
+            AlignReference(commander, propulsionVector);
+
+            // Invert and store the propulsion vector for debugging.
+            propulsionVector = vessel.transform.InverseTransformDirection(propulsionVector);
 
             // Setup flight controller.
             fc = part.gameObject.AddComponent<KCSFlightController>();
             fc.alignmentToleranceforBurn = isInterceptor ? 60 : 20;
+            fc.attitude = vessel.ReferenceTransform.up;
             fc.lerpAttitude = false;
             fc.throttleLerpRate = 99;
             fc.RCSVector = vessel.ReferenceTransform.up;
             fc.RCSPower = 20;
             fc.Drive();
 
-            //get an onboard probe core orientation to control from
-            //commented out due to people building dodgy missiles with incorrect probe core orientations
-            //best option is using the direction of the missiles thrust vector but may be resource intensive
-            //FindCommand(vessel).MakeReference();
-
-            //temporary measure to use simplest version but still one that causes bugs
-            fc.attitude = vessel.ReferenceTransform.up;
-
-            //enable RCS for translation
-            if (!vessel.ActionGroups[KSPActionGroup.RCS])
-                vessel.ActionGroups.SetGroup(KSPActionGroup.RCS, true);
-
-            // turn on rcs thrusters
-            var Thrusters = vessel.FindPartModulesImplementing<ModuleRCS>();
-            Thrusters.ForEach(t => t.rcsEnabled = true);
-
             // Turn on reaction wheels.
             var wheels = vessel.FindPartModulesImplementing<ModuleReactionWheel>();
             wheels.ForEach(w => w.wheelState = ModuleReactionWheel.WheelState.Active);
 
-            maxThrust = GetMaxThrust(vessel);
+            maxThrust = propulsionVector.magnitude;
             maxAcceleration = maxThrust / vessel.GetTotalMass();
 
+            Debug.Log("[KCS]: Forward Thrust: " + maxThrust + "Kn");
             vessel.targetObject = target;
 
             // wait to try to prevent destruction of decoupler.
@@ -199,9 +203,9 @@ namespace KerbalCombatSystems
 
             fc.alignmentToleranceforBurn = previousTolerance;
 
-            // Remove end cap. todo: will need to change to support cluster missiles.
-            List<ModuleDecouple> decouplers = vessel.FindPartModulesImplementing<ModuleDecouple>();
-            decouplers.ForEach(d => d.Decouple());
+            // Remove end cap
+            List<ModuleDecouplerDesignate> decouplers = FindDecouplerChildren(vessel.rootPart);
+            decouplers.ForEach(d => d.Separate());
 
             List<ModuleProceduralFairing> fairings = vessel.FindPartModulesImplementing<ModuleProceduralFairing>();
             fairings.ForEach(f => f.DeployFairing());
@@ -210,6 +214,7 @@ namespace KerbalCombatSystems
             targetLine = KCSDebug.CreateLine(Color.magenta);
             rvLine = KCSDebug.CreateLine(Color.green);
             interceptLine = KCSDebug.CreateLine(Color.cyan);
+            thrustLine = KCSDebug.CreateLine(new Color(255f / 255f, 165f / 255f, 0f, 1f)); //orange
 
             // enable autopilot
             engageAutopilot = true;
@@ -283,13 +288,12 @@ namespace KerbalCombatSystems
 
             targetVectorNormal = interceptVector.normalized;
 
+            //remove engines and thrusters that have been enabled and are dry, destroyed, or disconnected
+            engines.RemoveAll(e => e == null || (e.EngineIgnited && e.flameout) || e.vessel != vessel);
+            rcsThrusters.RemoveAll(r =>  r == null || !r.useThrottle || (r.isEnabled && r.flameout) || r.vessel != vessel);
+
             accuracy = Vector3.Dot(targetVectorNormal, relVelNrm);
-            if (targetVector.magnitude < shutoffDistance
-                || ((mainEngine == null
-                || !mainEngine.isOperational
-                || mainEngine == null
-                || mainEnginePart.vessel != vessel)
-                && accuracy < 0.99))
+            if (targetVector.magnitude < shutoffDistance || (!engines.Any() && !rcsThrusters.Any()) && accuracy < 0.99)
             {
                 StopGuidance();
                 return;
@@ -306,17 +310,22 @@ namespace KerbalCombatSystems
 
             fc.Drive();
 
+            
+
             // Update debug lines.
-            Vector3 origin = vessel.CoM;
-            KCSDebug.PlotLine(new[] { origin, origin + (relVelNrm * 15) }, rvLine);
+            if (KCSDebug.showLines)
+            {
+                Vector3 origin = vessel.CoM;
+                KCSDebug.PlotLine(new[] { origin, origin + (relVelNrm * 15) }, rvLine);
+                KCSDebug.PlotLine(new Vector3[] { origin, origin + vessel.transform.TransformDirection(propulsionVector)}, thrustLine);
 
-            if (isInterceptor)
-                KCSDebug.PlotLine(new[] { origin, origin + targetVector }, interceptLine);
-            else
-                KCSDebug.PlotLine(new[] { origin, origin + targetVector }, targetLine);
-
-            //if (isInterceptor)
-            //    prediction.transform.position = predictedPosWorld;
+                if (isInterceptor)
+                    KCSDebug.PlotLine(new[] { origin, origin + targetVector }, interceptLine);
+                else
+                    KCSDebug.PlotLine(new[] { origin, origin + targetVector }, targetLine);
+                //if (isInterceptor)
+                //    prediction.transform.position = predictedPosWorld;
+            }
         }
 
         public override void Setup()
@@ -360,6 +369,7 @@ namespace KerbalCombatSystems
             KCSDebug.DestroyLine(rvLine);
             KCSDebug.DestroyLine(targetLine);
             KCSDebug.DestroyLine(interceptLine);
+            KCSDebug.DestroyLine(thrustLine);
             Destroy(fc);
             //Destroy(prediction);
         }
