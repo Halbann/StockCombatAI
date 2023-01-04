@@ -253,7 +253,7 @@ namespace KerbalCombatSystems
               groupName = FireworkGroupName,
               groupDisplayName = FireworkGroupName),
               UI_FloatRange(
-                  minValue = 0f,
+                  minValue = 0.05f,
                   maxValue = 1f,
                   stepIncrement = 0.05f,
                   scene = UI_Scene.All
@@ -571,7 +571,7 @@ namespace KerbalCombatSystems
 
             if (decoupler == null)
             {
-                var module = KCS.FindDecoupler(part, "Weapon", true); // todo: set to false later
+                var module = FindDecoupler(part);
                 if (module == null) return 1.0f;
                 decoupler = module.part;
             }
@@ -585,14 +585,13 @@ namespace KerbalCombatSystems
                 totalMass = totalMass + part.mass + part.GetResourceMass();
             }
 
-            mass = totalMass;
-            return totalMass;
+            return mass = totalMass;
         }
 
         private void CountChildDecouplers()
         {
             Part parent;
-            var decoupler = FindDecoupler(part, "Weapon", true); // todo: set to false later
+            var decoupler = FindDecoupler(part);
 
             if (decoupler != null)
                 parent = decoupler.part;
@@ -605,7 +604,7 @@ namespace KerbalCombatSystems
         public float CalculateAcceleration(Part decoupler = null)
         {
             if (decoupler == null)
-                decoupler = FindDecoupler(part, "Weapon", true).part;
+                decoupler = FindDecoupler(part).part;
 
             var children = decoupler.FindChildParts<Part>(true).ToList();
 

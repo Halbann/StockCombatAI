@@ -45,39 +45,72 @@ namespace KerbalCombatSystems
         public static float GetMaxThrust(Vessel v)
         {
             List<ModuleEngines> engines = v.FindPartModulesImplementing<ModuleEngines>();
-            engines.RemoveAll(e => !e.EngineIgnited || !e.isOperational);
-            float thrust = engines.Sum(e => e.MaxThrustOutputVac(true));
-
-            //for the last time hatbat, the basic ModuleRCS is depreciated and doesn't work properly with multiple nozzle rcs parts
+            //The basic ModuleRCS is depreciated and doesn't work properly with multiple nozzle rcs parts
             List<ModuleRCSFX> RCS = v.FindPartModulesImplementing<ModuleRCSFX>();
-            foreach (ModuleRCS thruster in RCS)
-            {
-                if (thruster.useThrottle)
-                    thrust += thruster.thrusterPower;
-            }
 
-            return engines.Sum(e => e.MaxThrustOutputVac(true));
+            return GetFireVector(engines, RCS).magnitude;
         }
 
-        public static Vector3 GetFireVector(List<ModuleEngines> engines, Vector3 origin)
+        public static Vector3 GetFireVector(List<ModuleEngines> engines, List<ModuleRCSFX> RCS = null, Vector3 thrustVector = default(Vector3))
         {
-            //method to get the mean thrust vector of a list of engines 
+            //method to get the mean thrust vector of a list of engines and throttle enabled RCS
+            engines.RemoveAll(e => !e.EngineIgnited || e.flameout);
+            RCS.RemoveAll(r => !r.useThrottle || !r.isEnabled || r.flameout);
+            // Place linears first to establish a direction, not currently needed
+            //RCS.Sort((a, b) => a.thrusterTransforms.Count().CompareTo(b.thrusterTransforms.Count()));
 
-            //start the expected movement vector at the first child of the decoupler
-            Vector3 thrustVector = origin;
-
-            foreach (ModuleEngines thruster in engines)
+            if (engines?.Any() == true)
             {
-                thrustVector += GetMeanVector(thruster);
+                // If there are engines we can override any potential provided vector
+                thrustVector = GetMeanVector(engines.First());
+                foreach (ModuleEngines engine in engines.Skip(1))
+                {
+                    thrustVector += GetMeanVector(engine);
+                }
+                if (RCS?.Any() == true)
+                {
+                    // If there are engines we can add RCS on top
+                    foreach (ModuleRCSFX thruster in RCS)
+                    {
+                        thrustVector += GetRCSVector(thruster, thrustVector);
+                    }
+                }
+            }
+            else if (RCS?.Any() == true)
+            {
+                // If there are no engines we have to plot the RCS along the provided vector
+                Vector3 rcsVector = GetRCSVector(RCS.First(), thrustVector);
+                foreach (ModuleRCSFX thruster in RCS.Skip(1))
+                {
+                    rcsVector += GetRCSVector(thruster, thrustVector);
+                }
+                //replace thrustVector with RCS Vector
+                thrustVector = rcsVector;
             }
 
             return thrustVector;
         }
 
+        public static Vector3 GetRCSVector(ModuleRCSFX thruster, Vector3 thrustVector)
+        {
+            //method to get the thrust vector of a specified rcs thruster
+            List<Transform> positions = thruster.thrusterTransforms;
+            Vector3 meanVector = Vector3.zero;
+
+            foreach (Transform thrusterTransform in positions)
+            {
+                Vector3 pos = thrusterTransform.up * thruster.thrusterPower;
+                // rcs will fire if thrust goes in the forward direction by any degree, this is reduced with angle offset
+                if ( Vector3.Dot(thrustVector.normalized, pos.normalized) > 0)
+                    meanVector += pos * Vector3.Dot(thrustVector.normalized, pos.normalized);
+            }
+
+            return meanVector;
+        }
+
         public static Vector3 GetMeanVector(ModuleEngines thruster)
         {
-            //method to get the thrust vector of a specific part, which in some cases is not the part vector
-
+            //method to get the thrust vector of a specified engine
             Vector3 meanVector = Vector3.zero;
             List<Transform> positions = thruster.thrustTransforms;
 
@@ -138,12 +171,40 @@ namespace KerbalCombatSystems
             //do nothing otherwise
         }
 
+        // Create and set a new control point for a command module (commander) pointing along a world space vector (direction).
+        // Uses: controlling missiles from the the average engine direction to allow for mistaken/unconventional probe core orientation.
+        public static void AlignReference(ModuleCommand commander, Vector3 direction)
+        {
+            ControlPoint dynamic = commander.GetControlPoint("dynamic");
+            // Check for an already existing dynamic control point
+            if (dynamic == null)
+            {
+                // Create a new transform named dynamic.
+                GameObject tc = new GameObject("dynamic");
+                Transform transform = tc.transform;
+                transform.SetParent(commander.transform);
+                transform.position = commander.transform.position;
+
+                // Create a new control point with the transform.
+                dynamic = new ControlPoint("dynamic", "Dynamic", transform, Vector3.zero);
+
+                // Add the control point to the command module and set it as active.
+                commander.controlPoints.Add("dynamic", dynamic);
+            }
+
+            commander.SetControlPoint("dynamic");
+
+            // Orient the control point towards direction (finger) with perpendicular as the up vector (thumb).
+            Vector3 perpendicular = Vector3.ProjectOnPlane(commander.transform.forward, direction);
+            dynamic.transform.rotation = Quaternion.LookRotation(perpendicular, direction); // VAB orientation.
+        }
+
         #endregion
 
         #region Finders
         public static ModuleCommand FindCommand(Vessel craft)
         {
-            //get a list of onboard control points and return the first found
+            //get a list of onboard command pods and return one
             List<ModuleCommand> commandPoints = craft.FindPartModulesImplementing<ModuleCommand>();
 
             return commandPoints.FirstOrDefault();
@@ -159,28 +220,25 @@ namespace KerbalCombatSystems
             return ship;
         }
 
-        public static ModuleDecouplerDesignate FindDecoupler(Part origin, string type, bool ignoreTypeRequirement)
+        // Search up the part tree to find a separator.
+        public static ModuleDecouplerDesignate FindDecoupler(Part origin, string type = "Default")
         {
-            // method to search up the part tree to find a single decoupler
+            if (type == null) type = "Default";
 
             Part currentPart;
             Part nextPart = origin.parent;
             ModuleDecouplerDesignate module;
 
-            if (nextPart == null) return null;
-
-            for (int i = 0; i < 99; i++)
+            while (nextPart != null)
             {
                 currentPart = nextPart;
                 nextPart = currentPart.parent;
 
-                // stop looking if there is no next part
-                if (nextPart == null) break;
-
                 // make sure the decoupler designator exists and is the specified type
                 module = currentPart.GetComponent<ModuleDecouplerDesignate>();
                 if (module == null) continue;
-                if (module.decouplerDesignation != type && !ignoreTypeRequirement) continue;
+                //"" is shorthand for ignoring the type requirement and firing any decoupler
+                if (type != "" && module.decouplerDesignation != type) continue;
                 //strike any decouplers without any child parts
                 if (!currentPart.FindChildParts<Part>(true).ToList().Any()) continue;
 
@@ -190,15 +248,14 @@ namespace KerbalCombatSystems
             return null;
         }
 
-        public static List<ModuleDecouplerDesignate> FindDecouplerChildren(Part root, string type, bool ignoreTypeRequirement)
+        // Search the children of a specified part for separators.
+        public static List<ModuleDecouplerDesignate> FindDecouplerChildren(Part root, string type = "Default")
         {
-            // method to search the children of a specified part for decoupler modules
-
+            if (type == null) type = "Default";
 
             List<Part> childParts = root.FindChildParts<Part>(true).ToList();
-            //check the parent itself
-            childParts.Insert(0, root);
-            //spawn empty modules list to add to
+            childParts.Insert(0, root); //check the parent itself
+
             List<ModuleDecouplerDesignate> seperatorList = new List<ModuleDecouplerDesignate>();
             ModuleDecouplerDesignate module;
 
@@ -208,7 +265,8 @@ namespace KerbalCombatSystems
 
                 // make sure the decoupler designator exists and is the specified type
                 if (module == null) continue;
-                if (module.decouplerDesignation != type && !ignoreTypeRequirement) continue;
+                //"" is shorthand for ignoring the type requirement and firing any decoupler
+                if (type != "" && module.decouplerDesignation != type) continue;
                 //strike any decouplers without any child parts
                 if (!currentPart.FindChildParts<Part>(true).ToList().Any()) continue;
 
@@ -338,6 +396,7 @@ namespace KerbalCombatSystems
 
             return false;
         }
+
         #endregion
     }
 
