@@ -79,7 +79,6 @@ namespace KerbalCombatSystems
             {
                 Debug.Log("[KCS]: Couldn't find decoupler.");
             }
-            
             // Wait for seperation to take effect
             yield return new WaitForEndOfFrame();
 
