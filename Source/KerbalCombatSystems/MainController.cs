@@ -487,6 +487,10 @@ namespace KerbalCombatSystems
                 Overlay.UpdateOpacity();
             }
 
+            // Hidden until CC supports fireworks.
+            //GUILayout.Label("Gameplay", titleStyle);
+            //SliderSetting(ref ModuleFirework.fireworkSpeed, "Firework Speed", 100, 500);
+
             GUILayout.EndScrollView();
             GUILayout.EndVertical();
 
@@ -504,7 +508,7 @@ namespace KerbalCombatSystems
 
             GUILayout.Label(setting.ToString(), centeredText, GUILayout.Width(windowWidth * 0.25f));
 
-            if (setting != settingLast)
+            if (setting != settingLast && text.Contains("opacity"))
                 updateOverlayOpacity = true;
 
             GUILayout.EndHorizontal();

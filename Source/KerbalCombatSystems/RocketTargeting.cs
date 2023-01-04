@@ -40,15 +40,9 @@ namespace KerbalCombatSystems
         public override void Setup()
         {
             controller = part.FindModuleImplementing<ModuleWeaponController>();
-
             if (controller.target == null && vessel.targetObject == null) return;
-            target = controller.target ?? vessel.targetObject.GetVessel();
-            firingInterval = controller.firingInterval;
-            fireCountdown = controller.fireCountdown;
-            fireSymmetry = controller.fireSymmetry;
-            accuracyTolerance = controller.accuracyTolerance;
 
-            Debug.Log("[KCS]: decoupler is valid");
+            UpdateSettings();
             NextRocket();
 
             leadLine = KCSDebug.CreateLine(Color.green);
@@ -56,9 +50,24 @@ namespace KerbalCombatSystems
                 prediction = CreateSphere();
         }
 
+        public override void UpdateSettings()
+        {
+            target = controller.target ?? vessel.targetObject.GetVessel();
+            firingInterval = controller.firingInterval;
+            fireCountdown = controller.fireCountdown;
+            fireSymmetry = controller.fireSymmetry;
+            accuracyTolerance = controller.accuracyTolerance;
+        }
+
         public override Vector3 Aim()
         {
-            if (decouplers.Count < 1 || decoupler == null || decoupler.part.vessel != vessel || target == null)
+            if (decoupler == null || decoupler.part.vessel != vessel)
+            {
+                NextRocket();
+                return Vector3.zero;
+            }
+
+            if (decouplers.Count < 1 || target == null)
                 return Vector3.zero;
 
             float timeSinceLastCalculated = Time.time - lastCalculated;
@@ -82,11 +91,7 @@ namespace KerbalCombatSystems
 
             KCSDebug.PlotLine(new Vector3[] { origin, origin + leadVector }, leadLine);
 
-            // Scale the accuracy requirement (in degrees) based on the distance and size of the target.
-            Vector3 targetRadius = Vector3.ProjectOnPlane(Vector3.up, targetVector.normalized).normalized * (controller.targetSize / 2) * accuracyTolerance;
-            float aimTolerance = Vector3.Angle(targetVector, targetVector + targetRadius);
-
-            bool onTarget = Vector3.Angle(leadVector.normalized, decoupler.transform.up) < aimTolerance;
+            bool onTarget = OnTarget(leadVector.normalized, decoupler.transform.up, targetVector, controller.targetSize, accuracyTolerance);
             if (onTarget)
             {
                 // We must remain on target for fireCountdown seconds before we can fire.
@@ -110,7 +115,7 @@ namespace KerbalCombatSystems
                     // Create a static pink ball where the hit is predicted to happen.
                     if (KCSDebug.showLines)
                     {
-                        GameObject prediction = CreateSphere();
+                        GameObject prediction = CreateSphere(timeToHit + 5);
                         prediction.transform.position = origin + leadVector;
                     }
                 }
@@ -267,10 +272,13 @@ namespace KerbalCombatSystems
             controller.aimPart = decoupler.part;
         }
 
-        public void OnDestroy() =>
+        public void OnDestroy()
+        {
             KCSDebug.DestroyLine(leadLine);
+            Destroy(prediction);
+        }
 
-        private GameObject CreateSphere()
+        private GameObject CreateSphere(float deleteAfter = 0)
         {
             GameObject prediction = GameObject.CreatePrimitive(PrimitiveType.Sphere);
             var mr = prediction.GetComponent<MeshRenderer>();
@@ -279,9 +287,11 @@ namespace KerbalCombatSystems
             sphereMat.color = new Color(1f, 0f, 1f, 0.4f);
             mr.material = sphereMat;
 
-            //todo sphere doesn't destroy
             prediction.transform.localScale = prediction.transform.localScale * 2;
             Destroy(prediction.GetComponent<SphereCollider>());
+
+            if (deleteAfter > 0)
+                Destroy(prediction, deleteAfter);
 
             return prediction;
         }

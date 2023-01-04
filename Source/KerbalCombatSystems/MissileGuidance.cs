@@ -14,6 +14,7 @@ namespace KerbalCombatSystems
         private float maxThrust;
         private Vessel target;
         private Vessel firer;
+        private float igniteDelay;
         private float terminalVelocity;
         private ModuleWeaponController targetWeapon;
         private bool isInterceptor;
@@ -52,11 +53,13 @@ namespace KerbalCombatSystems
 
         private IEnumerator Launch()
         {
+            // 1. Separate from firer.
+
             // find decoupler
             seperator = FindDecoupler(part);
 
-            bool frontLaunch = Vector3.Dot(seperator.transform.up, vessel.ReferenceTransform.up) > 0.99;
-            controller.frontLaunch = frontLaunch;
+            // Store the direction the ship is facing.
+            Vector3 firerUp = vessel.ReferenceTransform.up;
 
             // todo:
             // electric charge check
@@ -76,9 +79,16 @@ namespace KerbalCombatSystems
             {
                 Debug.Log("[KCS]: Couldn't find decoupler.");
             }
-
             // Wait for seperation to take effect
             yield return new WaitForEndOfFrame();
+
+            // todo: use firevector instead.
+            // We are launching in the direction of the ship's propulsion, we need to flag this so the ship can throttle down temporarily.
+            bool frontLaunch = Vector3.Angle(vessel.ReferenceTransform.up, firerUp) < 50;
+            controller.frontLaunch = frontLaunch;
+
+
+            // 2. Initial setup.
 
             // turn on engines
             engines = vessel.FindPartModulesImplementing<ModuleEngines>();
@@ -107,7 +117,6 @@ namespace KerbalCombatSystems
             fc.attitude = vessel.ReferenceTransform.up;
             fc.lerpAttitude = false;
             fc.throttleLerpRate = 99;
-            fc.RCSVector = vessel.ReferenceTransform.up;
             fc.RCSPower = 20;
             fc.Drive();
 
@@ -121,33 +130,99 @@ namespace KerbalCombatSystems
             Debug.Log("[KCS]: Forward Thrust: " + maxThrust + "Kn");
             vessel.targetObject = target;
 
-            // wait to try to prevent destruction of decoupler.
-            // todo: could increase heat tolerance temporarily or calculate a lower throttle.
-            yield return new WaitForSeconds(0.2f);
 
-            if (!isInterceptor)
+            // 3. Start moving away from firer.
+
+            // Check if it's a horizontal launch.
+
+            Ray launchRay = new Ray(vessel.ReferenceTransform.position, vessel.ReferenceTransform.up);
+            bool horizontalLaunch = RayIntersectsVessel(firer, launchRay);
+
+            if (horizontalLaunch)
             {
-                // pulse to 5 m/s.
-                float burnTime = 0.5f;
-                float driftVelocity = 5;
+                Vector3 horizontal = firer.ReferenceTransform.forward;
+                bool foundExit = false;
+                Vector3 start = Vector3.ProjectOnPlane(firer.ReferenceTransform.forward, vessel.ReferenceTransform.up);
 
-                fc.throttle = driftVelocity / burnTime / GetMaxAcceleration(vessel);
-                fc.Drive();
+                // First check directions at 90 degrees to the firer's roll direction.
+                for (int i = 0; i < 4; i++)
+                {
+                    horizontal = Quaternion.AngleAxis(360f * (i / 4f), vessel.ReferenceTransform.up) * start;
+                    launchRay.direction = horizontal;
 
-                yield return new WaitForSeconds(burnTime);
+                    if (foundExit = !RayIntersectsVessel(firer, launchRay))
+                        break;
+                }
 
-                fc.throttle = 0;
+                // If we still can't find an exit, check diagonally.
+                // We do this second to prioritise straight exits from large openings.
+                if (!foundExit)
+                {
+                    for (int i = 0; i < 4; i++)
+                    {
+                        horizontal = Quaternion.AngleAxis(360 * i / 4 + 45, vessel.ReferenceTransform.up) * firer.ReferenceTransform.forward;
+                        launchRay.direction = horizontal;
+
+                        if (!RayIntersectsVessel(firer, launchRay))
+                            break;
+                    }
+                }
+
+                fc.RCSVector = horizontal.normalized * 200000f; // idk
+                float checkInterval = 0.1f;
+                float lastChecked = 0;
+
+                while (horizontalLaunch)
+                {
+                    yield return new WaitForFixedUpdate();
+
+                    fc.Drive();
+
+                    if (Time.time - lastChecked > checkInterval)
+                    {
+                        lastChecked = Time.time;
+
+                        launchRay.origin = vessel.ReferenceTransform.position;
+                        launchRay.direction = vessel.ReferenceTransform.up;
+                        horizontalLaunch = CylinderIntersectsVessel(firer, launchRay, 1.25f / 2);
+                    }
+                }
+
+                yield return new WaitForSeconds(igniteDelay);
             }
             else
             {
-                fc.throttle = 1;
+                fc.RCSVector = vessel.ReferenceTransform.up;
+
+                yield return new WaitForSeconds(igniteDelay);
+
+                if (!isInterceptor)
+                {
+                    fc.throttle = controller.pulseThrottle;
+                    fc.Drive();
+
+                    yield return new WaitForSeconds(controller.pulseDuration);
+
+                    fc.throttle = 0;
+                }
+                else
+                {
+                    fc.throttle = 1;
+                }
+
+                fc.RCSVector = Vector3.zero;
+                fc.Drive();
             }
-            fc.RCSVector = Vector3.zero;
-            fc.Drive();
+
+
+            // 4. Get line of sight to the target.
 
             Ray targetRay = new Ray();
+            targetRay.origin = vessel.ReferenceTransform.position;
+            targetRay.direction = target.transform.position - vessel.transform.position;
+            bool lineOfSight = !RayIntersectsVessel(firer, targetRay);
+
             Vector3 sideways;
-            bool lineOfSight = false;
             bool clear = false;
             float previousTolerance = fc.alignmentToleranceforBurn;
 
@@ -164,14 +239,18 @@ namespace KerbalCombatSystems
                     // We don't have line of sight with the target yet, but are we clear of the ship?
 
                     sideways = vessel.transform.forward;
+                    int blockedCount = 0;
 
                     for (int i = 0; i < 4; i++)
                     {
                         targetRay.origin = vessel.ReferenceTransform.position;
                         sideways = Vector3.Cross(sideways, vessel.ReferenceTransform.up);
                         targetRay.direction = sideways;
-                        clear = !RayIntersectsVessel(firer, targetRay);
 
+                        if (RayIntersectsVessel(firer, targetRay))
+                            blockedCount++;
+
+                        clear = blockedCount < 2;
                         if (!clear) break;
                     }
                 }
@@ -202,6 +281,9 @@ namespace KerbalCombatSystems
             }
 
             fc.alignmentToleranceforBurn = previousTolerance;
+
+
+            // 5. Finish setting up the missile.
 
             // Remove end cap
             List<ModuleDecouplerDesignate> decouplers = FindDecouplerChildren(vessel.rootPart);
@@ -339,6 +421,7 @@ namespace KerbalCombatSystems
             isInterceptor = controller.isInterceptor;
             targetWeapon = controller.targetWeapon;
             firer = vessel;
+            igniteDelay = controller.igniteDelay;
         }
 
         public override void Fire()

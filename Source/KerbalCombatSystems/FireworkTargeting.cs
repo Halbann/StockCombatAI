@@ -8,23 +8,27 @@ namespace KerbalCombatSystems
 {
     public class ModuleFirework : ModuleWeapon
     {
+        public static float fireworkSpeed = 100f;
+
         // Firework Targetting variables.
         public bool firing = false;
-        Vessel Target;
-        public Vector3 LeadVector;
-        Part FiringPart;
+        Vessel target;
+        public Vector3 leadVector;
+        Part firingPart;
         Vector3 aimVector;
-        Vector3 Origin;
+        Vector3 origin;
 
         // Debugging line variables.
-        LineRenderer AimLine;
+        LineRenderer aimLine;
 
         // stored settings
-        private int RoundBurst;
-        private float BurstSpacing;
+        private int roundBurst;
+        private float burstSpacing;
+        private float burstInterval;
+        float accuracyTolerance;
 
         //list of valid launcher modules with ammo
-        private List<ModulePartFirework> FireworkLaunchers;
+        private List<ModulePartFirework> fireworkLaunchers;
 
         ModuleWeaponController controller;
 
@@ -33,48 +37,48 @@ namespace KerbalCombatSystems
             UpdateSettings();
 
             // initialise debug line renderer
-            AimLine = KCSDebug.CreateLine(new Color(196f / 255f, 208f / 255f, 164f / 255f, 1f));
+            aimLine = KCSDebug.CreateLine(new Color(196f / 255f, 208f / 255f, 164f / 255f, 1f));
 
             //get list of fireworks
             FindFireworks(part.parent);
 
-            if (FireworkLaunchers.Count < 1)
+            if (fireworkLaunchers.Count < 1)
                 part.RemoveModule(part.GetComponent<ModuleFirework>());
             else
-                controller.aimPart = FireworkLaunchers.First().part;
+                controller.aimPart = fireworkLaunchers.First().part;
         }
 
         public override Vector3 Aim()
         {
             //if there is a ship target run the appropriate aiming angle calculations
-            if (Target != null)
+            if (target != null)
             {
-                if (FireworkLaunchers.Count < 1)
+                if (fireworkLaunchers.Count < 1)
                 {
                     controller.canFire = false;
                     return Vector3.zero;
                 }
 
                 //get the firework launcher to aim with and where it is currently facing
-                ModulePartFirework firstLauncher = FireworkLaunchers.First();
+                ModulePartFirework firstLauncher = fireworkLaunchers.First();
 
-                FiringPart = firstLauncher.part;
-                controller.aimPart = FiringPart;
-                aimVector = FiringPart.transform.up;
-                LeadVector = TargetLead(Target, FiringPart, 100f).normalized;
+                firingPart = firstLauncher.part;
+                controller.aimPart = firingPart;
+                aimVector = firingPart.transform.up;
+                leadVector = TargetLead(target, firingPart, fireworkSpeed).normalized;
 
                 // Update debug lines.
-                Origin = FiringPart.transform.position;
-                KCSDebug.PlotLine(new[] { Origin, Origin + (aimVector * 15) }, AimLine);
+                origin = firingPart.transform.position;
+                KCSDebug.PlotLine(new[] { origin, origin + (aimVector * 15) }, aimLine);
             }
 
             //once aligned correctly start the firing sequence
-            if (!firing && ((Vector3.Angle(aimVector, LeadVector) < 1f) || Target == null))
+            if (!firing && OnTarget(leadVector, aimVector, target.CoM - firingPart.transform.position, controller.targetSize, accuracyTolerance))
             {
                 Fire();
             }
 
-            return LeadVector;
+            return leadVector;
         }
 
         public override void Fire()
@@ -86,23 +90,23 @@ namespace KerbalCombatSystems
 
         private IEnumerator FireShells()
         {
-            int TempBurst = RoundBurst;
+            int tempBurst = roundBurst;
             //fire amount of shells
-            for (int i = 0; i < TempBurst; i++)
+            for (int i = 0; i < tempBurst; i++)
             {
-                if (FireworkLaunchers.Count < 1)
+                if (fireworkLaunchers.Count < 1)
                 {
                     controller.canFire = false;
                     break;
                 }
 
-                yield return new WaitForSeconds(BurstSpacing);
-                ModulePartFirework Launcher = FireworkLaunchers.Last();
+                yield return new WaitForSeconds(burstSpacing);
+                ModulePartFirework Launcher = fireworkLaunchers.Last();
 
                 // Change firework settings.
                 Launcher.variationOnShellDirection = false;
                 float oldVel = Launcher.shellVelocity;
-                Launcher.shellVelocity = 100f;
+                Launcher.shellVelocity = fireworkSpeed;
 
                 // Launch shell.
                 Launcher.LaunchShell();
@@ -118,11 +122,13 @@ namespace KerbalCombatSystems
                 //clear expended launchers from the list
                 if (Launcher.fireworkShots < 1)
                 {
-                    FireworkLaunchers.Remove(Launcher);
+                    fireworkLaunchers.Remove(Launcher);
                     //add one more round to the burst to substitute missing shot
-                    TempBurst++;
+                    tempBurst++;
                 }
             }
+
+            yield return new WaitForSeconds(burstInterval);
 
             firing = false;
         }
@@ -132,29 +138,31 @@ namespace KerbalCombatSystems
             List<Part> childParts = part.parent.FindChildParts<Part>(true).ToList();
             childParts.Add(part.parent);
 
-            FireworkLaunchers = new List<ModulePartFirework>();
-            ModulePartFirework Firework;
+            fireworkLaunchers = new List<ModulePartFirework>();
+            ModulePartFirework firework;
 
             foreach (Part CurrentPart in childParts)
             {
-                Firework = CurrentPart.GetComponent<ModulePartFirework>();
-                if (Firework == null) continue;
+                firework = CurrentPart.GetComponent<ModulePartFirework>();
+                if (firework == null) continue;
 
-                FireworkLaunchers.Add(Firework);
+                fireworkLaunchers.Add(firework);
             }
         }
 
         public void OnDestroy()
         {
-            KCSDebug.DestroyLine(AimLine);
+            KCSDebug.DestroyLine(aimLine);
         }
 
-        public void UpdateSettings()
+        public override void UpdateSettings()
         {
             controller = part.FindModuleImplementing<ModuleWeaponController>();
-            Target = controller.target;
-            RoundBurst = (int)controller.FWRoundBurst;
-            BurstSpacing = controller.FWBurstSpacing;
+            target = controller.target;
+            roundBurst = (int)controller.FWRoundBurst;
+            burstSpacing = controller.FWBurstSpacing;
+            burstInterval = controller.FWBurstInterval;
+            accuracyTolerance = controller.accuracyTolerance;
         }
     }
 }

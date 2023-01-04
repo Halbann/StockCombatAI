@@ -61,7 +61,8 @@ namespace KerbalCombatSystems
         }
     }
 
-    public class KCSOpponents : GameParameters.CustomParameterNode
+    // Hidden until implementation.
+    /*public class KCSOpponents : GameParameters.CustomParameterNode
     {
         public override string Title { get { return "Opponent Spawning"; } }
         public override GameParameters.GameMode GameMode { get { return GameParameters.GameMode.ANY; } }
@@ -91,5 +92,5 @@ namespace KerbalCombatSystems
         {
             return null;
         }
-    }
+    }*/
 }

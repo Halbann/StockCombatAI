@@ -19,7 +19,6 @@ namespace KerbalCombatSystems
         public float combatUpdateInterval = 2.5f;
         private bool allowWithdrawal;
         public float firingAngularVelocityLimit = 1; // degrees per second
-        public float firingInterval = 7.5f;
         public float controlTimeout = 10;
 
         // Robotics tracking variables
@@ -29,7 +28,7 @@ namespace KerbalCombatSystems
 
         // Ship AI variables.
 
-        private KCSFlightController fc;
+        internal KCSFlightController fc;
 
         public Vessel target;
         private ModuleShipController targetController;
@@ -75,13 +74,13 @@ namespace KerbalCombatSystems
         public bool alive = true;
 
         [KSPField(isPersistant = true)]
-        private bool DeployedSensors;
+        private bool deployedSensors;
 
         [KSPField(isPersistant = true,
             guiActive = true,
             guiActiveEditor = true,
             guiName = "Manoeuvring Speed",
-            guiUnits = "m/s",
+            guiUnits = " m/s",
             groupName = shipControllerGroupName,
             groupDisplayName = shipControllerGroupName),
             UI_FloatRange(
@@ -95,8 +94,8 @@ namespace KerbalCombatSystems
         [KSPField(isPersistant = true,
             guiActive = true,
             guiActiveEditor = true,
-            guiName = "Firing Speed",
-            guiUnits = "m/s",
+            guiName = "Strafing Speed Limit",
+            guiUnits = " m/s",
             groupName = shipControllerGroupName,
             groupDisplayName = shipControllerGroupName),
             UI_FloatRange(
@@ -121,6 +120,55 @@ namespace KerbalCombatSystems
             )]
         public float maxSalvoSize = 5;
 
+        [KSPField(isPersistant = true,
+            guiActive = true,
+            guiActiveEditor = true,
+            guiName = "Salvo Interval",
+            guiUnits = " s",
+            groupName = shipControllerGroupName,
+            groupDisplayName = shipControllerGroupName),
+            UI_FloatRange(
+                minValue = 1,
+                maxValue = 30,
+                stepIncrement = 0.1f,
+                scene = UI_Scene.All
+            )]
+        public float firingInterval = 7.5f;
+
+        [KSPField(isPersistant = true,
+            guiActive = true,
+            guiActiveEditor = true,
+            guiName = "Forwards Launch Throttle Limit", // could do with a better name
+            groupName = shipControllerGroupName,
+            groupDisplayName = shipControllerGroupName),
+            UI_FloatRange(
+                minValue = 0,
+                maxValue = 1,
+                stepIncrement = 0.1f,
+                scene = UI_Scene.All
+            )]
+        public float forwardLaunchThrottle = 0f;
+
+        private const float priorityTargetMin = 1f;
+        private const float priorityTargetMax = 250f;
+
+        [KSPField(isPersistant = true,
+            guiActive = true,
+            guiActiveEditor = true,
+            guiName = "Priority Target Mass",
+            guiUnits = " t",
+            groupName = shipControllerGroupName,
+            groupDisplayName = shipControllerGroupName),
+            UI_MinMaxRange(
+                minValueX = priorityTargetMin,
+                maxValueX = priorityTargetMax,
+                minValueY = priorityTargetMin,
+                maxValueY = priorityTargetMax,
+                stepIncrement = 1f,
+                scene = UI_Scene.All
+            )]
+        public Vector2 priorityTargetRange = new Vector2(priorityTargetMin, priorityTargetMax);
+
         [KSPField(
             isPersistant = true,
             guiActive = true,
@@ -131,6 +179,19 @@ namespace KerbalCombatSystems
             UI_ChooseOption(controlEnabled = true, affectSymCounterparts = UI_Scene.None,
             options = new string[] { "Default", "Chase", "Ignore" })]
         public string withdrawingPriority = "Default";
+
+        [KSPField(isPersistant = true,
+            guiActive = true,
+            guiActiveEditor = true,
+            guiName = "Use Evasion",
+            groupName = shipControllerGroupName,
+            groupDisplayName = shipControllerGroupName),
+            UI_Toggle(
+                enabledText = "Enabled",
+                disabledText = "Disabled",
+                scene = UI_Scene.All
+            )]
+        public bool useEvasion = true;
 
         // Debugging
         internal float nearInterceptBurnTime;
@@ -171,6 +232,9 @@ namespace KerbalCombatSystems
 
             if (behaviourCoroutine != null)
                 StopCoroutine(behaviourCoroutine);
+
+            vessel.ActionGroups.SetGroup(KSPActionGroup.SAS, true);
+            vessel.Autopilot.SetMode(VesselAutopilot.AutopilotMode.StabilityAssist);
         }
 
         private void Start()
@@ -314,10 +378,24 @@ namespace KerbalCombatSystems
                 // Switch to passive robotics while withdrawing.
                 UpdateFlightRobotics(false);
 
+                // Determine the direction.
+
+                var enemies = FindEnemies();
+                Vector3 averagePos = Vector3.zero;
+                if (enemies.Count > 1)
+                {
+                    foreach (var enemy in enemies)
+                        averagePos += FromTo(vessel, enemy.vessel).normalized;
+
+                    averagePos /= enemies.Count;
+                }
+
+                Vector3 direction = enemies.Count > 1 ? -averagePos.normalized : vessel.ReferenceTransform.up;
+                Vector3 orbitNormal = vessel.orbit.Normal(Planetarium.GetUniversalTime());
+                bool facingNorth = Vector3.Angle(direction, orbitNormal) < 90;
+
                 // Withdraw sequence. Locks behaviour while burning 200 m/s of delta-v either north or south.
 
-                Vector3 orbitNormal = vessel.orbit.Normal(Planetarium.GetUniversalTime());
-                bool facingNorth = Vector3.Angle(vessel.ReferenceTransform.up, orbitNormal) < 90;
                 Vector3 deltav = orbitNormal * (facingNorth ? 1 : -1) * 200;
                 fc.throttle = 1;
 
@@ -333,7 +411,7 @@ namespace KerbalCombatSystems
 
                 fc.throttle = 0;
             }
-            else if (CheckIncoming()) // Needs to start evading an incoming missile.
+            else if (useEvasion && CheckIncoming()) // Needs to start evading an incoming missile.
             {
                 state = "Dodging";
 
@@ -382,6 +460,7 @@ namespace KerbalCombatSystems
                 }
 
                 currentProjectile.targetSize = targetController.averagedSize;
+                currentProjectile.UpdateSettings();
 
                 while (UnderTimeLimit() && target != null && currentProjectile.canFire)
                 {
@@ -467,13 +546,15 @@ namespace KerbalCombatSystems
 
                 ModuleWeaponController currentWeapon = GetPreferredWeapon(target, weapons);
                 float minRange = currentWeapon.MinMaxRange.x;
-                float maxRange = currentWeapon.MinMaxRange.y;
+                float minRangeProjectile = currentWeapon.MinMaxRange.x * 0.25f;
+                float maxRange = Mathf.Min(currentWeapon.MinMaxRange.y, TargetLockRange());
                 float currentRange = VesselDistance(vessel, target);
                 bool complete = false;
                 bool nearInt = false;
                 Vector3 relVel = RelVel(vessel, target);
+                bool usingProjectile = ModuleWeaponController.projectileTypes.Contains(currentWeapon.weaponType);
 
-                if (currentRange < minRange && AwayCheck(minRange))
+                if (currentRange < (!usingProjectile ? minRange : minRangeProjectile) && AwayCheck(minRange))
                 {
                     state = "Manoeuvring (Away)";
                     fc.throttle = 1;
@@ -484,7 +565,7 @@ namespace KerbalCombatSystems
                     {
                         fc.attitude = FromTo(vessel, target).normalized * -1;
                         fc.throttle = Vector3.Dot(RelVel(vessel, target), fc.attitude) < manoeuvringSpeed ? 1 : 0;
-                        complete = FromTo(vessel, target).magnitude > minRange;
+                        complete = FromTo(vessel, target).magnitude > minRange || !AwayCheck(minRange);
 
                         yield return new WaitForFixedUpdate();
                     }
@@ -520,6 +601,9 @@ namespace KerbalCombatSystems
                         lateralVelocity = lateral.magnitude;
 
                         float throttle = Vector3.Dot(RelVel(vessel, target), toTarget.normalized) < manoeuvringSpeed ? 1 : 0;
+                        if (burn.magnitude / maxAcceleration < 1 && fc.throttle == 0)
+                            throttle = 0;
+
                         fc.throttle = throttle * Mathf.Clamp(burn.magnitude / maxAcceleration, 0.2f, 1);
 
                         if (fc.throttle > 0)
@@ -631,6 +715,9 @@ namespace KerbalCombatSystems
                 bool checkWeapons = false;
                 float targetMass = (float)target.totalMass;
 
+                // Decide how many missiles to use based on the mass of the missile we want to use, the mass of the target,
+                // and the mass of the weapons already on their way to the target.
+
                 if (targetController.incomingWeapons.Count > 0)
                 {
                     targetMass = (float)target.totalMass - targetController.incomingWeapons.Sum(w => w.mass * w.targetMassRatio);
@@ -672,11 +759,15 @@ namespace KerbalCombatSystems
 
                     if (weapon.frontLaunch)
                     {
+                        float launchTime = Time.time;
+
                         Coroutine waitForLaunch = StartCoroutine(WaitForLaunch(weapon));
                         yield return waitForLaunch;
+
+                        yield return new WaitForSeconds(Mathf.Max(weapon.salvoSpacing - (Time.time - launchTime), 0));
                     }
                     else if (weapon != last)
-                        yield return new WaitForSeconds(0.8f);
+                        yield return new WaitForSeconds(weapon.salvoSpacing);
                 }
 
                 if (checkWeapons)
@@ -754,12 +845,6 @@ namespace KerbalCombatSystems
             }
         }
 
-        public IEnumerator CheckWeaponsDelayed()
-        {
-            yield return new WaitForFixedUpdate();
-            CheckWeapons();
-        }
-
         public ModuleShipController GetNearestEnemy()
         {
             var enemiesByDistance = KCSController.ships.FindAll(s => s != null && s.alive && s.side != side);
@@ -794,9 +879,10 @@ namespace KerbalCombatSystems
 
             foreach (var selectedWeapon in weaponsRanked)
                 identicalWeapons.AddRange(weapons.FindAll(w => Mathf.Approximately(selectedWeapon.mass, w.mass) && !weaponsRanked.Contains(w) && !identicalWeapons.Contains(w)));
+            
+            weaponsRanked.AddRange(identicalWeapons);
 
             // Make doubly sure there aren't any duplicate entries.
-            weaponsRanked.AddRange(identicalWeapons);
             weaponsRanked = weaponsRanked.Distinct().ToList();
 
             // Group and order the identical missiles by their orientation to the target. More lined-up is better. 
@@ -842,7 +928,9 @@ namespace KerbalCombatSystems
 
         public bool CheckStatus()
         {
-            hasPropulsion = vessel.FindPartModulesImplementing<ModuleEngines>().FindAll(e => e.EngineIgnited && e.isOperational).Count > 0;
+            bool hasRCSFore = vessel.FindPartModulesImplementing<ModuleRCSFX>().FindAll(e => e.rcsEnabled && !e.flameout && e.useThrottle).Count > 0;
+
+            hasPropulsion = hasRCSFore || vessel.FindPartModulesImplementing<ModuleEngines>().FindAll(e => e.EngineIgnited && e.isOperational).Count > 0;
             hasWeapons = vessel.FindPartModulesImplementing<ModuleWeaponController>().FindAll(w => w.canFire).Count > 0;
 
             bool spunOut = false;
@@ -880,33 +968,38 @@ namespace KerbalCombatSystems
                 maxDetectionRange = sensors.Max(s => s.detectionRange);
 
             //if the sensors aren't deployed and the AI is running
-            if (!DeployedSensors && controllerRunning)
+            if (!deployedSensors && controllerRunning)
             {
-                foreach (ModuleObjectTracking Sensor in sensors)
+                foreach (ModuleObjectTracking sensor in sensors)
                 {
-                    //try deploy animations, not all scanners will have them 
-                    var anim = Sensor.part.FindModuleImplementing<ModuleAnimationGroup>();
+                    if (!sensor.animate) continue;
+
+                    //try deploy animations, not all scanners will have them
+                    var anim = sensor.part.FindModuleImplementing<ModuleAnimationGroup>();
                     if (anim == null) continue;
                     TryToggle(true, anim);
                 }
-                DeployedSensors = true;
+                deployedSensors = true;
             }
 
             //if the sensors are deployed and the AI isn't runnning
-            if (DeployedSensors && !controllerRunning)
+            if (deployedSensors && !controllerRunning)
             {
-                foreach (ModuleObjectTracking Sensor in sensors)
+                foreach (ModuleObjectTracking sensor in sensors)
                 {
+                    if (!sensor.animate) continue;
+
                     //try retract animations, not all scanners will have them 
-                    var anim = Sensor.part.FindModuleImplementing<ModuleAnimationGroup>();
+                    var anim = sensor.part.FindModuleImplementing<ModuleAnimationGroup>();
                     if (anim == null) continue;
                     TryToggle(false, anim);
                 }
-                DeployedSensors = false;
+                deployedSensors = false;
             }
+
         }
 
-        private void FindTarget()
+        private List<ModuleShipController> FindEnemies()
         {
             List<ModuleShipController> validEnemies = KCSController.ships.FindAll(
                 s =>
@@ -914,6 +1007,13 @@ namespace KerbalCombatSystems
                 && s.vessel != null
                 && s.side != side
                 && s.alive);
+
+            return validEnemies;
+        }
+
+        private void FindTarget()
+        {
+            List<ModuleShipController> validEnemies = FindEnemies();
 
             if (!hasWeapons || validEnemies.Count < 1)
             {
@@ -930,25 +1030,50 @@ namespace KerbalCombatSystems
             // Remove all possibility of targeting withdrawing enemies who are out of range and can't be intercepted.
             withdrawingEnemies = withdrawingEnemies.Except(withdrawingEnemies.FindAll(s => FromTo(vessel, s.vessel).magnitude > maxWeaponRange && !CanInterceptShip(s))).ToList();
 
+            // Remove offline enemies, add them to the bottom of the list later.
             List<ModuleShipController> offlineEnemies = validEnemies.FindAll(s => !s.controllerRunning);
             validEnemies = validEnemies.Except(offlineEnemies).ToList();
 
+            // If a priority target mass range has been specified, separate them out, add them to the top of the list later.
+            List<ModuleShipController> priorityTargets = new List<ModuleShipController>();
+
+            if (priorityTargetRange.x != priorityTargetMin || priorityTargetRange.y != priorityTargetMax)
+            {
+                // Within 2 x weapon range and within mass range.
+                // If our max is all the way to the right then include anything heavier.
+
+                priorityTargets = validEnemies.FindAll(s =>
+                    FromTo(vessel, s.vessel).magnitude < maxWeaponRange * 2
+                    && s.initialMass > priorityTargetRange.x
+                    && (s.initialMass < priorityTargetRange.y
+                        || (s.initialMass > priorityTargetRange.y 
+                            && priorityTargetRange.y == priorityTargetMax))
+                );
+
+                validEnemies = validEnemies.Except(priorityTargets).ToList();
+                priorityTargets = priorityTargets.OrderBy(s => WeighTarget(s)).ToList();
+            }
+
+            // Weigh valid enemies.
             validEnemies = validEnemies.OrderBy(s => WeighTarget(s)).ToList();
 
+            // Add withdrawing enemies to the back of the list, the front, or ignore them.
             if (withdrawingPriority != "Ignore")
             {
                 withdrawingEnemies = withdrawingEnemies.OrderBy(s => WeighTarget(s)).ToList();
 
                 if (withdrawingPriority == "Chase")
                 {
-                    withdrawingEnemies.AddRange(validEnemies);
-                    validEnemies = withdrawingEnemies;
+                    validEnemies.InsertRange(0, withdrawingEnemies);
                 }
                 else
                 {
                     validEnemies.AddRange(withdrawingEnemies);
                 }
             }
+
+            // Add priority targets to the front of the list.
+            validEnemies.InsertRange(0, priorityTargets);
 
             offlineEnemies = offlineEnemies.OrderBy(s => WeighTarget(s)).ToList();
             validEnemies.AddRange(offlineEnemies);
@@ -986,9 +1111,14 @@ namespace KerbalCombatSystems
             return distance * (1 - massComparison);
         }
 
+        private float TargetLockRange()
+        {
+            return maxDetectionRange * Mathf.Clamp(targetController.heatSignature / 1500, 0.5f, 3.0f);
+        }
+
         private bool HasLock()
         {
-            return FromTo(vessel, target).magnitude < maxDetectionRange * Mathf.Clamp((targetController.heatSignature / 1500), 0.5f, 3.0f);
+            return FromTo(vessel, target).magnitude < TargetLockRange();
         }
 
         private void FindInterceptTarget()
@@ -1303,7 +1433,7 @@ namespace KerbalCombatSystems
         private IEnumerator WaitForLaunch(ModuleWeaponController weapon)
         {
             state = "Firing Missile";
-            fc.throttle = 0;
+            fc.throttle = Mathf.Min(forwardLaunchThrottle, fc.throttle);
             fc.Drive();
             fc.Stability(true);
 
