@@ -63,7 +63,7 @@ namespace KerbalCombatSystems
         [KSPField(isPersistant = true,
                guiActive = true,
                guiActiveEditor = true,
-               guiName = "Target Mass Ratio",
+               guiName = "Mass Ratio",
                guiUnits = "x",
                groupName = weaponGroupName,
                groupDisplayName = weaponGroupName),
