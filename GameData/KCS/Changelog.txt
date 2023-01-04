@@ -7,6 +7,7 @@ Patch notes:
 - Added a 'Firing Interval' setting to the ship controller for controlling the time between missile salvos.
 - Added a setting to the ship controller to toggle evasion.
 - Added a 'Forward Fire Throttle Limit' setting to the ship controller to limit the throttle while missiles are launching from the front of the ship. Zero by default.
+- Added a setting for time between firework bursts.
 - Added missile settings:
 	- Launch delay.
 	- Launch duration.
