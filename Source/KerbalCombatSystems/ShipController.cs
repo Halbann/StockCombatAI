@@ -123,7 +123,7 @@ namespace KerbalCombatSystems
         [KSPField(isPersistant = true,
             guiActive = true,
             guiActiveEditor = true,
-            guiName = "Firing Interval",
+            guiName = "Salvo Interval",
             guiUnits = " s",
             groupName = shipControllerGroupName,
             groupDisplayName = shipControllerGroupName),
@@ -138,7 +138,7 @@ namespace KerbalCombatSystems
         [KSPField(isPersistant = true,
             guiActive = true,
             guiActiveEditor = true,
-            guiName = "Forward Fire Throttle Limit", // could do with a better name
+            guiName = "Forwards Launch Throttle Limit", // could do with a better name
             groupName = shipControllerGroupName,
             groupDisplayName = shipControllerGroupName),
             UI_FloatRange(
@@ -148,6 +148,26 @@ namespace KerbalCombatSystems
                 scene = UI_Scene.All
             )]
         public float forwardLaunchThrottle = 0f;
+
+        private const float priorityTargetMin = 1f;
+        private const float priorityTargetMax = 250f;
+
+        [KSPField(isPersistant = true,
+            guiActive = true,
+            guiActiveEditor = true,
+            guiName = "Priority Target Mass",
+            guiUnits = " t",
+            groupName = shipControllerGroupName,
+            groupDisplayName = shipControllerGroupName),
+            UI_MinMaxRange(
+                minValueX = priorityTargetMin,
+                maxValueX = priorityTargetMax,
+                minValueY = priorityTargetMin,
+                maxValueY = priorityTargetMax,
+                stepIncrement = 1f,
+                scene = UI_Scene.All
+            )]
+        public Vector2 priorityTargetRange = new Vector2(priorityTargetMin, priorityTargetMax);
 
         [KSPField(
             isPersistant = true,
@@ -1010,25 +1030,50 @@ namespace KerbalCombatSystems
             // Remove all possibility of targeting withdrawing enemies who are out of range and can't be intercepted.
             withdrawingEnemies = withdrawingEnemies.Except(withdrawingEnemies.FindAll(s => FromTo(vessel, s.vessel).magnitude > maxWeaponRange && !CanInterceptShip(s))).ToList();
 
+            // Remove offline enemies, add them to the bottom of the list later.
             List<ModuleShipController> offlineEnemies = validEnemies.FindAll(s => !s.controllerRunning);
             validEnemies = validEnemies.Except(offlineEnemies).ToList();
 
+            // If a priority target mass range has been specified, separate them out, add them to the top of the list later.
+            List<ModuleShipController> priorityTargets = new List<ModuleShipController>();
+
+            if (priorityTargetRange.x != priorityTargetMin || priorityTargetRange.y != priorityTargetMax)
+            {
+                // Within 2 x weapon range and within mass range.
+                // If our max is all the way to the right then include anything heavier.
+
+                priorityTargets = validEnemies.FindAll(s =>
+                    FromTo(vessel, s.vessel).magnitude < maxWeaponRange * 2
+                    && s.initialMass > priorityTargetRange.x
+                    && (s.initialMass < priorityTargetRange.y
+                        || (s.initialMass > priorityTargetRange.y 
+                            && priorityTargetRange.y == priorityTargetMax))
+                );
+
+                validEnemies = validEnemies.Except(priorityTargets).ToList();
+                priorityTargets = priorityTargets.OrderBy(s => WeighTarget(s)).ToList();
+            }
+
+            // Weigh valid enemies.
             validEnemies = validEnemies.OrderBy(s => WeighTarget(s)).ToList();
 
+            // Add withdrawing enemies to the back of the list, the front, or ignore them.
             if (withdrawingPriority != "Ignore")
             {
                 withdrawingEnemies = withdrawingEnemies.OrderBy(s => WeighTarget(s)).ToList();
 
                 if (withdrawingPriority == "Chase")
                 {
-                    withdrawingEnemies.AddRange(validEnemies);
-                    validEnemies = withdrawingEnemies;
+                    validEnemies.InsertRange(0, withdrawingEnemies);
                 }
                 else
                 {
                     validEnemies.AddRange(withdrawingEnemies);
                 }
             }
+
+            // Add priority targets to the front of the list.
+            validEnemies.InsertRange(0, priorityTargets);
 
             offlineEnemies = offlineEnemies.OrderBy(s => WeighTarget(s)).ToList();
             validEnemies.AddRange(offlineEnemies);
