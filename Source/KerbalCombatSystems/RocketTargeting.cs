@@ -115,7 +115,7 @@ namespace KerbalCombatSystems
                     // Create a static pink ball where the hit is predicted to happen.
                     if (KCSDebug.showLines)
                     {
-                        GameObject prediction = CreateSphere();
+                        GameObject prediction = CreateSphere(timeToHit + 5);
                         prediction.transform.position = origin + leadVector;
                     }
                 }
@@ -281,10 +281,13 @@ namespace KerbalCombatSystems
             controller.aimPart = decoupler.part;
         }
 
-        public void OnDestroy() =>
+        public void OnDestroy()
+        {
             KCSDebug.DestroyLine(leadLine);
+            Destroy(prediction);
+        }
 
-        private GameObject CreateSphere()
+        private GameObject CreateSphere(float deleteAfter = 0)
         {
             GameObject prediction = GameObject.CreatePrimitive(PrimitiveType.Sphere);
             var mr = prediction.GetComponent<MeshRenderer>();
@@ -294,9 +297,11 @@ namespace KerbalCombatSystems
 
             mr.material = sphereMat;
 
-            //todo sphere doesn't destroy
             prediction.transform.localScale = prediction.transform.localScale * 2;
             Destroy(prediction.GetComponent<SphereCollider>());
+
+            if (deleteAfter > 0)
+                Destroy(prediction, deleteAfter);
 
             return prediction;
         }
