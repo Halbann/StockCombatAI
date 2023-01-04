@@ -9,6 +9,7 @@ Patch notes:
 - Changed accuracy threshold for fireworks from a fixed angle to a multiple of the target radius.
 - Ships will no longer move away from their target when below minimum range if their current weapon is a projectile.
 - Ships will now ignore target intercept adjustments of less than a second.
+- Ships now decide whether to withdraw north or south based on the position of enemy ships.  
 - RCS with throttle enabled now counts towards ship propulsion status.
 - Renamed some settings for clarity.
 - Hid unused settings.
