@@ -26,3 +26,4 @@ Patch notes:
 - Fixed a bug causing missile stacks to fire in the wrong order.
 - Fixed object tracking info panels in part menu displaying 0.
 - Fixed a ship movement bug caused by max weapon range exceeding lock range.
+- Fixed a bug that was preventing the use of throttle hotkeys after turning off the AI.

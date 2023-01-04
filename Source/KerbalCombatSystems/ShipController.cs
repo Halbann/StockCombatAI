@@ -212,6 +212,9 @@ namespace KerbalCombatSystems
 
             if (behaviourCoroutine != null)
                 StopCoroutine(behaviourCoroutine);
+
+            vessel.ActionGroups.SetGroup(KSPActionGroup.SAS, true);
+            vessel.Autopilot.SetMode(VesselAutopilot.AutopilotMode.StabilityAssist);
         }
 
         private void Start()
