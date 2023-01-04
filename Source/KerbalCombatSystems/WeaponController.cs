@@ -97,8 +97,37 @@ namespace KerbalCombatSystems
         [KSPField(isPersistant = true,
               guiActive = true,
               guiActiveEditor = true,
-              guiName = "Ignition Delay",
+              guiName = "Launch Delay",
               guiUnits = " s",
+              groupName = missileGroupName,
+              groupDisplayName = missileGroupName),
+              UI_FloatRange(
+                  minValue = 0f,
+                  maxValue = 2f,
+                  stepIncrement = 0.1f,
+                  scene = UI_Scene.All
+              )]
+        public float igniteDelay = 0.2f;
+
+        [KSPField(isPersistant = true,
+              guiActive = true,
+              guiActiveEditor = true,
+              guiName = "Launch Duration",
+              guiUnits = " s",
+              groupName = missileGroupName,
+              groupDisplayName = missileGroupName),
+              UI_FloatRange(
+                  minValue = 0f,
+                  maxValue = 5f,
+                  stepIncrement = 0.1f,
+                  scene = UI_Scene.All
+              )]
+        public float pulseDuration = 0.5f;
+
+        [KSPField(isPersistant = true,
+              guiActive = true,
+              guiActiveEditor = true,
+              guiName = "Launch Throttle",
               groupName = missileGroupName,
               groupDisplayName = missileGroupName),
               UI_FloatRange(
@@ -107,7 +136,22 @@ namespace KerbalCombatSystems
                   stepIncrement = 0.01f,
                   scene = UI_Scene.All
               )]
-        public float igniteDelay = 0.2f;
+        public float pulseThrottle = 0.5f;
+
+        [KSPField(isPersistant = true,
+              guiActive = true,
+              guiActiveEditor = true,
+              guiName = "Salvo Spacing",
+              guiUnits = " s",
+              groupName = missileGroupName,
+              groupDisplayName = missileGroupName),
+              UI_FloatRange(
+                  minValue = 0.2f,
+                  maxValue = 5f,
+                  stepIncrement = 0.1f,
+                  scene = UI_Scene.All
+              )]
+        public float salvoSpacing = 0.8f;
 
         [KSPField(isPersistant = true,
             guiActive = true,

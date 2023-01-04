@@ -3,8 +3,15 @@ v0.1.2
 Patch notes:
 
 - Added automatic support for horizontal missile launches via RCS.
-- Added a setting for engine ignition delay time to missiles.
 - Added a setting to toggle the automatic playing of animations on scanners.
+- Added a 'Firing Interval' setting to the ship controller for controlling the time between missile salvos.
+- Added a setting to the ship controller to toggle evasion.
+- Added a 'Forward Fire Throttle Limit' setting to the ship controller to limit the throttle while missiles are launching from the front of the ship. Zero by default.
+- Added missile settings:
+	- Launch delay.
+	- Launch duration.
+	- Launch throttle.
+	- Salvo spacing.
 
 - Changed accuracy threshold for fireworks from a fixed angle to a multiple of the target radius.
 - Ships will no longer move away from their target when below minimum range if their current weapon is a projectile.

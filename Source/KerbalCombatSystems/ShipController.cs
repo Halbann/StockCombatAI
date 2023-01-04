@@ -19,7 +19,6 @@ namespace KerbalCombatSystems
         public float combatUpdateInterval = 2.5f;
         private bool allowWithdrawal;
         public float firingAngularVelocityLimit = 1; // degrees per second
-        public float firingInterval = 7.5f;
         public float controlTimeout = 10;
 
         // Robotics tracking variables
@@ -121,6 +120,35 @@ namespace KerbalCombatSystems
             )]
         public float maxSalvoSize = 5;
 
+        [KSPField(isPersistant = true,
+            guiActive = true,
+            guiActiveEditor = true,
+            guiName = "Firing Interval",
+            guiUnits = " s",
+            groupName = shipControllerGroupName,
+            groupDisplayName = shipControllerGroupName),
+            UI_FloatRange(
+                minValue = 1,
+                maxValue = 30,
+                stepIncrement = 0.1f,
+                scene = UI_Scene.All
+            )]
+        public float firingInterval = 7.5f;
+
+        [KSPField(isPersistant = true,
+            guiActive = true,
+            guiActiveEditor = true,
+            guiName = "Forward Fire Throttle Limit", // could do with a better name
+            groupName = shipControllerGroupName,
+            groupDisplayName = shipControllerGroupName),
+            UI_FloatRange(
+                minValue = 0,
+                maxValue = 1,
+                stepIncrement = 0.1f,
+                scene = UI_Scene.All
+            )]
+        public float forwardLaunchThrottle = 0f;
+
         [KSPField(
             isPersistant = true,
             guiActive = true,
@@ -131,6 +159,19 @@ namespace KerbalCombatSystems
             UI_ChooseOption(controlEnabled = true, affectSymCounterparts = UI_Scene.None,
             options = new string[] { "Default", "Chase", "Ignore" })]
         public string withdrawingPriority = "Default";
+
+        [KSPField(isPersistant = true,
+            guiActive = true,
+            guiActiveEditor = true,
+            guiName = "Use Evasion",
+            groupName = shipControllerGroupName,
+            groupDisplayName = shipControllerGroupName),
+            UI_Toggle(
+                enabledText = "Enabled",
+                disabledText = "Disabled",
+                scene = UI_Scene.All
+            )]
+        public bool useEvasion = true;
 
         // Debugging
         internal float nearInterceptBurnTime;
@@ -347,7 +388,7 @@ namespace KerbalCombatSystems
 
                 fc.throttle = 0;
             }
-            else if (CheckIncoming()) // Needs to start evading an incoming missile.
+            else if (useEvasion && CheckIncoming()) // Needs to start evading an incoming missile.
             {
                 state = "Dodging";
 
@@ -695,11 +736,15 @@ namespace KerbalCombatSystems
 
                     if (weapon.frontLaunch)
                     {
+                        float launchTime = Time.time;
+
                         Coroutine waitForLaunch = StartCoroutine(WaitForLaunch(weapon));
                         yield return waitForLaunch;
+
+                        yield return new WaitForSeconds(Mathf.Max(weapon.salvoSpacing - (Time.time - launchTime), 0));
                     }
                     else if (weapon != last)
-                        yield return new WaitForSeconds(0.8f);
+                        yield return new WaitForSeconds(weapon.salvoSpacing);
                 }
 
                 if (checkWeapons)
@@ -1340,7 +1385,7 @@ namespace KerbalCombatSystems
         private IEnumerator WaitForLaunch(ModuleWeaponController weapon)
         {
             state = "Firing Missile";
-            fc.throttle = 0;
+            fc.throttle = Mathf.Min(forwardLaunchThrottle, fc.throttle);
             fc.Drive();
             fc.Stability(true);
 

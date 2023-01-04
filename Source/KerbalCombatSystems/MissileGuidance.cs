@@ -191,20 +191,14 @@ namespace KerbalCombatSystems
             {
                 fc.RCSVector = vessel.ReferenceTransform.up;
 
-                // wait to try to prevent destruction of decoupler.
-                // todo: could increase heat tolerance temporarily or calculate a lower throttle.
                 yield return new WaitForSeconds(igniteDelay);
 
                 if (!isInterceptor)
                 {
-                    // pulse to 5 m/s.
-                    float burnTime = 0.5f;
-                    float driftVelocity = 5;
-
-                    fc.throttle = driftVelocity / burnTime / GetMaxAcceleration(vessel);
+                    fc.throttle = controller.pulseThrottle;
                     fc.Drive();
 
-                    yield return new WaitForSeconds(burnTime);
+                    yield return new WaitForSeconds(controller.pulseDuration);
 
                     fc.throttle = 0;
                 }
