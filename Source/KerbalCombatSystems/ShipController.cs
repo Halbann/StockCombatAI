@@ -314,10 +314,24 @@ namespace KerbalCombatSystems
                 // Switch to passive robotics while withdrawing.
                 UpdateFlightRobotics(false);
 
+                // Determine the direction.
+
+                var enemies = FindEnemies();
+                Vector3 averagePos = Vector3.zero;
+                if (enemies.Count > 1)
+                {
+                    foreach (var enemy in enemies)
+                        averagePos += FromTo(vessel, enemy.vessel).normalized;
+
+                    averagePos /= enemies.Count;
+                }
+
+                Vector3 direction = enemies.Count > 1 ? -averagePos.normalized : vessel.ReferenceTransform.up;
+                Vector3 orbitNormal = vessel.orbit.Normal(Planetarium.GetUniversalTime());
+                bool facingNorth = Vector3.Angle(direction, orbitNormal) < 90;
+
                 // Withdraw sequence. Locks behaviour while burning 200 m/s of delta-v either north or south.
 
-                Vector3 orbitNormal = vessel.orbit.Normal(Planetarium.GetUniversalTime());
-                bool facingNorth = Vector3.Angle(vessel.ReferenceTransform.up, orbitNormal) < 90;
                 Vector3 deltav = orbitNormal * (facingNorth ? 1 : -1) * 200;
                 fc.throttle = 1;
 
@@ -917,7 +931,7 @@ namespace KerbalCombatSystems
 
         }
 
-        private void FindTarget()
+        private List<ModuleShipController> FindEnemies()
         {
             List<ModuleShipController> validEnemies = KCSController.ships.FindAll(
                 s =>
@@ -925,6 +939,13 @@ namespace KerbalCombatSystems
                 && s.vessel != null
                 && s.side != side
                 && s.alive);
+
+            return validEnemies;
+        }
+
+        private void FindTarget()
+        {
+            List<ModuleShipController> validEnemies = FindEnemies();
 
             if (!hasWeapons || validEnemies.Count < 1)
             {
