@@ -82,11 +82,6 @@ namespace KerbalCombatSystems
             // Wait for seperation to take effect
             yield return new WaitForEndOfFrame();
 
-            // todo: use firevector instead.
-            // We are launching in the direction of the ship's propulsion, we need to flag this so the ship can throttle down temporarily.
-            bool frontLaunch = Vector3.Angle(vessel.ReferenceTransform.up, firerUp) < 50;
-            controller.frontLaunch = frontLaunch;
-
 
             // 2. Initial setup.
 
@@ -108,7 +103,11 @@ namespace KerbalCombatSystems
             propulsionVector = -GetFireVector(engines, rcsThrusters, -vessel.ReferenceTransform.up);
             AlignReference(commander, propulsionVector);
 
-            // Invert and store the propulsion vector for debugging.
+            // If we are launching in the direction of the ship's propulsion, then we need to flag this so the ship can throttle down temporarily.
+            bool frontLaunch = Vector3.Angle(vessel.ReferenceTransform.up, firerUp) < 50;
+            controller.frontLaunch = frontLaunch;
+
+            // Store the propulsion vector in local space for debugging.
             propulsionVector = vessel.transform.InverseTransformDirection(propulsionVector);
 
             // Setup flight controller.
@@ -127,7 +126,7 @@ namespace KerbalCombatSystems
             maxThrust = propulsionVector.magnitude;
             maxAcceleration = maxThrust / vessel.GetTotalMass();
 
-            Debug.Log("[KCS]: Forward Thrust: " + maxThrust + "Kn");
+            // Set the in-game target.
             vessel.targetObject = target;
 
 
@@ -392,7 +391,6 @@ namespace KerbalCombatSystems
 
             fc.Drive();
 
-            
 
             // Update debug lines.
             if (KCSDebug.showLines)

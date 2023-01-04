@@ -45,10 +45,17 @@ namespace KerbalCombatSystems
         public static float GetMaxThrust(Vessel v)
         {
             List<ModuleEngines> engines = v.FindPartModulesImplementing<ModuleEngines>();
-            //The basic ModuleRCS is depreciated and doesn't work properly with multiple nozzle rcs parts
-            List<ModuleRCSFX> RCS = v.FindPartModulesImplementing<ModuleRCSFX>();
+            engines.RemoveAll(e => !e.EngineIgnited || !e.isOperational);
+            float thrust = engines.Sum(e => e.MaxThrustOutputVac(true));
 
-            return GetFireVector(engines, RCS).magnitude;
+            List<ModuleRCSFX> RCS = v.FindPartModulesImplementing<ModuleRCSFX>();
+            foreach (ModuleRCS thruster in RCS)
+            {
+                if (thruster.useThrottle)
+                    thrust += thruster.thrusterPower;
+            }
+
+            return engines.Sum(e => e.MaxThrustOutputVac(true));
         }
 
         public static Vector3 GetFireVector(List<ModuleEngines> engines, List<ModuleRCSFX> RCS = null, Vector3 thrustVector = default(Vector3))
