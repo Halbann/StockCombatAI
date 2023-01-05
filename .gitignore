@@ -37,12 +37,6 @@ Source/KerbalCombatSystems/References/
 Source/KerbalCombatSystems/pdb2mdb
 Source/KerbalCombatSystems/pdb2mdb/
 
-# Build products and files generated during gameplay
-GameData/KCS/Plugins
-GameData/KCS/Plugins/
-GameData/KCS/PluginData
-GameData/KCS/PluginData/
-
 # OS Specific
 .DS_STORE*
 [Tt]humbs.db
