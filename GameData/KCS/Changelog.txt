@@ -2,6 +2,8 @@ v0.1.2
 
 Patch notes:
 
+- Added a smaller scanner based on the medium ore scanner.
+- Tech tree and cargo compatibility added to parts.
 - Added automatic support for horizontal missile launches via RCS.
 - Added a target prioritisation setting based on a mass range, only applies to targets within 2x max weapons range.
 - Added a setting to toggle the automatic playing of animations on scanners.
@@ -9,6 +11,11 @@ Patch notes:
 - Added a setting to the ship controller to toggle evasion.
 - Added a 'Forward Fire Throttle Limit' setting to the ship controller to limit the throttle while missiles are launching from the front of the ship. Zero by default.
 - Added a setting for time between firework bursts.
+- Support for docking ports and radial decouplers as weapon separators.
+- Missiles now point forward based on thrust direction.
+- Support for angled thrusters in thrust calculations.
+- Improved support for RCS missiles.
+- Added savegame settings for gameplay preferences. Currently a retreat override and scanning range multiplers.
 - Added missile settings:
 	- Launch delay.
 	- Launch duration.
@@ -28,3 +35,8 @@ Patch notes:
 - Fixed object tracking info panels in part menu displaying 0.
 - Fixed a ship movement bug caused by max weapon range exceeding lock range.
 - Fixed a bug that was preventing the use of throttle hotkeys after turning off the AI.
+- Fixed a bug that was preventing firer collision avoidance for missiles.
+- Increased minimum value for firework burst spacing above 0.
+- Fixed manual fire for rockets.
+- Removed Phoenia.
+- Sated the snow leopard.
