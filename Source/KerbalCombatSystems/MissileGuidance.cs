@@ -16,9 +16,9 @@ namespace KerbalCombatSystems
         private Vessel firer;
         private float igniteDelay;
         private float terminalVelocity;
-        private ModuleWeaponController targetWeapon;
         private bool isInterceptor;
         private int shutoffDistance;
+        private ModuleWeaponController targetWeapon;
 
         // Missile guidance variables.
 
@@ -34,7 +34,6 @@ namespace KerbalCombatSystems
         private bool drift;
         public float maxAcceleration;
         private Vector3 rcs;
-        private float targetSize;
         private Vector3 propulsionVector;
 
         // Components
@@ -44,7 +43,9 @@ namespace KerbalCombatSystems
         private ModuleWeaponController controller;
         private List<ModuleRCSFX> rcsThrusters;
         private List<ModuleEngines> engines;
-        private int partCount = -1;
+
+        //private float targetSize;
+        //private int partCount = -1;
 
         // Debugging line variables.
 
@@ -53,6 +54,45 @@ namespace KerbalCombatSystems
 
         private IEnumerator Launch()
         {
+            // 0. Failsafes for manual fire.
+            // todo: some of this should probably transferred to the weapon controller.
+
+            if (controller.target == null && vessel.targetObject == null) 
+                yield break;
+
+            if (controller.target == null)
+            {
+                // The missile was fired manually.
+
+                target = vessel.targetObject.GetVessel();
+                controller.target = target;
+
+                ModuleShipController firerController = FindController(firer);
+                if (firerController != null)
+                {
+                    // Don't require a ship controller and only consider ship-side limitations
+                    // if a ship controller exists. It is probably more fun this way.
+
+                    controller.side = firerController.side;
+
+                    if (firerController.maxDetectionRange == 0)
+                        firerController.UpdateDetectionRange();
+
+                    if (FromTo(vessel, target).magnitude > firerController.maxDetectionRange)
+                        yield break;
+                }
+
+                ModuleShipController targetController = FindController(target);
+                if (targetController != null && !targetController.incomingWeapons.Contains(controller))
+                    targetController.AddIncoming(controller);
+            }
+            else
+                target = controller.target;
+
+            if (!KCSController.weaponsInFlight.Contains(controller))
+                KCSController.weaponsInFlight.Add(controller);
+
+
             // 1. Separate from firer.
 
             // find decoupler
@@ -129,9 +169,8 @@ namespace KerbalCombatSystems
 
             maxThrust = propulsionVector.magnitude;
             maxAcceleration = maxThrust / vessel.GetTotalMass();
-
-            // Set the in-game target.
             vessel.targetObject = target;
+            shutoffDistance = isInterceptor ? 3 : 10;
 
 
             // 3. Start moving away from firer.
@@ -300,21 +339,19 @@ namespace KerbalCombatSystems
             interceptLine = KCSDebug.CreateLine(Color.cyan);
             thrustLine = KCSDebug.CreateLine(new Color(255f / 255f, 165f / 255f, 0f, 1f)); //orange
 
-            // enable autopilot
-            engageAutopilot = true;
-
-            shutoffDistance = isInterceptor ? 3 : 10;
-            var targetController = FindController(target);
-            targetSize = targetController != null ? targetController.averagedSize : AveragedSize(target);
-            partCount = vessel.parts.Count;
-
+            // Rename the new vessel.
             string oldName = vessel.vesselName;
             string missileName = controller.weaponCode == "" ? "Missile" : controller.weaponCode;
             string firerName = ShortenName(firer.vesselName);
             vessel.vesselName = !isInterceptor ? $"{missileName} ({firerName} >> {ShortenName(target.vesselName)})" : $"Interceptor ({firerName})";
             GameEvents.onVesselRename.Fire(new GameEvents.HostedFromToAction<Vessel, string>(vessel, oldName, vessel.vesselName));
 
+            engageAutopilot = true;
             controller.launched = true;
+
+            //var targetController = FindController(target);
+            //targetSize = targetController != null ? targetController.averagedSize : AveragedSize(target);
+            //partCount = vessel.parts.Count;
 
             //if (isInterceptor)
             //{
@@ -414,9 +451,6 @@ namespace KerbalCombatSystems
         public override void Setup()
         {
             controller = part.FindModuleImplementing<ModuleWeaponController>();
-
-            if (controller.target == null && vessel.targetObject == null) return;
-            target = controller.target ?? vessel.targetObject.GetVessel();
 
             terminalVelocity = controller.terminalVelocity;
             isInterceptor = controller.isInterceptor;

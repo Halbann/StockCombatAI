@@ -31,7 +31,7 @@ namespace KerbalCombatSystems
         internal KCSFlightController fc;
 
         public Vessel target;
-        private ModuleShipController targetController;
+        internal ModuleShipController targetController;
 
         private Coroutine shipControllerCoroutine;
         private Coroutine behaviourCoroutine;
@@ -958,7 +958,7 @@ namespace KerbalCombatSystems
             return Mathf.Abs(RelVel(vessel, nearest.vessel).magnitude) < 200;
         }
 
-        private void UpdateDetectionRange()
+        internal void UpdateDetectionRange()
         {
             var sensors = vessel.FindPartModulesImplementing<ModuleObjectTracking>();
 
