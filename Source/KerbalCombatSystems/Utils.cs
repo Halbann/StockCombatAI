@@ -60,9 +60,6 @@ namespace KerbalCombatSystems
 
         public static Vector3 GetFireVector(List<ModuleEngines> engines, List<ModuleRCSFX> RCS = null, Vector3 thrustVector = default(Vector3))
         {
-            //method to get the mean thrust vector of a list of engines and throttle enabled RCS
-            engines.RemoveAll(e => !e.EngineIgnited || e.flameout);
-            RCS.RemoveAll(r => !r.useThrottle || !r.isEnabled || r.flameout);
             // Place linears first to establish a direction, not currently needed
             //RCS.Sort((a, b) => a.thrusterTransforms.Count().CompareTo(b.thrusterTransforms.Count()));
 

@@ -36,7 +36,15 @@ namespace KerbalCombatSystems
                     break;
                 case "port":
                     ModuleDockingNode node = part.GetComponent<ModuleDockingNode>();
-                    if (node.state != "Ready") // Undocking a free docking port throws an error.
+                    if (node == null || node.state == "Ready")
+                        break;
+
+                    if (node.state == "Disengage")
+                        Debug.Log("hi");
+
+                    if (node.state == "Disengage" || node.state == "PreAttached")
+                        node.Decouple();
+                    else
                         node.Undock();
 
                     break;

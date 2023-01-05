@@ -830,7 +830,7 @@ namespace KerbalCombatSystems
                 if (calibriliFont != null)
                 {
                     shipNameStyle.font = calibriliFont;
-                    shipNameStyle.fontStyle = FontStyle.Bold;
+                    shipNameStyle.fontStyle = FontStyle.Normal;
                 }
             }
 

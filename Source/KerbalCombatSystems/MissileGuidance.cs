@@ -93,6 +93,10 @@ namespace KerbalCombatSystems
             rcsThrusters = vessel.FindPartModulesImplementing<ModuleRCSFX>();
             rcsThrusters.ForEach(t => t.rcsEnabled = true);
 
+            // Remove unused thrusters.
+            engines.RemoveAll(e => !e.EngineIgnited || e.flameout);
+            rcsThrusters.RemoveAll(r => !r.useThrottle || !r.isEnabled || r.flameout);
+
             // Enable RCS group
             if (!vessel.ActionGroups[KSPActionGroup.RCS])
                 vessel.ActionGroups.SetGroup(KSPActionGroup.RCS, true);
@@ -217,8 +221,8 @@ namespace KerbalCombatSystems
             // 4. Get line of sight to the target.
 
             Ray targetRay = new Ray();
-            targetRay.origin = vessel.ReferenceTransform.position;
-            targetRay.direction = target.transform.position - vessel.transform.position;
+            targetRay.origin = vessel.CoM;
+            targetRay.direction = target.CoM - vessel.CoM;
             bool lineOfSight = !RayIntersectsVessel(firer, targetRay);
 
             Vector3 sideways;
@@ -230,9 +234,6 @@ namespace KerbalCombatSystems
                 yield return new WaitForSeconds(0.1f);
                 if (target == null) break;
 
-                targetRay.origin = vessel.ReferenceTransform.position;
-                targetRay.direction = target.transform.position - vessel.transform.position;
-
                 if (!clear) // Latch clear once true.
                 {
                     // We don't have line of sight with the target yet, but are we clear of the ship?
@@ -242,7 +243,7 @@ namespace KerbalCombatSystems
 
                     for (int i = 0; i < 4; i++)
                     {
-                        targetRay.origin = vessel.ReferenceTransform.position;
+                        targetRay.origin = vessel.CoM;
                         sideways = Vector3.Cross(sideways, vessel.ReferenceTransform.up);
                         targetRay.direction = sideways;
 
@@ -276,6 +277,8 @@ namespace KerbalCombatSystems
                 }
 
                 // Do we have line of sight with the target vessel?
+                targetRay.origin = vessel.CoM;
+                targetRay.direction = target.CoM - vessel.CoM;
                 lineOfSight = !RayIntersectsVessel(firer, targetRay);
             }
 
