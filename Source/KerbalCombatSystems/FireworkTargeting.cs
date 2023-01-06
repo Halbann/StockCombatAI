@@ -83,6 +83,9 @@ namespace KerbalCombatSystems
 
         public override void Fire()
         {
+            if (firing)
+                return;
+
             firing = true;
             UpdateSettings();
             StartCoroutine(FireShells());
@@ -91,6 +94,7 @@ namespace KerbalCombatSystems
         private IEnumerator FireShells()
         {
             int tempBurst = roundBurst;
+
             //fire amount of shells
             for (int i = 0; i < tempBurst; i++)
             {
@@ -100,8 +104,16 @@ namespace KerbalCombatSystems
                     break;
                 }
 
-                yield return new WaitForSeconds(burstSpacing);
                 ModulePartFirework Launcher = fireworkLaunchers.Last();
+
+                //clear expended launchers from the list
+                if (Launcher.fireworkShots < 1)
+                {
+                    fireworkLaunchers.Remove(Launcher);
+                    //add one more round to the burst to substitute missing shot
+                    tempBurst++;
+                    continue;
+                }
 
                 // Change firework settings.
                 Launcher.variationOnShellDirection = false;
@@ -119,13 +131,7 @@ namespace KerbalCombatSystems
                 var fx = Launcher.fxController;
                 Destroy(fx);
 
-                //clear expended launchers from the list
-                if (Launcher.fireworkShots < 1)
-                {
-                    fireworkLaunchers.Remove(Launcher);
-                    //add one more round to the burst to substitute missing shot
-                    tempBurst++;
-                }
+                yield return new WaitForSeconds(burstSpacing);
             }
 
             yield return new WaitForSeconds(burstInterval);

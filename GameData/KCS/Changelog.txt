@@ -1,3 +1,7 @@
+v0.2.2
+
+- Fixed a bug in the firework burst logic that was causing the incorrect nubmer of fireworks to be fired when a launcher was near empty.
+
 v0.2.1
 
 - Added an automatic check to throttle the ship down temporarily if a missile is being launched from an enclosed space.
