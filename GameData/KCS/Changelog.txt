@@ -1,6 +1,16 @@
-v0.2.0
+v0.2.1
 
-Patch notes:
+- Added an automatic check to throttle the ship down temporarily if a missile is being launched from an enclosed space.
+
+- Changed throttle settings to a percentage.
+- The overlay is now visible only while the AI is running on the active vessel.
+- Renamed missile 'launch' settings to 'kick'. These settings refer to the short burn used to push the missile away from the ship after decoupling.
+
+- Fixed a bug with the thrust-based control orientation that was causing some missiles to fire sideways.
+- Fixed a bug that was causing multiple interceptors to fire at the same missile.
+
+
+v0.2.0
 
 - Added a smaller scanner based on the medium ore scanner.
 - Added automatic support for horizontal missile launches via RCS.

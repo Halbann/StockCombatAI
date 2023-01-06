@@ -198,9 +198,12 @@ namespace KerbalCombatSystems
 
             commander.SetControlPoint("dynamic");
 
+            Vector3 referenceRoll = commander.part.GetReferenceTransform().forward;
+            Vector3 roll = referenceRoll != direction.normalized ? referenceRoll : commander.transform.forward;
+
             // Orient the control point towards direction (finger) with perpendicular as the up vector (thumb).
-            Vector3 perpendicular = Vector3.ProjectOnPlane(commander.transform.forward, direction);
-            dynamic.transform.rotation = Quaternion.LookRotation(perpendicular, direction); // VAB orientation.
+            Vector3 perpendicular = Vector3.ProjectOnPlane(roll, direction.normalized);
+            dynamic.transform.rotation = Quaternion.LookRotation(perpendicular, direction.normalized); // VAB orientation.
         }
 
         #endregion

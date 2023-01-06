@@ -97,7 +97,7 @@ namespace KerbalCombatSystems
         [KSPField(isPersistant = true,
               guiActive = true,
               guiActiveEditor = true,
-              guiName = "Launch Delay",
+              guiName = "Kick Delay",
               guiUnits = " s",
               groupName = missileGroupName,
               groupDisplayName = missileGroupName),
@@ -112,7 +112,7 @@ namespace KerbalCombatSystems
         [KSPField(isPersistant = true,
               guiActive = true,
               guiActiveEditor = true,
-              guiName = "Launch Duration",
+              guiName = "Kick Duration",
               guiUnits = " s",
               groupName = missileGroupName,
               groupDisplayName = missileGroupName),
@@ -127,16 +127,17 @@ namespace KerbalCombatSystems
         [KSPField(isPersistant = true,
               guiActive = true,
               guiActiveEditor = true,
-              guiName = "Launch Throttle",
+              guiName = "Kick Throttle",
+              guiUnits = "%",
               groupName = missileGroupName,
               groupDisplayName = missileGroupName),
               UI_FloatRange(
                   minValue = 0f,
-                  maxValue = 1f,
-                  stepIncrement = 0.01f,
+                  maxValue = 100f,
+                  stepIncrement = 5f,
                   scene = UI_Scene.All
               )]
-        public float pulseThrottle = 0.5f;
+        public float pulseThrottle = 50f;
 
         [KSPField(isPersistant = true,
               guiActive = true,
@@ -179,7 +180,7 @@ namespace KerbalCombatSystems
         )]
         public bool MatchTargetVelocity = true;*/
 
-        public bool frontLaunch = false;
+        public int frontLaunch = 0;
         public bool missed = false;
         public bool hit = false;
         public bool isInterceptor = false;

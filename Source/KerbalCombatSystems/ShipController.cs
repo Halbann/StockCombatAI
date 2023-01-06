@@ -138,13 +138,14 @@ namespace KerbalCombatSystems
         [KSPField(isPersistant = true,
             guiActive = true,
             guiActiveEditor = true,
+            guiUnits = "%",
             guiName = "Forwards Launch Throttle Limit", // could do with a better name
             groupName = shipControllerGroupName,
             groupDisplayName = shipControllerGroupName),
             UI_FloatRange(
                 minValue = 0,
-                maxValue = 1,
-                stepIncrement = 0.1f,
+                maxValue = 100f,
+                stepIncrement = 5f,
                 scene = UI_Scene.All
             )]
         public float forwardLaunchThrottle = 0f;
@@ -757,7 +758,7 @@ namespace KerbalCombatSystems
                     KCSController.weaponsInFlight.Add(weapon);
                     targetController.AddIncoming(weapon);
 
-                    if (weapon.frontLaunch)
+                    if (weapon.frontLaunch != 0)
                     {
                         float launchTime = Time.time;
 
@@ -809,7 +810,7 @@ namespace KerbalCombatSystems
                     interceptTarget.interceptedBy.Add(interceptor);
                     KCSController.interceptorsInFlight.Add(interceptor);
 
-                    if (interceptor.frontLaunch)
+                    if (interceptor.frontLaunch != 0)
                     {
                         Coroutine waitForLaunch = StartCoroutine(WaitForLaunch(interceptor));
                         yield return waitForLaunch;
@@ -1433,7 +1434,7 @@ namespace KerbalCombatSystems
         private IEnumerator WaitForLaunch(ModuleWeaponController weapon)
         {
             state = "Firing Missile";
-            fc.throttle = Mathf.Min(forwardLaunchThrottle, fc.throttle);
+            fc.throttle = Mathf.Min(forwardLaunchThrottle / 100f, fc.throttle);
             fc.Drive();
             fc.Stability(true);
 

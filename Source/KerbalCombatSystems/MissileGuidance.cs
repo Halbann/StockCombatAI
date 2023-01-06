@@ -85,12 +85,12 @@ namespace KerbalCombatSystems
                 ModuleShipController targetController = FindController(target);
                 if (targetController != null && !targetController.incomingWeapons.Contains(controller))
                     targetController.AddIncoming(controller);
+
+                if (!KCSController.weaponsInFlight.Contains(controller) && !isInterceptor)
+                    KCSController.weaponsInFlight.Add(controller);
             }
             else
                 target = controller.target;
-
-            if (!KCSController.weaponsInFlight.Contains(controller))
-                KCSController.weaponsInFlight.Add(controller);
 
 
             // 1. Separate from firer.
@@ -119,8 +119,6 @@ namespace KerbalCombatSystems
             {
                 Debug.Log("[KCS]: Couldn't find decoupler.");
             }
-            // Wait for seperation to take effect
-            yield return new WaitForEndOfFrame();
 
 
             // 2. Initial setup.
@@ -145,11 +143,7 @@ namespace KerbalCombatSystems
             ModuleCommand commander = FindCommand(vessel);
             commander.MakeReference();
             propulsionVector = -GetFireVector(engines, rcsThrusters, -vessel.ReferenceTransform.up);
-            AlignReference(commander, propulsionVector);
-
-            // If we are launching in the direction of the ship's propulsion, then we need to flag this so the ship can throttle down temporarily.
-            bool frontLaunch = Vector3.Angle(vessel.ReferenceTransform.up, firerUp) < 50;
-            controller.frontLaunch = frontLaunch;
+            AlignReference(commander, propulsionVector.normalized);
 
             // Store the propulsion vector in local space for debugging.
             propulsionVector = vessel.transform.InverseTransformDirection(propulsionVector);
@@ -171,6 +165,42 @@ namespace KerbalCombatSystems
             maxAcceleration = maxThrust / vessel.GetTotalMass();
             vessel.targetObject = target;
             shutoffDistance = isInterceptor ? 3 : 10;
+
+            // If we are launching in the direction of the ship's propulsion, or in an enclosed space,
+            // then we need to flag this so the ship can throttle down temporarily.
+            // todo: wrap this function up with the horizontal launch raycasts
+
+            int frontLaunch = 0;
+
+            if (Vector3.Angle(vessel.ReferenceTransform.up, firerUp) < 50)
+                frontLaunch = 1;
+
+            if (frontLaunch == 0)
+            {
+                Vector3 horizontal;
+                Transform vRef = vessel.ReferenceTransform;
+                Ray enclosedRay = new Ray(vessel.CoM, Vector3.zero);
+                frontLaunch = 2;
+
+                for (int i = 0; i < 4; i++)
+                {
+                    horizontal = Quaternion.AngleAxis(360f * (i / 4f), vRef.up) * vRef.forward;
+                    enclosedRay.direction = horizontal;
+
+                    if (!RayIntersectsVessel(firer, enclosedRay))
+                    {
+                        frontLaunch = 0;
+                        break;
+                    }
+                }
+            }
+
+            controller.frontLaunch = frontLaunch;
+
+            // Had to move this because frontLaunch has to be set before the thread is paused,
+            // and frontLaunch requires GetFireVector to modify the reference transform. Not sure if
+            // GetFireVector requires a wait? It works as expected in tests.
+            yield return new WaitForFixedUpdate();
 
 
             // 3. Start moving away from firer.
@@ -240,7 +270,11 @@ namespace KerbalCombatSystems
 
                 if (!isInterceptor)
                 {
-                    fc.throttle = controller.pulseThrottle;
+                    // Support save files and craft saved before changing to a percentage.
+                    if (controller.pulseThrottle < 1)
+                        controller.pulseThrottle *= 100;
+
+                    fc.throttle = controller.pulseThrottle / 100f;
                     fc.Drive();
 
                     yield return new WaitForSeconds(controller.pulseDuration);
@@ -306,11 +340,13 @@ namespace KerbalCombatSystems
                     fc.alignmentToleranceforBurn = 60;
                     fc.Drive();
                 }
-                else if (frontLaunch)
+                else if (frontLaunch != 0)
                 {
                     // We are exiting a front facing weapons bay, match the ship's rotation and acceleration until clear of the bay.
 
-                    fc.attitude = firer.ReferenceTransform.up;
+                    if (frontLaunch == 1)
+                        fc.attitude = firer.ReferenceTransform.up;
+
                     fc.throttle = firer.acceleration.magnitude > 0 ? 1 : 0;
                     fc.Drive();
                 }
