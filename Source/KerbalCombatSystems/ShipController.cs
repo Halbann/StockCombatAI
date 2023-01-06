@@ -310,6 +310,12 @@ namespace KerbalCombatSystems
         {
             while (true)
             {
+                if (Time.timeSinceLevelLoad < 1)
+                {
+                    yield return new WaitForFixedUpdate();
+                    continue;
+                }
+
                 CheckStatus();
                 if (!alive)
                 {
@@ -943,7 +949,9 @@ namespace KerbalCombatSystems
             else
                 lastInControl = Time.time;
 
-            hasControl = vessel.isCommandable && !spunOut;
+            hasControl = vessel.isCommandable 
+                && !spunOut 
+                && vessel.CurrentControlLevel != Vessel.ControlLevel.NONE;
 
             bool dead = (!hasPropulsion && !hasWeapons) || !hasControl;
             alive = !dead;

@@ -1,6 +1,7 @@
 v0.2.2
 
-- Fixed a bug in the firework burst logic that was causing the incorrect nubmer of fireworks to be fired when a launcher was near empty.
+- Fixed a bug in the firework burst logic that was causing the incorrect nubmer of shots when a launcher was near empty.
+- Fixed a bug that was causing some ships without control to be counted as alive.
 
 v0.2.1
 
