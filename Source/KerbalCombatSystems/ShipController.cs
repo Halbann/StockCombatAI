@@ -47,6 +47,7 @@ namespace KerbalCombatSystems
         private List<ModuleWeaponController> interceptors;
         private List<ModuleWeaponController> weaponsToIntercept;
         private float lastFired = 0;
+        public ModuleWeaponController currentWeapon;
 
         internal float maxDetectionRange;
         internal float maxWeaponRange;
@@ -316,13 +317,14 @@ namespace KerbalCombatSystems
                     continue;
                 }
 
+                bool wasAlive = alive;
                 CheckStatus();
-                if (!alive)
+
+                if (!alive && wasAlive)
                 {
                     DeathMessage();
                     StopAI();
                     vessel.ActionGroups.SetGroup(KSPActionGroup.Abort, true);
-                    yield break;
                 }
 
                 CalculateHeatSignature();
@@ -551,7 +553,7 @@ namespace KerbalCombatSystems
                 // Deploy combat robotics.
                 UpdateFlightRobotics(true);
 
-                ModuleWeaponController currentWeapon = GetPreferredWeapon(target, weapons);
+                currentWeapon = GetPreferredWeapon(target, weapons);
                 float minRange = currentWeapon.MinMaxRange.x;
                 float minRangeProjectile = currentWeapon.MinMaxRange.x * 0.25f;
                 float maxRange = Mathf.Min(currentWeapon.MinMaxRange.y, TargetLockRange());
@@ -935,10 +937,9 @@ namespace KerbalCombatSystems
 
         public bool CheckStatus()
         {
-            bool hasRCSFore = vessel.FindPartModulesImplementing<ModuleRCSFX>().FindAll(e => e.rcsEnabled && !e.flameout && e.useThrottle).Count > 0;
-
-            hasPropulsion = hasRCSFore || vessel.FindPartModulesImplementing<ModuleEngines>().FindAll(e => e.EngineIgnited && e.isOperational).Count > 0;
-            hasWeapons = vessel.FindPartModulesImplementing<ModuleWeaponController>().FindAll(w => w.canFire).Count > 0;
+            bool hasRCSFore = vessel.FindPartModulesImplementing<ModuleRCSFX>().FindIndex(e => e.rcsEnabled && !e.flameout && e.useThrottle) > -1;
+            hasPropulsion = hasRCSFore || vessel.FindPartModulesImplementing<ModuleEngines>().FindIndex(e => e.EngineIgnited && e.isOperational) > -1;
+            hasWeapons = vessel.FindPartModulesImplementing<ModuleWeaponController>().FindIndex(w => w.canFire) > -1;
 
             bool spunOut = false;
             if (vessel.angularVelocity.magnitude > 50)

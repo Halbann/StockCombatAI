@@ -170,7 +170,9 @@ namespace KerbalCombatSystems
                     + "\n Intercept Time: "
                     + ship.nearInterceptApproachTime.ToString("0.00")
                     + "\n Throttle: "
-                    + ship.fc.throttleLerped.ToString("0.00"),
+                    + ship.fc.throttleLerped.ToString("0.00")
+                    + "\n Current Weapon: "
+                    + ((ship.currentWeapon?.weaponCode) == "" ? (ship.currentWeapon?.weaponType) : (ship.currentWeapon?.weaponCode)),
                     ship.vessel);
             }
         }
