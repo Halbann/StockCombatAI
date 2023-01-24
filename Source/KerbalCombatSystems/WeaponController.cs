@@ -53,12 +53,12 @@ namespace KerbalCombatSystems
             UI_MinMaxRange(
                 minValueX = 50f,
                 maxValueX = 5000f,
-                minValueY = 100f,
+                minValueY = 50f,
                 maxValueY = 5000f,
                 stepIncrement = 50f,
                 scene = UI_Scene.All
             )]
-        public Vector2 MinMaxRange = new Vector2(500f, 1000f);
+        public Vector2 MinMaxRange = new Vector2(500f, 1500f);
 
         [KSPField(isPersistant = true,
                guiActive = true,
