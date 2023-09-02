@@ -6,7 +6,6 @@ using UnityEngine;
 namespace KerbalCombatSystems
 {
     [KSPAddon(KSPAddon.Startup.Flight, false)]
-
     public class KCSDebug : MonoBehaviour
     {
         public static bool showLines;
@@ -193,6 +192,78 @@ namespace KerbalCombatSystems
             if (textRect.x > Screen.width || textRect.y > Screen.height || screenPos.z < 0) return;
 
             GUI.Label(textRect, text, textStyle);
+        }
+    }
+
+    public class DrawTransform : MonoBehaviour
+    {
+        public static bool drawTransforms = true;
+        private bool drawEnabled = false;
+
+        LineRenderer xLine;
+        LineRenderer yLine;
+        LineRenderer zLine;
+
+        void Start()
+        {
+            if (!drawTransforms)
+            {
+                Destroy(this);
+                return;
+            }
+
+            xLine = new GameObject().AddComponent<LineRenderer>();
+            yLine = new GameObject().AddComponent<LineRenderer>();
+            zLine = new GameObject().AddComponent<LineRenderer>();
+
+            SetupLine(xLine, Color.red);
+            SetupLine(yLine, Color.green);
+            SetupLine(zLine, Color.blue);
+
+            xLine.enabled = drawEnabled;
+            yLine.enabled = drawEnabled;
+            zLine.enabled = drawEnabled;
+        }
+
+        // Update is called once per frame
+        void Update()
+        {
+            if (KCSDebug.showLines)
+            {
+                UpdateLine(xLine, transform.right);
+                UpdateLine(yLine, transform.up);
+                UpdateLine(zLine, transform.forward);
+            }
+
+            if (KCSDebug.showLines == drawEnabled)
+                return;
+
+            if (KCSDebug.showLines)
+            {
+                xLine.enabled = true;
+                yLine.enabled = true;
+                zLine.enabled = true;
+            }
+            else
+            {
+                xLine.enabled = false;
+                yLine.enabled = false;
+                zLine.enabled = false;
+            }
+
+            drawEnabled = KCSDebug.showLines;
+        }
+
+        void SetupLine(LineRenderer line, Color color)
+        {
+            line.material = new Material(Shader.Find("Unlit/Color"));
+            line.material.color = color;
+            line.widthMultiplier = 0.03f;
+        }
+
+        void UpdateLine(LineRenderer line, Vector3 direction)
+        {
+            line.SetPositions(new Vector3[] { transform.position, transform.position + direction * 2 });
         }
     }
 }

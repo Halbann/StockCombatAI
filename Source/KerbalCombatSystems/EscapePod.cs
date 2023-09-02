@@ -1,141 +1,163 @@
-﻿using System;
+﻿using KSP.Localization;
+using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Linq;
+
 using UnityEngine;
+
 using static KerbalCombatSystems.KCS;
 
 namespace KerbalCombatSystems
 {
-    [KSPAddon(KSPAddon.Startup.Flight, false)]
     class ModuleEscapePodGuidance : PartModule
     {
         #region Fields
-        const string EscapeGuidanceGroupName = "Escape Pod Guidance";
 
-        private List<Part> shipControllerList;
-        private List<ModuleEngines> engines;
-        //relavent game settings
-        private int refreshRate;
-        //universal flight controller and toggle
-        KCSFlightController fc;
-        //current status retained during loads
         [KSPField(isPersistant = true)]
         private bool escaped = false;
 
-        private double minSafeAltitude;
-        //ModuleDecouple Decoupler;
-        ModuleDecouplerDesignate seperator;
+        private List<Part> shipControllerParts;
+        private List<ModuleEngines> engines;
+        private KCSFlightController fc;
+        private ModuleDecouplerDesignate seperator;
         private Vessel parent;
+
+        private readonly int refreshRate = 5;
+
+        #endregion
+
+        #region Buttons/Actions
+
+        const string groupName = "Escape Pod Guidance";
+
+        // Escape is called from the button, from the action, when no controllers are found, or when the ship controller calls an abort.
+        [KSPEvent(
+            guiActive = true,
+            guiActiveEditor = false,
+            guiName = "Launch",
+            groupName = groupName,
+            groupDisplayName = groupName
+        )]
+        public void Launch()
+        {
+            //find decoupler
+            seperator = FindDecoupler(part, "Escape Pod");
+
+            StartCoroutine(EscapeSequence());
+        }
+
+        [KSPAction("Launch", KSPActionGroup.Abort)]
+        public void LaunchAction(KSPActionParam param)
+        {
+            Launch();
+        }
 
         #endregion
 
         #region Main
-        //escape guidance is called when the button is pressed, when no ship controller can be found onboard the ship, or when the ship controller dictates an evacuation
-        [KSPEvent(guiActive = true,
-                  guiActiveEditor = false,
-                  guiName = "Eject",
-                  groupName = EscapeGuidanceGroupName,
-                  groupDisplayName = EscapeGuidanceGroupName)]
-        public void BeginEscape()
-        {
-            //find decoupler
-            seperator = FindDecoupler(part, "Escape Pod");
-            Debug.Log("[KCS]: Escaping from " + parent.GetName());
-            //set the refresh rate
-            refreshRate = HighLogic.CurrentGame.Parameters.CustomParams<KCSCombat>().refreshRate;
-            StartCoroutine(RunEscapeSequence());
-        }
-
-        [KSPAction("Fire Escape Pod", KSPActionGroup.Abort)]
-        public void ManualEscape(KSPActionParam param)
-        {
-            BeginEscape();
-        }
 
         public override void OnStart(StartState state)
         {
-            if (!HighLogic.LoadedSceneIsFlight) return;
+            if (!HighLogic.LoadedSceneIsFlight)
+                return;
 
-            //create the appropriate lists
-            shipControllerList = new List<Part>();
-            List<ModuleShipController> AIModulesList;
+            shipControllerParts = new List<Part>();
 
-            //designate ship that's being escaped from
+            // Store a reference to the parent ship.
             parent = vessel;
 
-            //find ai parts and add to list
-            AIModulesList = vessel.FindPartModulesImplementing<ModuleShipController>();
-            foreach (var Controller in AIModulesList)
-            {
-                shipControllerList.Add(Controller.part);
-            }
+            // Find ship controllers and add them to our list.
+            var controllers = vessel.FindPartModulesImplementing<ModuleShipController>();
+            shipControllerParts = controllers.Select(m => m.part).ToList();
 
-            StartCoroutine(StatusRoutine());
+            // Only start the status routine if we have a ship controller.
+            if (shipControllerParts.Count > 0)
+                StartCoroutine(StatusRoutine());
         }
 
-        private IEnumerator RunEscapeSequence()
+        // Continuously check for a connection to the ship controller.
+        IEnumerator StatusRoutine()
         {
-            //stop the status checker temporarily
-            StopCoroutine(StatusRoutine());
+            while (!escaped)
+            {
+                for (int i = shipControllerParts.Count - 1; i >= 0; i--)
+                {
+                    //if part does not exist / on the same ship
+                    if (shipControllerParts[i] == null || shipControllerParts[i].vessel.id != part.vessel.id)
+                        shipControllerParts.RemoveAt(i);
+                }
+
+                if (shipControllerParts.Count < 1)
+                {
+                    escaped = true;
+                    Launch();
+                }
+
+                yield return new WaitForSeconds(refreshRate);
+            }
+        }
+
+        private IEnumerator EscapeSequence()
+        {
+            // Stop checking for connection.
+            //if (statusRoutine != null)
+            //    StopCoroutine(statusRoutine);
 
             // try to pop decoupler
             if (seperator != null)
             {
                 seperator.Separate();
             }
-            else
+            else if (vessel == parent)
             {
-                //notify of error but launch anyway for pods that have lost decoupler
-                Debug.Log("[KCS]: Couldn't find decoupler on " + vessel.GetName() + " (Escape Pod)");
+                // We didn't find a decoupler and we're still attached to the parent.
+
+                Debug.Log("[KCS]: Failed to launch escape pod on " + vessel.vesselName);
+
+                // Abort the escape.
+                yield break;
             }
 
-            // set target orientation to away from the vessel by default
-            fc = part.gameObject.AddComponent<KCSFlightController>();
+            KCSController.Log("Escape pod launching from %1", parent);
+            escaped = true;
 
-            yield return new WaitForFixedUpdate(); // wait a frame
-            FindCommand(vessel).MakeReference();
+            yield return new WaitForFixedUpdate(); // Wait for our new vessel to be created.
 
-            // turn on engines and create list
+            // Transfer as many crew as possible from the parent ship.
+            TransferCrew();
+
+            ModuleCommand command = FindCommand(vessel);
+            if (command)
+                command.MakeReference();
+
+            // Activate engines.
             engines = vessel.FindPartModulesImplementing<ModuleEngines>();
-            foreach (ModuleEngines engine in engines)
-            {
-                engine.Activate();
-            }
+            engines.ForEach(e => e.Activate());
 
-            // enable autopilot and set target orientation to away from the vessel by default
+            // Add flight controller.
+            fc = part.gameObject.AddComponent<KCSFlightController>();
             fc.throttleLerpRate = 100;
             fc.throttle = 1;
             fc.alignmentToleranceforBurn = 10;
             fc.attitude = vessel.ReferenceTransform.up;
             fc.Drive();
 
-            // turn on engines
+            // Deploy parachutes.
             List<ModuleParachute> parachutes = vessel.FindPartModulesImplementing<ModuleParachute>();
-            foreach (ModuleParachute parachute in parachutes)
-            {
-                parachute.Deploy();
-            }
+            parachutes.ForEach(p => p.Deploy());
 
-            yield return new WaitForSeconds(1f);
+            yield return new WaitForSeconds(1f); // Exiting the ship.
 
-            StartCoroutine(EscapeRoutine());
-
-            yield break;
+            StartCoroutine(FlightRoutine());
         }
 
-        IEnumerator StatusRoutine()
+        IEnumerator FlightRoutine()
         {
-            while (!escaped)
+            while (true)
             {
-                CheckConnection();
-                yield return new WaitForSeconds(refreshRate);
-            }
-        }
-
-        IEnumerator EscapeRoutine()
-        {
-            while (vessel.FindPartModulesImplementing<ModuleEngines>().FindAll(e => e.EngineIgnited && e.isOperational).Count > 0)
-            {
+                if (engines.FindAll(e => e.EngineIgnited && e.isOperational).Count < 1)
+                    break;
 
                 if (CheckOrbitUnsafe())
                 {
@@ -160,6 +182,8 @@ namespace KerbalCombatSystems
                 }
                 else
                 {
+                    // Burn either normal or anti-normal until we run out of fuel.
+
                     Vector3 orbitNormal = vessel.orbit.Normal(Planetarium.GetUniversalTime());
                     bool facingNorth = Vector3.Angle(vessel.ReferenceTransform.up, orbitNormal) < 90;
                     fc.attitude = orbitNormal * (facingNorth ? 1 : -1);
@@ -170,40 +194,95 @@ namespace KerbalCombatSystems
                 yield return new WaitForSeconds(refreshRate);
             }
 
-            Debug.Log("[KCS]: Escape Sequence Ending on " + vessel.GetName() + " (Escape Pod)");
+            Debug.Log("[KCS]: Escape sequence ending on " + vessel.GetName() + " (Escape Pod)");
+
             //remove the flight controller and allow the guidance to cease
-            Destroy(part.gameObject.GetComponent<KCSFlightController>());
-            yield break;
+            Destroy(fc);
         }
+
         #endregion
 
-        #region Checks
+        #region Functions
+
         private bool CheckOrbitUnsafe()
         {
             Orbit o = vessel.orbit;
             CelestialBody body = o.referenceBody;
             PQS pqs = body.pqsController;
             double maxTerrainHeight = pqs.radiusMax - pqs.radius;
-            minSafeAltitude = maxTerrainHeight;
-            return o.PeA < minSafeAltitude;
+
+            return o.PeA < maxTerrainHeight;
         }
 
-        //method to check for the existence of any ship ai onboard
-        public void CheckConnection()
+        private void TransferCrew()
         {
-            for (int i = shipControllerList.Count - 1; i >= 0; i--)
+            // Transfer as many crew as possible from parent to vessel.
+
+            List<ProtoCrewMember> crew = parent.GetVesselCrew().ToList();
+            var emptySeats = new List<Part>();
+
+            foreach (var part in vessel.parts)
             {
-                //if part does not exist / on the same ship
-                if (shipControllerList[i] == null || shipControllerList[i].vessel.id != part.vessel.id)
-                    shipControllerList.RemoveAt(i);
+                int seats = part.CrewCapacity - part.protoModuleCrew.Count;
+
+                for (int i = 0; i < seats; i++)
+                    emptySeats.Add(part);
             }
 
-            if (shipControllerList.Count == 0)
+            if (emptySeats.Count < 1)
+                return;
+
+            Part seat;
+
+            // todo: deprioritise external command seats.
+
+            foreach (ProtoCrewMember crewMember in crew)
             {
-                escaped = true;
-                BeginEscape();
+                if (emptySeats.Count < 1)
+                    break;
+
+                seat = emptySeats.Last();
+                emptySeats.RemoveAt(emptySeats.Count - 1);
+
+                MoveCrewMember(crewMember, seat);
+            }
+
+            // todo: fix kerbal portraits not updating on parent.
+
+            vessel.DespawnCrew();
+            parent.DespawnCrew();
+
+            StartCoroutine(FinaliseCrewTransfer(parent, vessel));
+        }
+
+        public static void MoveCrewMember(ProtoCrewMember crew, Part part)
+        {
+            Part source = crew.seat.part;
+
+            source.RemoveCrewmember(crew);
+            part.AddCrewmember(crew);
+
+            GameEvents.onCrewTransferred.Fire(new GameEvents.HostedFromToAction<ProtoCrewMember, Part>(crew, source, part));
+
+            if (part.partInfo.name == "seatExternalCmd")
+            {
+                var seat = part.FindModuleImplementing<KerbalSeat>();
+
+                if (seat.Occupant == null)
+                    seat.OnStartFinished(StartState.Orbital);
             }
         }
+
+        public static IEnumerator FinaliseCrewTransfer(Vessel source, Vessel target)
+        {
+            Vessel.CrewWasModified(source, target);
+
+            yield return null;
+
+            target.SpawnCrew();
+            source.SpawnCrew();
+        }
+
         #endregion
     }
 }

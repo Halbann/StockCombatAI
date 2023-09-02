@@ -533,6 +533,10 @@ namespace KerbalCombatSystems
             engageAutopilot = false;
             controller.missed = true;
             OnDestroy();
+
+            // Mark the vessel as debris
+            vessel.vesselType = VesselType.Debris;
+            GameEvents.onVesselRename.Fire(new GameEvents.HostedFromToAction<Vessel, string>(vessel, vessel.name, vessel.name));
         }
 
         private void OnHit()

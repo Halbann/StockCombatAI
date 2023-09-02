@@ -1,20 +1,16 @@
 ﻿using Expansions.Serenity;
-using UnityEngine;
+using static Expansions.Serenity.ModuleRoboticController;
 
 namespace KerbalCombatSystems
 {
-    [KSPAddon(KSPAddon.Startup.Flight, false)]
     class ModuleCombatRobotics : PartModule
     {
+        [KSPField(isPersistant = true)]
+        public string roboticsType; //Basic, Ship, Weapon
+
         private ModuleRoboticController KAL;
 
-        [KSPField(isPersistant = true)]
-        public string RoboticsType; //Basic, Ship, Weapon
-
-        //access the sequence internals
-        public ModuleRoboticController.SequenceDirectionOptions Forward { get; private set; }
-        public ModuleRoboticController.SequenceLoopOptions Once { get; private set; }
-        public int SequenceLength { get; internal set; }
+        public float SequenceLength => KAL.SequenceLength;
 
         public override void OnStart(StartState state)
         {
@@ -22,30 +18,18 @@ namespace KerbalCombatSystems
                 GameEvents.onEditorVariantApplied.Add(OnVariantApplied);
 
             KAL = part.FindModuleImplementing<ModuleRoboticController>();
-
-            string Name = KAL.GetModuleDisplayName();
-            Debug.Log("KAL Name" + Name);
         }
 
         //KCS KALs only have two states
-        public void KALTrigger(bool Extend)
+        public void KALTrigger(bool extend)
         {
-            KAL.SetLoopMode(Once);
+            KAL.SetLoopMode(SequenceLoopOptions.Once);
             KAL.ToggleControllerEnabled(true);
-            KAL.SetDirection(Forward);
+            KAL.SetDirection(SequenceDirectionOptions.Forward);
 
-            if (Extend)
-            {
-                //send robotics to end of sequence(trigger Combat)
-                Debug.Log("[KCS]: Extending KAL Position");
-            }
-            else
-            {
-                //send robotics to start of sequence(trigger Passive)
-                Debug.Log("[KCS]: Resetting KAL Position");
-                //Reverse doesn't work as advertised so setting as forward then reversing
+            // Reverse the direction prior to playing if we're retracting.
+            if (!extend)
                 KAL.ToggleDirection();
-            }
 
             KAL.SequencePlay();
         }
@@ -54,10 +38,10 @@ namespace KerbalCombatSystems
         {
             if (appliedPart != part) return;
 
-            RoboticsType = variant.Name;
+            roboticsType = variant.Name;
         }
 
-        private void OnDestroy()
+        internal void OnDestroy()
         {
             GameEvents.onEditorVariantApplied.Remove(OnVariantApplied);
         }

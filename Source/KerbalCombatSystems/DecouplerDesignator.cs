@@ -1,28 +1,40 @@
-﻿using UnityEngine;
+﻿using System;
+using UnityEngine;
 
 namespace KerbalCombatSystems
 {
     public class ModuleDecouplerDesignate : PartModule
     {
-        //denote seperator type
         [KSPField(isPersistant = true)]
-            public string seperatorType = "seperatorType";
-
+        public string seperatorType = "";
 
         [KSPField(isPersistant = true)]
-            public bool seperated = false;
+        public bool seperated = false;
 
-        const string DecouplerDesignationGroupName = "KCS Designation";
+        const string groupName = "KCS Designation";
+        readonly static string[] types = new string[] { "Default", "Warhead", "Escape Pod" };
+
         [KSPField(
             isPersistant = true,
             guiActive = true,
             guiActiveEditor = true,
-            guiName = "Separator Type",
-            groupName = DecouplerDesignationGroupName,
-            groupDisplayName = DecouplerDesignationGroupName),
-            UI_ChooseOption(controlEnabled = true, affectSymCounterparts = UI_Scene.None,
-            options = new string[] { "Default", "Warhead", "Escape Pod" })] //re-add "Countermeasure" at later date
-            public string decouplerDesignation = "Default";
+            guiName = "Type",
+            groupName = groupName,
+            groupDisplayName = groupName)]
+        [UI_ChooseOption(controlEnabled = true, affectSymCounterparts = UI_Scene.None)]
+        public string decouplerDesignation = "Default";
+
+        public override void OnAwake()
+        {
+            UI_ChooseOption optionsField;
+
+            if (HighLogic.LoadedSceneIsEditor)
+                optionsField = Fields[nameof(decouplerDesignation)].uiControlEditor as UI_ChooseOption;
+            else
+                optionsField = Fields[nameof(decouplerDesignation)].uiControlFlight as UI_ChooseOption;
+
+            optionsField.options = types;
+        }
 
         public void Separate()
         {
@@ -52,7 +64,15 @@ namespace KerbalCombatSystems
                     Debug.Log("[KCS]: Improper Decoupler Designation");
                     break;
             }
+
             seperated = true;
         }
+    }
+
+    public enum DecouplerDesignation
+    {
+        Default,
+        Warhead,
+        EscapePod
     }
 }

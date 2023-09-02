@@ -1,16 +1,12 @@
 using System;
-using System.Collections.Generic;
-using System.Linq;
 using System.Text;
-using System.Threading.Tasks;
-using KSP.UI.Screens;
-using UnityEngine;
 
 namespace KerbalCombatSystems
 {
     public class ModuleDataLink : PartModule
     {
         public ModuleWeapon typeModule;
+        public int scalingFactor = 5;
 
         public void Setup()
         {
@@ -43,7 +39,6 @@ namespace KerbalCombatSystems
         //relay parts only are capable of sending the target lists
 
         const string dataLinkGroupName = "Target Broadcaster";
-        private int scalingFactor;
 
         [KSPField(
               guiActive = true,
@@ -70,7 +65,6 @@ namespace KerbalCombatSystems
 
         public override void OnStart(StartState state)
         {
-            scalingFactor = HighLogic.CurrentGame.Parameters.CustomParams<KCSCombat>().dataLinkFactor;
             transmitterPower = baseTransmitterPower * scalingFactor;
         }
     }
@@ -80,7 +74,6 @@ namespace KerbalCombatSystems
         //all parts with antenna modules(commands pods and antennas afaik) are capable of receiving datalinked target lists
 
         const string dataLinkGroupName = "Target Receiver";
-        private int scalingFactor;
 
         [KSPField(
               guiActive = true,
@@ -107,8 +100,6 @@ namespace KerbalCombatSystems
 
         public override void OnStart(StartState state)
         {
-
-            scalingFactor = HighLogic.CurrentGame.Parameters.CustomParams<KCSCombat>().dataLinkFactor;
             recieverPower = baseReceiverPower * scalingFactor;
         }
     }
