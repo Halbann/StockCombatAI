@@ -20,7 +20,8 @@ namespace KerbalCombatSystems
             KAL = part.FindModuleImplementing<ModuleRoboticController>();
         }
 
-        //KCS KALs only have two states
+        //KSP KALs cannot reverse from a reversed state. 
+        //This is used on the KAL 500 ship mode swapper
         public void KALTrigger(bool extend)
         {
             KAL.SetLoopMode(SequenceLoopOptions.Once);

@@ -36,7 +36,7 @@ namespace KerbalCombatSystems
 
     public class ModuleDataLinkRelay : ModuleDataLink
     {
-        //relay parts only are capable of sending the target lists
+        // Relay parts only are capable of sending target lists to vessels with receivers
 
         const string dataLinkGroupName = "Target Broadcaster";
 
@@ -71,7 +71,7 @@ namespace KerbalCombatSystems
 
     public class ModuleDataLinkAntenna : ModuleDataLink
     {
-        //all parts with antenna modules(commands pods and antennas afaik) are capable of receiving datalinked target lists
+        // All parts with antenna modules(pods and antennas) are capable of receiving target lists
 
         const string dataLinkGroupName = "Target Receiver";
 

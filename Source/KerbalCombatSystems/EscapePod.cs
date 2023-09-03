@@ -14,6 +14,7 @@ namespace KerbalCombatSystems
     {
         #region Fields
 
+        // Current status retained during craft loading
         [KSPField(isPersistant = true)]
         private bool escaped = false;
 
@@ -23,7 +24,8 @@ namespace KerbalCombatSystems
         private ModuleDecouplerDesignate seperator;
         private Vessel parent;
 
-        private readonly int refreshRate = 5;
+        // Relavent Game Setting
+        private int refreshRate;
 
         #endregion
 
@@ -43,7 +45,6 @@ namespace KerbalCombatSystems
         {
             //find decoupler
             seperator = FindDecoupler(part, "Escape Pod");
-
             StartCoroutine(EscapeSequence());
         }
 
@@ -66,6 +67,9 @@ namespace KerbalCombatSystems
 
             // Store a reference to the parent ship.
             parent = vessel;
+
+            // Set the refresh rate
+            refreshRate = HighLogic.CurrentGame.Parameters.CustomParams<KCSCombat>().refreshRate;
 
             // Find ship controllers and add them to our list.
             var controllers = vessel.FindPartModulesImplementing<ModuleShipController>();
@@ -109,7 +113,13 @@ namespace KerbalCombatSystems
             {
                 seperator.Separate();
             }
-            else if (vessel == parent)
+            else
+            {
+                // Notify of error but try to launch anyway
+                Debug.Log("[KCS]: Couldn't find decoupler on " + vessel.GetName() + " (Escape Pod)");
+            }
+
+            if (vessel == parent)
             {
                 // We didn't find a decoupler and we're still attached to the parent.
 
@@ -127,6 +137,7 @@ namespace KerbalCombatSystems
             // Transfer as many crew as possible from the parent ship.
             TransferCrew();
 
+            // Try find command part
             ModuleCommand command = FindCommand(vessel);
             if (command)
                 command.MakeReference();
@@ -147,9 +158,21 @@ namespace KerbalCombatSystems
             List<ModuleParachute> parachutes = vessel.FindPartModulesImplementing<ModuleParachute>();
             parachutes.ForEach(p => p.Deploy());
 
-            yield return new WaitForSeconds(1f); // Exiting the ship.
 
-            StartCoroutine(FlightRoutine());
+            // If there are no command points then end the escape after the inital hard burn
+            if (command)
+            {
+                yield return new WaitForSeconds(1f); // Exiting the ship.
+                StartCoroutine(FlightRoutine());
+            }
+            else
+            {
+                yield return new WaitForSeconds(10f); // Exiting the ship and burning for a few seconds
+                Debug.Log("[KCS]: Escape sequence ending on " + vessel.GetName() + " (Escape Pod)");
+
+                // Remove the flight controller and allow the guidance to cease
+                Destroy(fc);
+            }
         }
 
         IEnumerator FlightRoutine()
@@ -183,7 +206,6 @@ namespace KerbalCombatSystems
                 else
                 {
                     // Burn either normal or anti-normal until we run out of fuel.
-
                     Vector3 orbitNormal = vessel.orbit.Normal(Planetarium.GetUniversalTime());
                     bool facingNorth = Vector3.Angle(vessel.ReferenceTransform.up, orbitNormal) < 90;
                     fc.attitude = orbitNormal * (facingNorth ? 1 : -1);
