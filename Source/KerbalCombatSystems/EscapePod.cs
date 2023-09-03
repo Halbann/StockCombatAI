@@ -1,10 +1,10 @@
-﻿using KSP.Localization;
-using System;
+﻿using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 
 using UnityEngine;
+using KSP.UI.Screens.Flight;
 
 using static KerbalCombatSystems.KCS;
 
@@ -27,11 +27,34 @@ namespace KerbalCombatSystems
         // Relavent Game Setting
         private int refreshRate;
 
+        public const string groupName = "Escape Pod";
+        public const float escapeSpeedMin = 50f;
+        public const float escapeSpeedMax = 500f;
+
+        [KSPAxisField(
+            guiName = "Escape Velocity",
+            isPersistant = true,
+            groupStartCollapsed = false,
+            minValue = escapeSpeedMin,
+            maxValue = escapeSpeedMax,
+            groupDisplayName = groupName,
+            groupName = groupName,
+            guiActive = true,
+            guiActiveEditor = true,
+            guiUnits = " m/s"
+        )]
+        [UI_FloatRange(
+            minValue = escapeSpeedMin,
+            maxValue = escapeSpeedMax,
+            stepIncrement = 10f,
+            scene = UI_Scene.All
+        )]
+        public float escapeSpeed = 200f;
+
         #endregion
 
         #region Buttons/Actions
 
-        const string groupName = "Escape Pod Guidance";
 
         // Escape is called from the button, from the action, when no controllers are found, or when the ship controller calls an abort.
         [KSPEvent(
@@ -60,7 +83,7 @@ namespace KerbalCombatSystems
 
         public override void OnStart(StartState state)
         {
-            if (!HighLogic.LoadedSceneIsFlight)
+            if (!HighLogic.LoadedSceneIsFlight || escaped)
                 return;
 
             shipControllerParts = new List<Part>();
@@ -177,20 +200,24 @@ namespace KerbalCombatSystems
 
         IEnumerator FlightRoutine()
         {
+            float lastUpdate;
+
             while (true)
             {
-                if (engines.FindAll(e => e.EngineIgnited && e.isOperational).Count < 1)
+                lastUpdate = Time.time;
+
+                if (!InControl())
                     break;
 
                 if (CheckOrbitUnsafe())
                 {
                     Orbit o = vessel.orbit;
-                    double UT = Planetarium.GetUniversalTime();
+                    double UT;
 
                     // Execute a burn to circularize our orbit at the current altitude.
                     Vector3d fvel, deltaV = Vector3d.up * 100;
 
-                    while (deltaV.magnitude > 2)
+                    while (deltaV.magnitude > 2 && Time.time - lastUpdate < refreshRate)
                     {
                         yield return new WaitForFixedUpdate();
 
@@ -205,21 +232,44 @@ namespace KerbalCombatSystems
                 }
                 else
                 {
-                    // Burn either normal or anti-normal until we run out of fuel.
-                    Vector3 orbitNormal = vessel.orbit.Normal(Planetarium.GetUniversalTime());
+                    // Plane change. Burning either normal or anti-normal until we reach the escape speed.
+
+                    double UT = Planetarium.GetUniversalTime();
+                    Vector3 orbitNormal = vessel.orbit.Normal(UT);
                     bool facingNorth = Vector3.Angle(vessel.ReferenceTransform.up, orbitNormal) < 90;
-                    fc.attitude = orbitNormal * (facingNorth ? 1 : -1);
+                    Vector3 deltaV = orbitNormal * (facingNorth ? 1 : -1) * escapeSpeed;
                     fc.throttle = 1;
+
+                    while (deltaV.magnitude > 10 && InControl())
+                    {
+                        UT = Planetarium.GetUniversalTime();
+                        deltaV = vessel.orbit.Normal(UT) * (facingNorth ? 1 : -1) * deltaV.magnitude;
+                        deltaV -= Vector3.Project(vessel.acceleration, deltaV) * TimeWarp.fixedDeltaTime;
+
+                        fc.attitude = deltaV.normalized;
+                        fc.Drive();
+
+                        yield return new WaitForFixedUpdate();
+                    }
+
+                    fc.throttle = 0;
                     fc.Drive();
+
+                    break; 
                 }
 
                 yield return new WaitForSeconds(refreshRate);
             }
 
-            Debug.Log("[KCS]: Escape sequence ending on " + vessel.GetName() + " (Escape Pod)");
-
-            //remove the flight controller and allow the guidance to cease
+            // Remove the flight controller and allow the guidance to cease.
             Destroy(fc);
+        }
+
+        bool InControl()
+        {
+            engines.RemoveAll(e => !e.EngineIgnited || !e.isOperational);
+
+            return vessel.IsControllable && engines.Count > 0;
         }
 
         #endregion
@@ -269,10 +319,9 @@ namespace KerbalCombatSystems
                 MoveCrewMember(crewMember, seat);
             }
 
-            // todo: fix kerbal portraits not updating on parent.
-
-            vessel.DespawnCrew();
-            parent.DespawnCrew();
+            Vessel active = FlightGlobals.ActiveVessel;
+            if (parent == active || vessel == active)
+                active.DespawnCrew();
 
             StartCoroutine(FinaliseCrewTransfer(parent, vessel));
         }
@@ -301,8 +350,12 @@ namespace KerbalCombatSystems
 
             yield return null;
 
-            target.SpawnCrew();
-            source.SpawnCrew();
+            Vessel active = FlightGlobals.ActiveVessel;
+            if (source == active || target == active)
+            {
+                active.SpawnCrew();
+                KerbalPortraitGallery.Instance.StartReset(active);
+            }
         }
 
         #endregion
