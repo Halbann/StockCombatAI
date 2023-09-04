@@ -15,8 +15,8 @@ namespace KerbalCombatSystems
               guiUnits = " m",
               groupName = groupName,
               groupDisplayName = groupName
-        )]
-        [UI_Label(scene = UI_Scene.All)]
+            )]
+            [UI_Label(scene = UI_Scene.All)]
         public float detectionRange = 0f;
 
         [KSPField(isPersistant = true)]
@@ -29,11 +29,11 @@ namespace KerbalCombatSystems
             guiName = "Deploy Automatically",
             groupName = groupName,
             groupDisplayName = groupName)]
-        [UI_Toggle(
+            [UI_Toggle(
                 enabledText = "Enabled",
                 disabledText = "Disabled",
                 scene = UI_Scene.All
-        )]
+            )]
         public bool animate = true;
 
         public override string GetInfo()

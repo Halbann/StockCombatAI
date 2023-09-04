@@ -14,6 +14,7 @@ namespace KerbalCombatSystems
     {
         #region Fields
 
+        // Current status retained during craft loading
         [KSPField(isPersistant = true)]
         private bool escaped = false;
 
@@ -66,7 +67,6 @@ namespace KerbalCombatSystems
         {
             //find decoupler
             seperator = FindDecoupler(part, "Escape Pod");
-
             StartCoroutine(EscapeSequence());
         }
 
@@ -89,6 +89,7 @@ namespace KerbalCombatSystems
 
             // Store a reference to the parent ship.
             parent = vessel;
+
 
             // Find ship controllers and add them to our list.
             var controllers = vessel.FindPartModulesImplementing<ModuleShipController>();
@@ -127,29 +128,37 @@ namespace KerbalCombatSystems
             //if (statusRoutine != null)
             //    StopCoroutine(statusRoutine);
 
-            // try to pop decoupler
+            // Try to pop decoupler
             if (seperator != null)
             {
                 seperator.Separate();
             }
-            else if (vessel == parent)
+            else
             {
-                // We didn't find a decoupler and we're still attached to the parent.
+                // Notify of error but try to launch anyway
+                Debug.Log("[KCS]: Couldn't find decoupler on " + vessel.GetName() + " (Escape Pod)");
+            }
 
+
+            KCSController.Log("Escape pod launching from %1", parent);
+
+            yield return new WaitForFixedUpdate(); // Wait for our new vessel to be created.
+
+            if (vessel == parent & seperator != null)
+            {
+                // We're still attached to the parent after trying to decouple
                 Debug.Log("[KCS]: Failed to launch escape pod on " + vessel.vesselName);
 
                 // Abort the escape.
                 yield break;
             }
 
-            KCSController.Log("Escape pod launching from %1", parent);
             escaped = true;
-
-            yield return new WaitForFixedUpdate(); // Wait for our new vessel to be created.
 
             // Transfer as many crew as possible from the parent ship.
             TransferCrew();
 
+            // Try find command part
             ModuleCommand command = FindCommand(vessel);
             if (command)
                 command.MakeReference();
@@ -170,9 +179,21 @@ namespace KerbalCombatSystems
             List<ModuleParachute> parachutes = vessel.FindPartModulesImplementing<ModuleParachute>();
             parachutes.ForEach(p => p.Deploy());
 
-            yield return new WaitForSeconds(1f); // Exiting the ship.
 
-            StartCoroutine(FlightRoutine());
+            // If there are no command points then end the escape after the inital hard burn
+            if (command)
+            {
+                yield return new WaitForSeconds(1f); // Exiting the ship.
+                StartCoroutine(FlightRoutine());
+            }
+            else
+            {
+                yield return new WaitForSeconds(10f); // Exiting the ship and burning for a few seconds
+                Debug.Log("[KCS]: Escape sequence ending on " + vessel.GetName() + " (Escape Pod)");
+
+                // Remove the flight controller and allow the guidance to cease
+                Destroy(fc);
+            }
         }
 
         IEnumerator FlightRoutine()
@@ -209,7 +230,7 @@ namespace KerbalCombatSystems
                 }
                 else
                 {
-                    // Plane change. Burning either north or south until we reach the escape speed.
+                    // Plane change. Burning either normal or anti-normal until we reach the escape speed.
 
                     double UT = Planetarium.GetUniversalTime();
                     Vector3 orbitNormal = vessel.orbit.Normal(UT);
