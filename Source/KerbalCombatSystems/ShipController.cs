@@ -1325,7 +1325,7 @@ namespace KerbalCombatSystems
             List<ModuleCombatRobotics> RoboticControllers = vessel.FindPartModulesImplementing<ModuleCombatRobotics>();
             foreach (ModuleCombatRobotics KAL in RoboticControllers)
             {
-                if (KAL.RoboticsType == "Ship") FlightRoboticControllers.Add(KAL);
+                if (KAL.roboticsType == "Ship") FlightRoboticControllers.Add(KAL);
             }
 
             if (deploy)
@@ -1349,7 +1349,7 @@ namespace KerbalCombatSystems
             foreach (ModuleCombatRobotics KAL in RoboticControllers)
             {
                 Debug.Log(KAL.GetModuleDisplayName());
-                if (KAL.RoboticsType != "Weapon") continue;
+                if (KAL.roboticsType != "Weapon") continue;
                 if (KAL.GetModuleDisplayName() != WeaponTag && KAL.GetModuleDisplayName() != "KAL Series Robotics Controller") continue;
                 WeaponRoboticControllers.Add(KAL);
             }
