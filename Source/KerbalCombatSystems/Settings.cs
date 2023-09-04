@@ -18,10 +18,10 @@ namespace KerbalCombatSystems
         public bool allowWithdrawal = true;
 
         //todo: migrate referesh rate into mod config tied settings
-        [GameParameters.CustomIntParameterUI("Refresh Rate", minValue = 1, maxValue = 10, stepSize = 1,
+        /*[GameParameters.CustomIntParameterUI("Refresh Rate", minValue = 1, maxValue = 10, stepSize = 1,
         toolTip = "Multiplier for the time space between intensive but accuracy aiding AI functions")]
         public int refreshRate { get { return refreshRateDefault; } set { refreshRateDefault = value; } }
-        private int refreshRateDefault = 5;
+        private int refreshRateDefault = 5;*/
 
         public override void SetDifficultyPreset(GameParameters.Preset preset)
         {

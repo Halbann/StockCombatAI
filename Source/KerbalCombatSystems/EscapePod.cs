@@ -25,7 +25,7 @@ namespace KerbalCombatSystems
         private Vessel parent;
 
         // Relavent Game Setting
-        private int refreshRate;
+        private readonly int refreshRate = 5;
 
         public const string groupName = "Escape Pod";
         public const float escapeSpeedMin = 50f;
@@ -91,8 +91,6 @@ namespace KerbalCombatSystems
             // Store a reference to the parent ship.
             parent = vessel;
 
-            // Set the refresh rate
-            refreshRate = HighLogic.CurrentGame.Parameters.CustomParams<KCSCombat>().refreshRate;
 
             // Find ship controllers and add them to our list.
             var controllers = vessel.FindPartModulesImplementing<ModuleShipController>();
