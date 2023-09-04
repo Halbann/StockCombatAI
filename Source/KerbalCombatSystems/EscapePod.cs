@@ -24,7 +24,6 @@ namespace KerbalCombatSystems
         private ModuleDecouplerDesignate seperator;
         private Vessel parent;
 
-        // Relavent Game Setting
         private readonly int refreshRate = 5;
 
         public const string groupName = "Escape Pod";
@@ -129,7 +128,7 @@ namespace KerbalCombatSystems
             //if (statusRoutine != null)
             //    StopCoroutine(statusRoutine);
 
-            // try to pop decoupler
+            // Try to pop decoupler
             if (seperator != null)
             {
                 seperator.Separate();
@@ -140,20 +139,21 @@ namespace KerbalCombatSystems
                 Debug.Log("[KCS]: Couldn't find decoupler on " + vessel.GetName() + " (Escape Pod)");
             }
 
-            if (vessel == parent)
-            {
-                // We didn't find a decoupler and we're still attached to the parent.
 
+            KCSController.Log("Escape pod launching from %1", parent);
+
+            yield return new WaitForFixedUpdate(); // Wait for our new vessel to be created.
+
+            if (vessel == parent & seperator != null)
+            {
+                // We're still attached to the parent after trying to decouple
                 Debug.Log("[KCS]: Failed to launch escape pod on " + vessel.vesselName);
 
                 // Abort the escape.
                 yield break;
             }
 
-            KCSController.Log("Escape pod launching from %1", parent);
             escaped = true;
-
-            yield return new WaitForFixedUpdate(); // Wait for our new vessel to be created.
 
             // Transfer as many crew as possible from the parent ship.
             TransferCrew();
