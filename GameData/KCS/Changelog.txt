@@ -1,5 +1,8 @@
-v0.2.2
+v0.3.0
 
+todo: add changes from v0.2.1 to 'Flight controller shutdown' commit.
+
+- Fixed missiles being de-selected in weapons menu after firing.
 - Fixed a bug in the firework burst logic that was causing the incorrect nubmer of shots when a launcher was near empty.
 - Fixed a bug that was causing some ships without control to be counted as alive.
 

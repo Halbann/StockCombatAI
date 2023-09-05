@@ -1,14 +1,16 @@
-﻿using KSP.UI.Screens;
 using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
+
 using UnityEngine;
+using KSP.UI.Screens;
+
 using static KerbalCombatSystems.KCS;
 
 namespace KerbalCombatSystems
 {
-    // Overall controller for KCS. Setup battles, 
+    // Overall controller for KCS.
     [KSPAddon(KSPAddon.Startup.Flight, false)]
     class KCSController : MonoBehaviour
     {
@@ -440,7 +442,8 @@ namespace KerbalCombatSystems
                     string weaponName = string.Format("{0}\n<color=#808080ff>Type: {1}, Mass: {2} t</color>",
                         code, w.weaponType, w.mass.ToString("0.0"));
 
-                    if (GUILayout.Toggle(w == selectedWeapon, weaponName, GUI.skin.button))
+                    string selectedCode = selectedWeapon == null ? "null" : selectedWeapon.weaponCode;
+                    if (GUILayout.Toggle(w == selectedWeapon || w.weaponCode == selectedCode, weaponName, GUI.skin.button))
                         selectedWeapon = w;
                 }
             }

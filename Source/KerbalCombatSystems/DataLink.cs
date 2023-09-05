@@ -18,7 +18,7 @@ namespace KerbalCombatSystems
                 case "transmitter":
                     moduleName = "ModuleDataLinkRelay";
                     break;
-                case "reciever":
+                case "receiver":
                     moduleName = "ModuleDataLinkAntenna";
                     break;
                 default:
@@ -78,12 +78,12 @@ namespace KerbalCombatSystems
         [KSPField(
               guiActive = true,
               guiActiveEditor = true,
-              guiName = "Reciever Power",
+              guiName = "Receiver Power",
               guiUnits = " ",
               groupName = dataLinkGroupName,
               groupDisplayName = dataLinkGroupName),
               UI_Label(scene = UI_Scene.All)]
-        public float recieverPower = 0f;
+        public float receiverPower = 0f;
 
         [KSPField(isPersistant = true)]
         public float baseReceiverPower = 0f;
@@ -93,14 +93,14 @@ namespace KerbalCombatSystems
             StringBuilder output = new StringBuilder();
 
             output.Append(Environment.NewLine);
-            output.Append(String.Format("Reciever Power: {0}", recieverPower));
+            output.Append($"Receiver Power: {receiverPower}");
 
             return output.ToString();
         }
 
         public override void OnStart(StartState state)
         {
-            recieverPower = baseReceiverPower * scalingFactor;
+            receiverPower = baseReceiverPower * scalingFactor;
         }
     }
 }

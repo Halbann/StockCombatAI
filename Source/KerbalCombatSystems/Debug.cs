@@ -48,7 +48,7 @@ namespace KerbalCombatSystems
 
         void OnGUI()
         {
-            if (!showLines) return;
+            if (!showLines || Camera.main == null) return;
 
             if (textStyle == null)
             {

@@ -1,5 +1,7 @@
-﻿using System.Collections.Generic;
+using System;
+using System.Collections.Generic;
 using System.Linq;
+
 using UnityEngine;
 
 namespace KerbalCombatSystems
@@ -159,17 +161,17 @@ namespace KerbalCombatSystems
             return name;
         }
 
-        public static void TryToggle(bool Direction, ModuleAnimationGroup Animation)
+        public static void TryToggle(bool direction, ModuleAnimationGroup animation)
         {
-            if (Direction && Animation.isDeployed == false)
+            if (direction && animation.isDeployed == false)
             {
                 //try deploy if not already
-                Animation.DeployModule();
+                animation.DeployModule();
             }
-            else if (!Direction && Animation.isDeployed == true)
+            else if (!direction && animation.isDeployed == true)
             {
                 //try retract if not already
-                Animation.RetractModule();
+                animation.RetractModule();
             }
 
             //do nothing otherwise
@@ -244,10 +246,12 @@ namespace KerbalCombatSystems
                 // make sure the decoupler designator exists and is the specified type
                 module = currentPart.GetComponent<ModuleDecouplerDesignate>();
                 if (module == null) continue;
+
                 //"" is shorthand for ignoring the type requirement and firing any decoupler
                 if (type != "" && module.decouplerDesignation != type) continue;
+
                 //strike any decouplers without any child parts
-                if (!currentPart.FindChildParts<Part>(true).ToList().Any()) continue;
+                if (!currentPart.FindChildParts<Part>(false).ToList().Any()) continue;
 
                 return module;
             }
@@ -272,16 +276,31 @@ namespace KerbalCombatSystems
 
                 // make sure the decoupler designator exists and is the specified type
                 if (module == null) continue;
+
                 //"" is shorthand for ignoring the type requirement and firing any decoupler
                 if (type != "" && module.decouplerDesignation != type) continue;
+
                 //strike any decouplers without any child parts
-                if (!currentPart.FindChildParts<Part>(true).ToList().Any()) continue;
+                if (!currentPart.FindChildParts<Part>(false).ToList().Any()) continue;
 
                 seperatorList.Add(module);
             }
 
             return seperatorList;
         }
+
+        #endregion
+
+        #region Graphics
+
+        public static Color Desaturate(Color color, float sat)
+        {
+            float h, s, v;
+            Color.RGBToHSV(color, out h, out s, out v);
+
+            return Color.HSVToRGB(h, s * sat, v);
+        }
+
         #endregion
 
         #region Physics Calculations
@@ -402,6 +421,11 @@ namespace KerbalCombatSystems
             }
 
             return false;
+        }
+
+        static float AngleDifference(float a, float b)
+        {
+            return (a - b + 540) % 360 - 180;
         }
 
         #endregion

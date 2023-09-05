@@ -1,4 +1,4 @@
-﻿using UnityEngine;
+using UnityEngine;
 
 namespace KerbalCombatSystems
 {
@@ -54,10 +54,24 @@ namespace KerbalCombatSystems
             //KCSDebug.DestroyLine(rup);
             //KCSDebug.DestroyLine(rright);
             //KCSDebug.DestroyLine(rforward);
+
+            if (controllingVessel?.Autopilot != null)
+            {
+                controllingVessel.Autopilot.SetMode(VesselAutopilot.AutopilotMode.StabilityAssist);
+                controllingVessel.ActionGroups.SetGroup(KSPActionGroup.SAS, true);
+            }
+
+            if (controllingVessel?.ctrlState != null)
+            {
+                controllingVessel.ctrlState.mainThrottle = 0;
+            }
         }
 
         public void Drive()
         {
+            // todo: this is dumb. should redefine the flight controller as a part module.
+            controllingVessel = gameObject.GetComponent<Part>()?.vessel;
+
             if (controllingVessel == null)
             {
                 Destroy(this);
