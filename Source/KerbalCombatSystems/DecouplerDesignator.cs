@@ -1,4 +1,6 @@
 ﻿using System;
+using System.Data.SqlTypes;
+using System.Linq;
 using UnityEngine;
 
 namespace KerbalCombatSystems
@@ -11,8 +13,9 @@ namespace KerbalCombatSystems
         [KSPField(isPersistant = true)]
         public bool seperated = false;
 
-        const string groupName = "KCS Designation";
-        readonly static string[] types = new string[] { "Default", "Warhead", "Escape Pod" };
+        private const string groupName = "KCS Designation";
+        public readonly static string[] types = new string[] { "Default", "Warhead", "EscapePod" };
+        public readonly static string[] typeNames = new string[] { "Default", "Warhead", "Escape Pod" };
 
         [KSPField(
             isPersistant = true,
@@ -20,20 +23,14 @@ namespace KerbalCombatSystems
             guiActiveEditor = true,
             guiName = "Type",
             groupName = groupName,
-            groupDisplayName = groupName)]
+            groupDisplayName = groupName
+        )]
         [UI_ChooseOption(controlEnabled = true, affectSymCounterparts = UI_Scene.None)]
         public string decouplerDesignation = "Default";
 
         public override void OnAwake()
         {
-            UI_ChooseOption optionsField;
-
-            if (HighLogic.LoadedSceneIsEditor)
-                optionsField = Fields[nameof(decouplerDesignation)].uiControlEditor as UI_ChooseOption;
-            else
-                optionsField = Fields[nameof(decouplerDesignation)].uiControlFlight as UI_ChooseOption;
-
-            optionsField.options = types;
+            SetupTypes();
         }
 
         public void Separate()
@@ -67,12 +64,24 @@ namespace KerbalCombatSystems
 
             seperated = true;
         }
-    }
 
-    public enum DecouplerDesignation
-    {
-        Default,
-        Warhead,
-        EscapePod
+        private void SetupTypes()
+        {
+            if (decouplerDesignation == "Escape Pod")
+                decouplerDesignation = "EscapePod";
+
+            UI_ChooseOption optionsField;
+
+            if (HighLogic.LoadedSceneIsEditor)
+                optionsField = Fields[nameof(decouplerDesignation)].uiControlEditor as UI_ChooseOption;
+            else
+                optionsField = Fields[nameof(decouplerDesignation)].uiControlFlight as UI_ChooseOption;
+
+            optionsField.options = types;
+            optionsField.display = typeNames;
+
+            if (!types.Contains(decouplerDesignation))
+                decouplerDesignation = "Default";
+        }
     }
 }
