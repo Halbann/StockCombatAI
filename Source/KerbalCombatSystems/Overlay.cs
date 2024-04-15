@@ -278,8 +278,8 @@ namespace KerbalCombatSystems
         private void Update()
         {
             if (activeController == null
-                || MapView.MapIsEnabled 
-                || mainCamera == null 
+                || MapView.MapIsEnabled
+                || mainCamera == null
                 || FlightGlobals.ActiveVessel == null
                 || !activeController.controllerRunning)
             {
@@ -344,7 +344,7 @@ namespace KerbalCombatSystems
                 if (elevationLines.Count > 0 || dashedLinesMesh.Positions.Count > 0)
                     elevationLinesMesh.SetLinesFromPoints(elevationLines);
 
-                // Dashed lines between each ship and its current target. 
+                // Dashed lines between each ship and its current target.
 
                 dashedLines.Clear();
                 foreach (var ship in ships)
@@ -526,7 +526,7 @@ namespace KerbalCombatSystems
             return line;
         }
 
-        // We need to use segmented straight lines because the camera culls whole lines 
+        // We need to use segmented straight lines because the camera culls whole lines
         // that have either end outside of the camera frustum.
         private List<Vector3> SegmentedLine(Vector3 start, Vector3 end, int segments)
         {
@@ -740,7 +740,7 @@ namespace KerbalCombatSystems
                     ColorUtility.TryParseHtmlString(ship.SideColour(), out currentIconColour);
 
                 // Draw a diamond icon with the ship's team colour.
-                // TODO: use different regular polygons for each team for colour-blindness.  
+                // TODO: use different regular polygons for each team for colour-blindness.
                 DrawIcon(ship.vessel.CoM, iconTexture, Vector2.one * iconSize, currentIconColour);
 
                 // Draw a ring around the ship's target to represent target lock.
@@ -860,7 +860,7 @@ namespace KerbalCombatSystems
 
                 textRect.x = screenPos.x + 18; // Shift right of centre.
                 textRect.y = (Screen.height - screenPos.y) - (textSize.y / 2); // Vertically align middle of text with centre.
-    
+
                 if (textRect.x > Screen.width || textRect.y > Screen.height || screenPos.z < 0) continue;
 
                 // Create a shorterned ship name with a bold prefix.
@@ -868,7 +868,7 @@ namespace KerbalCombatSystems
                 string name = ShortenName(ship.vessel.GetDisplayName());
 
                 // Bold prefix disabled for now.
-                
+
                 /*string[] nameWords = name.Split(' ');
                 bool endPrefix = false;
                 bool allCaps;

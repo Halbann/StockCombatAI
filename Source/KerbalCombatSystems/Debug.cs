@@ -1,6 +1,7 @@
 ﻿using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
+
 using UnityEngine;
 
 namespace KerbalCombatSystems
@@ -9,17 +10,34 @@ namespace KerbalCombatSystems
     public class KCSDebug : MonoBehaviour
     {
         public static bool showLines;
+
+        private static GUIStyle textStyle;
+
         private static List<LineRenderer> lines;
         private static List<float> times;
 
-        //relavent game settings
-        private GUIStyle textStyle;
+        public static List<DebugLabelData> debugLabels;
 
-        private void Start()
+        public struct DebugLabelData
+        {
+            public string text;
+            public Vector3 position;
+            internal float time;
+
+            public DebugLabelData(string text, Vector3 position)
+            {
+                this.text = text;
+                this.position = position;
+                time = Time.fixedTime;
+            }
+        }
+
+        internal void Start()
         {
             showLines = false;
             lines = new List<LineRenderer>();
             times = new List<float>();
+            debugLabels = new List<DebugLabelData>();
 
             StartCoroutine(LineCleaner());
         }
@@ -34,13 +52,8 @@ namespace KerbalCombatSystems
 
                 //removes inactive lines not caught fast enough by the generic line clearer
                 if (!showLines)
-                {
-                    foreach (var line in lines)
-                    {
-                        if (line == null) continue;
-                        line.positionCount = 0;
-                    }
-                }
+                    HideLines(0);
+
 
                 Debug.Log("[KCS]: Lines " + (showLines ? "enabled." : "disabled."));
             }
@@ -48,21 +61,30 @@ namespace KerbalCombatSystems
 
         void OnGUI()
         {
-            if (!showLines || Camera.main == null) return;
+            if (!showLines || Camera.main == null)
+                return;
 
-            if (textStyle == null)
-            {
-                textStyle = new GUIStyle(GUI.skin.label);
-
-                Font calibriliFont = Resources.FindObjectsOfTypeAll<Font>().ToList().Find(f => f.name == "calibrili");
-                if (calibriliFont != null)
-                    textStyle.font = calibriliFont;
-            }
-
+            InitStyles();
             DrawDebugText();
         }
 
-        public static LineRenderer CreateLine(Color LineColour)
+        private void InitStyles()
+        {
+            // Initialise GUI styles.
+
+            if (textStyle != null)
+                return;
+
+            textStyle = new GUIStyle(GUI.skin.label);
+
+            Font calibriliFont = Resources.FindObjectsOfTypeAll<Font>().ToList().Find(f => f.name == "calibrili");
+            if (calibriliFont != null)
+                textStyle.font = calibriliFont;
+        }
+
+        #region Lines
+
+        public static LineRenderer CreateLine(Color LineColour, float width = 0.5f)
         {
             //spawn new line
             LineRenderer Line = new GameObject().AddComponent<LineRenderer>();
@@ -75,7 +97,8 @@ namespace KerbalCombatSystems
             Line.material = LineMaterial;
 
             //make it come to a point
-            Line.startWidth = 0.5f;
+            //Line.startWidth = width * 0.4f;
+            Line.startWidth = 0.1f;
             Line.endWidth = 0.1f;
 
             // Don't draw until the line is first plotted.
@@ -106,36 +129,55 @@ namespace KerbalCombatSystems
 
         public static void DestroyLine(LineRenderer line)
         {
-            if (line == null) return;
-            if (line.gameObject == null) return;
-            line.gameObject.DestroyGameObject();
+            if (line == null || line.gameObject == null)
+                return;
+
+            Destroy(line.gameObject);
         }
 
         private IEnumerator LineCleaner()
         {
             // Hide rogue lines that haven't been plotted in a while.
 
-            LineRenderer currentLine;
-
             while (true)
             {
-                for (int i = 0; i < lines.Count; i++)
-                {
-                    if (Time.time - times[i] < 5) continue;
-                    currentLine = lines[i];
-                    if (currentLine == null) continue;
-                    lines[i].positionCount = 0;
-                }
+                HideLines(5);
 
                 yield return new WaitForSeconds(5f);
             }
         }
+
+        private void HideLines(float timeLimit)
+        {
+            LineRenderer currentLine;
+
+            for (int i = 0; i < lines.Count; i++)
+            {
+                if (Time.time - times[i] < timeLimit)
+                    continue;
+
+                currentLine = lines[i];
+
+                if (currentLine == null)
+                    continue;
+
+                // Hide inactive line.
+                lines[i].positionCount = 0;
+            }
+        }
+
+        #endregion
+
+        #region Labels
 
         // todo: draw construction lines and timetointecept text for nearintercept variables
         private void ActiveVesselDebug()
         {
 
         }
+
+        public static void DrawDebugLabel(string text, Vector3 position) =>
+            debugLabels.Add(new DebugLabelData(text, position));
 
         private void DrawDebugText()
         {
@@ -174,9 +216,22 @@ namespace KerbalCombatSystems
                     + ((ship.currentWeapon?.weaponCode) == "" ? (ship.currentWeapon?.weaponType) : (ship.currentWeapon?.weaponCode)),
                     ship.vessel);
             }
+
+            foreach (DebugLabelData data in debugLabels)
+            {
+                if (data.time >= Time.fixedTime - 0.01f)
+                    DebugLabel(data.text, data.position);
+            }
+
+            debugLabels.RemoveAll(d => Time.fixedTime - d.time > 0.1f);
         }
 
-        private void VesselLabel(string text, Vessel vessel)
+        private static void VesselLabel(string text, Vessel vessel)
+        {
+            DebugLabel(text, vessel.CoM);
+        }
+
+        public static void DebugLabel(string text, Vector3 position)
         {
             if (MapView.MapIsEnabled) return;
 
@@ -184,16 +239,21 @@ namespace KerbalCombatSystems
             Rect textRect = new Rect(0, 0, textSize.x, textSize.y);
             Vector3 screenPos;
 
-            screenPos = Camera.main.WorldToScreenPoint(vessel.CoM);
+            screenPos = Camera.main.WorldToScreenPoint(position);
 
             textRect.x = screenPos.x + 18;
             textRect.y = (Screen.height - screenPos.y) - (textSize.y / 2);
 
             if (textRect.x > Screen.width || textRect.y > Screen.height || screenPos.z < 0) return;
 
-            GUI.Label(textRect, text, textStyle);
+            string labelText = text + "";
+            GUI.Label(textRect, labelText, textStyle);
         }
+
+        #endregion
     }
+
+    #region Transforms
 
     public class DrawTransform : MonoBehaviour
     {
@@ -266,4 +326,6 @@ namespace KerbalCombatSystems
             line.SetPositions(new Vector3[] { transform.position, transform.position + direction * 2 });
         }
     }
+
+    #endregion
 }

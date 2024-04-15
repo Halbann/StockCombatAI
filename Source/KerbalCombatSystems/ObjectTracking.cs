@@ -19,7 +19,7 @@ namespace KerbalCombatSystems
         [UI_Label(scene = UI_Scene.All)]
         public float detectionRange = 0f;
 
-        [KSPField(isPersistant = true)]
+        [KSPField]
         public float baseDetectionRange = 0f;
 
         [KSPField(
@@ -36,6 +36,17 @@ namespace KerbalCombatSystems
         )]
         public bool animate = true;
 
+
+        public override void OnLoad(ConfigNode node)
+        {
+            base.OnLoad(node);
+
+            if (node.HasValue("baseDetectionRange"))
+            {
+                baseDetectionRange = float.Parse(node.GetValue("baseDetectionRange"));
+            }
+        }
+
         public override string GetInfo()
         {
             StringBuilder output = new StringBuilder();
@@ -48,6 +59,11 @@ namespace KerbalCombatSystems
 
         public override void OnStart(StartState state)
         {
+            // Retrieve the default value for baseDetectionRange for this part.
+            // isPersistent was incorrectly set to true, so this fix has to be applied.
+            var prefab = PartLoader.getPartInfoByName(part.partInfo.name).partPrefab;
+            baseDetectionRange = (float)Fields["baseDetectionRange"].GetValue(prefab.Modules["ModuleObjectTracking"]);
+
             detectionRange = baseDetectionRange * scalingFactor;
 
             // Hide the animation option for the ship controller.

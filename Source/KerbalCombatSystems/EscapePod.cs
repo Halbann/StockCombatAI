@@ -24,7 +24,7 @@ namespace KerbalCombatSystems
         private Vessel parent;
         private int parentPartCount;
 
-        private readonly int refreshRate = 5;
+        public static float checkRate = 0.5f;
 
         public const string groupName = "Escape Pod";
         public const float escapeSpeedMin = 50f;
@@ -154,7 +154,7 @@ namespace KerbalCombatSystems
                     Launch();
                 }
 
-                yield return new WaitForSeconds(refreshRate);
+                yield return new WaitForSeconds(checkRate);
             }
         }
 
@@ -262,7 +262,7 @@ namespace KerbalCombatSystems
                     // Execute a burn to circularize our orbit at the current altitude.
                     Vector3d fvel, deltaVd = Vector3d.up * 100;
 
-                    while (deltaVd.magnitude > 2 && Time.time - lastUpdate < refreshRate)
+                    while (deltaVd.magnitude > 2 && Time.time - lastUpdate < checkRate)
                     {
                         yield return new WaitForFixedUpdate();
 
@@ -318,7 +318,7 @@ namespace KerbalCombatSystems
                     break; 
                 }
 
-                yield return new WaitForSeconds(refreshRate);
+                yield return new WaitForSeconds(checkRate);
             }
 
             // Remove the flight controller and allow the guidance to cease.
@@ -424,7 +424,10 @@ namespace KerbalCombatSystems
 
         public static void MoveCrewMember(ProtoCrewMember crew, Part part)
         {
-            Part source = crew.seat.part;
+            Part source = crew?.seat?.part;
+
+            if (crew == null || source == null || part == null)
+                return;
 
             source.RemoveCrewmember(crew);
             part.AddCrewmember(crew);
