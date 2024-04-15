@@ -98,6 +98,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="ClosestTimeToCPA.cs" />
+    <Compile Include="FX.cs" />
     <Compile Include="LineMesh.cs" />
     <Compile Include="AssetLoader.cs" />
     <Compile Include="Overlay.cs" />
