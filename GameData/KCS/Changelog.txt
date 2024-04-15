@@ -1,10 +1,26 @@
 v0.3.0
 
-todo: add changes from v0.2.1 to 'Flight controller shutdown' commit.
+- Fixed controller part model scaling, controllers should be slightly smaller.
+- Changed controller attachment rules.
+- Added a small variant of the narrow-band scanner.
+- Removed the standalone small scanner part.
+- Updated part descriptions.
 
-- Fixed missiles being de-selected in weapons menu after firing.
+- Fixed (?) a bug that was causing some ships without control to be counted as alive.
+- Fixed missiles being de-selected in the weapons menu after firing.
 - Fixed a bug in the firework burst logic that was causing the incorrect nubmer of shots when a launcher was near empty.
-- Fixed a bug that was causing some ships without control to be counted as alive.
+
+- Spent missiles are now automatically marked as debris.
+
+- Added escape pod direction and delta-v settings.
+- Improved escape pod logic and reliability.
+- Escape pods now transfer crew before launching.
+- Escape pods now deploy parachutes.
+
+- Removed detection range scale setting.
+- Removed data link range scale setting.
+- Removed refresh rate setting.
+
 
 v0.2.1
 
