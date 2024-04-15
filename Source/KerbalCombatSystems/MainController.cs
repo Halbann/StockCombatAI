@@ -498,6 +498,11 @@ namespace KerbalCombatSystems
             GUILayout.EndVertical();
 
             GUILayout.Label("This menu is a placeholder. Settings changes are not permanent.");
+
+            if (GUILayout.Button("Toggle Explosions"))
+            {
+                KCSFX.HideExplosions(!KCSFX.replaceExplosions);
+            }
         }
 
         private void SliderSetting(ref float setting, string text, int min, int max)
