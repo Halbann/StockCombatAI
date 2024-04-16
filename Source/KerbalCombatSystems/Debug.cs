@@ -9,7 +9,24 @@ namespace KerbalCombatSystems
     [KSPAddon(KSPAddon.Startup.Flight, false)]
     public class Debug : MonoBehaviour
     {
-        public static bool showLines;
+        private static bool _debugVisible;
+        public static bool Visible
+        {
+            get => _debugVisible;
+            set
+            {
+                if (_debugVisible == value)
+                    return;
+
+                _debugVisible = value;
+
+                //removes inactive lines not caught fast enough by the generic line clearer
+                if (!Visible)
+                    HideLines(0);
+
+                Log("Lines " + (Visible ? "enabled." : "disabled."));
+            }
+        }
 
         private static GUIStyle textStyle;
 
@@ -34,7 +51,7 @@ namespace KerbalCombatSystems
 
         internal void Start()
         {
-            showLines = false;
+            Visible = false;
             lines = new List<LineRenderer>();
             times = new List<float>();
             debugLabels = new List<DebugLabelData>();
@@ -45,23 +62,23 @@ namespace KerbalCombatSystems
         internal void Update()
         {
             //on press f12 toggle missile lines
-            if (Input.GetKeyDown(KeyCode.F12) && !Input.GetKey(KeyCode.LeftAlt))
+            /*if (Input.GetKeyDown(KeyCode.F12) && !Input.GetKey(KeyCode.LeftAlt))
             {
                 //switch bool return
-                showLines = !showLines;
+                drawDebugInfo = !drawDebugInfo;
 
                 //removes inactive lines not caught fast enough by the generic line clearer
-                if (!showLines)
+                if (!drawDebugInfo)
                     HideLines(0);
 
 
-                Log("Lines " + (showLines ? "enabled." : "disabled."));
-            }
+                Log("Lines " + (drawDebugInfo ? "enabled." : "disabled."));
+            }*/
         }
 
         void OnGUI()
         {
-            if (!showLines || Camera.main == null)
+            if (!Visible || Camera.main == null)
                 return;
 
             InitStyles();
@@ -113,7 +130,7 @@ namespace KerbalCombatSystems
 
         public static void PlotLine(Vector3[] Positions, LineRenderer Line)
         {
-            if (showLines)
+            if (Visible)
             {
                 Line.positionCount = 2;
                 Line.SetPositions(Positions);
@@ -147,7 +164,7 @@ namespace KerbalCombatSystems
             }
         }
 
-        private void HideLines(float timeLimit)
+        private static void HideLines(float timeLimit)
         {
             LineRenderer currentLine;
 
@@ -302,17 +319,17 @@ namespace KerbalCombatSystems
         // Update is called once per frame
         void Update()
         {
-            if (Debug.showLines)
+            if (Debug.Visible)
             {
                 UpdateLine(xLine, transform.right);
                 UpdateLine(yLine, transform.up);
                 UpdateLine(zLine, transform.forward);
             }
 
-            if (Debug.showLines == drawEnabled)
+            if (Debug.Visible == drawEnabled)
                 return;
 
-            if (Debug.showLines)
+            if (Debug.Visible)
             {
                 xLine.enabled = true;
                 yLine.enabled = true;
@@ -325,7 +342,7 @@ namespace KerbalCombatSystems
                 zLine.enabled = false;
             }
 
-            drawEnabled = Debug.showLines;
+            drawEnabled = Debug.Visible;
         }
 
         void SetupLine(LineRenderer line, Color color)

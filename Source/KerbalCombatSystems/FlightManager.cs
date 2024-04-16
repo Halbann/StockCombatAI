@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
@@ -6,51 +6,71 @@ using System.Linq;
 using UnityEngine;
 using KSP.UI.Screens;
 
-using static KerbalCombatSystems.KCS;
+using static KerbalCombatSystems.Utils;
 
 namespace KerbalCombatSystems
 {
-    // Overall controller for KCS.
+    // Overall flight controller for KCS.
     [KSPAddon(KSPAddon.Startup.Flight, false)]
-    class KCSController : MonoBehaviour
+    class FlightManager : MonoBehaviour
     {
         #region Fields
 
-        // GUI variables.
-        private static ApplicationLauncherButton appLauncherButton;
-        private static bool addedAppLauncherButton = false;
-        private static bool guiEnabled = false;
-        private static bool guiHidden;
+        // Instance variable.
 
-        private int windowWidth = 350;
-        private int windowHeight = 700;
-        private Rect windowRect;
+        private static FlightManager instance;
+        public static FlightManager Instance => instance;
+
+        // GUI variables.
+
+        private ApplicationLauncherButton appLauncherButton;
+        private bool guiEnabled = false;
+        private bool guiHidden;
+
+        private const int windowWidth = 350;
+        private const int windowHeight = 700;
+        private static Rect windowRect = new Rect((Screen.width * 0.85f) - (windowWidth / 2), (Screen.height / 2) - (windowHeight / 2), 0, 0);
         private GUIStyle boxStyle;
         private GUIStyle smallTextButtonStyle;
         private GUIStyle buttonStyle;
         private GUIStyle titleStyle;
         private GUIStyle centeredText;
-        private static int scrollViewHeight;
+        private int scrollViewHeight;
         private Vector2 scrollPosition;
         private Vector2 settingsScrollPosition;
         private static Vector2 logScrollPosition;
         private const int logScrollHeight = 350;
+        private static bool scrollLock = false;
 
-        private readonly string[] modes = { "Ships", "Weapons", "Log", "Settings" };
+        private readonly string[] modes = { "Ships", "Weapons", "Log", "Settings", "Debug" };
         private string mode = "Ships";
+
+
+        // Flight manager variables.
 
         public static List<ModuleShipController> ships;
         public static List<ModuleWeaponController> weaponsInFlight;
         public static List<ModuleWeaponController> interceptorsInFlight;
         private float lastUpdateTime;
 
+
+        // Weapon variables.
+
         List<ModuleWeaponController> weaponList;
         ModuleWeaponController selectedWeapon;
         private Vessel currentVessel;
+        private static float launchFailureTime = float.NegativeInfinity;
+        private static string launchFailureReason;
 
-        private static List<string> log;
+
+        // Battle log variables.
+
+        private static List<string> log = new List<string>();
         private static float lastLogged;
         private bool updateOverlayOpacity;
+
+
+        // Dependency variables.
 
         static bool hasCC;
         static bool hasPRE;
@@ -59,17 +79,14 @@ namespace KerbalCombatSystems
 
         #region Main
 
-        private void Awake()
+        internal void Awake()
         {
-            log = new List<string>();
+            instance = this;
         }
 
-        private void Start()
+        internal void Start()
         {
             // Setup GUI. 
-
-            windowRect = new Rect((Screen.width * 0.85f) - (windowWidth / 2), (Screen.height / 2) - (windowHeight / 2), 0, 0);
-            guiEnabled = false;
 
             AddToolbarButton();
 
@@ -77,6 +94,7 @@ namespace KerbalCombatSystems
 
             UpdateWeaponList();
             UpdateShipList();
+
             GameEvents.onVesselCreate.Add(VesselEventUpdate);
             GameEvents.onVesselDestroy.Add(VesselEventUpdate);
             GameEvents.onVesselGoOffRails.Add(VesselEventUpdate);
@@ -133,6 +151,8 @@ namespace KerbalCombatSystems
             GameEvents.onVesselDestroy.Remove(VesselEventUpdate);
             GameEvents.onVesselGoOffRails.Remove(VesselEventUpdate);
             GameEvents.onVesselGoOnRails.Remove(VesselEventUpdate);
+
+            RemoveToolbarButton();
         }
 
         #endregion
@@ -163,7 +183,7 @@ namespace KerbalCombatSystems
 
         private void UpdateShipList()
         {
-            Debug.Log("[KCS]: Updated ship list.");
+            Debug.Log("Updated ship list.");
 
             var loadedVessels = FlightGlobals.VesselsLoaded;
             ships = new List<ModuleShipController>();
@@ -194,6 +214,9 @@ namespace KerbalCombatSystems
 
         private void UpdateWeaponList()
         {
+            // Collect a sorted, collapsed list of usable
+            // weapons on the active vessel for display in the flight UI.
+
             var c = FlightGlobals.ActiveVessel.FindPartModuleImplementing<ModuleShipController>();
             if (c == null)
             {
@@ -204,9 +227,25 @@ namespace KerbalCombatSystems
             c.CheckWeapons();
             weaponList = c.weapons;
 
+            // Separate out the uncoded weapons.
             var ungroupedMissiles = weaponList.FindAll(m => m.weaponCode == "");
             weaponList = weaponList.Except(ungroupedMissiles).ToList();
-            weaponList = weaponList.GroupBy(m => m.weaponCode).Select(g => g.First()).ToList();
+
+            // Get one weapon per weapon code, the one with the fewest child decouplers.
+            weaponList = weaponList
+                .GroupBy(m => m.weaponCode)
+                .Select(g => g.OrderBy(m => m.childDecouplers).First())
+                .ToList();
+            
+            weaponList = weaponList.OrderByDescending(m => m.weaponCode).ToList();
+
+            // Get one weapon per weapon of a certain mass, the one with the fewest child decouplers.
+            ungroupedMissiles = ungroupedMissiles
+                .GroupBy(m => Math.Round(m.mass, 1))
+                .Select(g => g.OrderBy(m => m.childDecouplers).First())
+                .ToList();
+            
+            ungroupedMissiles = ungroupedMissiles.OrderByDescending(m => m.mass).ToList();
             weaponList = weaponList.Concat(ungroupedMissiles).ToList();
         }
 
@@ -225,9 +264,17 @@ namespace KerbalCombatSystems
 
         public void FireSelectedWeapon()
         {
-            if (selectedWeapon == null) return;
+            if (selectedWeapon == null)
+                return;
+
             selectedWeapon.Fire();
             UpdateWeaponList();
+        }
+
+        public static void OnWeaponFailed(string reason)
+        {
+            launchFailureTime = Time.time;
+            launchFailureReason = reason;
         }
 
         #endregion
@@ -289,11 +336,21 @@ namespace KerbalCombatSystems
 
         void OnGUI()
         {
-            if (guiEnabled && !guiHidden) DrawGUI();
+            if (guiEnabled && !guiHidden)
+                DrawGUI();
         }
 
-        private void DrawGUI() =>
-            windowRect = GUILayout.Window(GUIUtility.GetControlID(FocusType.Passive), windowRect, FillWindow, "KCS Beta v0.2.1", GUILayout.Height(0), GUILayout.Width(mode != "Log" ? windowWidth : windowWidth * 1.25f));
+        private void DrawGUI()
+        {
+            windowRect = GUILayout.Window(
+                GUIUtility.GetControlID(FocusType.Passive),
+                windowRect,
+                FillWindow,
+                "KCS Beta v0.3.0",
+                GUILayout.Height(0),
+                GUILayout.Width(mode != "Log" ? windowWidth : windowWidth * 1.25f)
+            );
+        }
 
         private void FillWindow(int windowID)
         {
@@ -302,16 +359,32 @@ namespace KerbalCombatSystems
                 buttonStyle = GUI.skin.button;
                 boxStyle = GUI.skin.GetStyle("Box");
 
-                smallTextButtonStyle = new GUIStyle(buttonStyle);
-                smallTextButtonStyle.fontSize = 10;
-                smallTextButtonStyle.alignment = TextAnchor.MiddleCenter;
+                smallTextButtonStyle = new GUIStyle(buttonStyle)
+                {
+                    fontSize = 10,
+                    alignment = TextAnchor.MiddleCenter
+                };
 
-                titleStyle = new GUIStyle(GUI.skin.label);
-                titleStyle.alignment = TextAnchor.MiddleCenter;
-                titleStyle.fontStyle = FontStyle.Bold;
+                titleStyle = new GUIStyle(GUI.skin.label)
+                {
+                    alignment = TextAnchor.MiddleCenter,
+                    fontStyle = FontStyle.Bold
+                };
 
-                centeredText = new GUIStyle(GUI.skin.label);
-                centeredText.alignment = TextAnchor.MiddleCenter;
+                centeredText = new GUIStyle(GUI.skin.label)
+                {
+                    alignment = TextAnchor.MiddleCenter
+                };
+            }
+
+            // Lock scroll zoom when mousing over the UI.
+
+            bool lockedScroll = false;
+            if (windowRect.Contains(new Vector2(Input.mousePosition.x, Screen.height - Input.mousePosition.y)))
+            {
+                lockedScroll = true;
+                scrollLock = true;
+                InputLockManager.SetControlLock(ControlTypes.CAMERACONTROLS, "KCSGUI");
             }
 
             if (GUI.Button(new Rect(windowRect.width - 18, 2, 16, 16), ""))
@@ -345,6 +418,9 @@ namespace KerbalCombatSystems
                 case "Settings":
                     SettingsGUI();
                     break;
+                case "Debug":
+                    DebugGUI();
+                    break;
                 default:
                     GUILayout.Label("Something went wrong...");
                     break;
@@ -360,6 +436,9 @@ namespace KerbalCombatSystems
 
             GUILayout.EndVertical();
             GUI.DragWindow(new Rect(0, 0, 10000, 500));
+
+            if (!lockedScroll && scrollLock)
+                InputLockManager.RemoveControlLock("KCSGUI");
         }
 
         private void WarningMessage(string message)
@@ -432,8 +511,10 @@ namespace KerbalCombatSystems
         private void WeaponsGUI()
         {
             GUILayout.BeginVertical(boxStyle);
+
             scrollViewHeight = Mathf.Max(Mathf.Min(15 * 30, 30 * weaponList.Count), 5 * 30);
             scrollPosition = GUILayout.BeginScrollView(scrollPosition, false, true, GUILayout.Height(scrollViewHeight), GUILayout.Width(windowWidth));
+            
             if (weaponList.Count > 0)
             {
                 foreach (var w in weaponList)
@@ -442,16 +523,42 @@ namespace KerbalCombatSystems
                     string weaponName = string.Format("{0}\n<color=#808080ff>Type: {1}, Mass: {2} t</color>",
                         code, w.weaponType, w.mass.ToString("0.0"));
 
-                    string selectedCode = selectedWeapon == null ? "null" : selectedWeapon.weaponCode;
-                    if (GUILayout.Toggle(w == selectedWeapon || w.weaponCode == selectedCode, weaponName, GUI.skin.button))
+                    bool sameAsSelected = false;
+                    if (selectedWeapon != null)
+                    {
+                        if (w.weaponCode != "")
+                        {
+                            if (w.weaponCode == selectedWeapon.weaponCode)
+                                sameAsSelected = true;
+                        }
+                        else if (Mathf.Approximately((float)Math.Round(w.mass, 1), (float)Math.Round(selectedWeapon.mass, 1)))
+                            sameAsSelected = true;
+                    }
+
+                    if (GUILayout.Toggle(w == selectedWeapon || sameAsSelected, weaponName, GUI.skin.button))
                         selectedWeapon = w;
                 }
             }
+
+            // Remove the selected weapon after it has been fired and we have selected its sibling.
+            if (selectedWeapon != null && selectedWeapon.vessel.persistentId != FlightGlobals.ActiveVessel.persistentId)
+                selectedWeapon = null;
+
             GUILayout.EndScrollView();
             GUILayout.EndVertical();
 
-            if (GUILayout.Button("Update List")) UpdateWeaponList();
-            if (GUILayout.Button("Fire")) FireSelectedWeapon();
+            if (GUILayout.Button("Update List"))
+                UpdateWeaponList();
+
+            if (GUILayout.Button("Fire"))
+                FireSelectedWeapon();
+
+            if (Time.time - launchFailureTime < 3)
+            {
+                GUI.color = Color.red;
+                GUILayout.Label("Launch failed: " + launchFailureReason);
+                GUI.color = Color.white;
+            }
         }
 
         private void LogGUI()
@@ -500,6 +607,14 @@ namespace KerbalCombatSystems
             GUILayout.Label("This menu is a placeholder. Settings changes are not permanent.");
         }
 
+        private void DebugGUI()
+        {
+            bool debugVisible = GUILayout.Toggle(Debug.Visible, "Draw Debug Info");
+
+            if (debugVisible != Debug.Visible)
+                Debug.Visible = debugVisible;
+        }
+
         private void SliderSetting(ref float setting, string text, int min, int max)
         {
             GUILayout.BeginHorizontal();
@@ -519,35 +634,45 @@ namespace KerbalCombatSystems
 
         // Application launcher/Toolbar setup.
 
-        private void AddToolbarButton()
+        public void AddToolbarButton()
         {
-            if (!addedAppLauncherButton)
-            {
-                Texture buttonTexture = GameDatabase.Instance.GetTexture("KCS/Icons/Button", false);
-                appLauncherButton = ApplicationLauncher.Instance.AddModApplication(ToggleGui, ToggleGui, null, null, null, null, ApplicationLauncher.AppScenes.FLIGHT, buttonTexture);
-                addedAppLauncherButton = true;
-            }
+            if (appLauncherButton != null)
+                return;
 
-            if (appLauncherButton.isActiveAndEnabled)
-                appLauncherButton.SetFalse(false);
+            var scenes = ApplicationLauncher.AppScenes.FLIGHT;
+            Texture buttonTexture = GameDatabase.Instance.GetTexture("KCS/Icons/Button", false);
+            appLauncherButton = ApplicationLauncher.Instance.AddModApplication(EnableGui, DisableGui, null, null, null, null, scenes, buttonTexture);
+        }
+
+        public void RemoveToolbarButton()
+        {
+            if (appLauncherButton == null)
+                return;
+
+            ApplicationLauncher.Instance.RemoveModApplication(appLauncherButton);
+            appLauncherButton = null;
         }
 
         public void ToggleGui()
         {
             if (guiEnabled)
-            {
                 DisableGui();
-                appLauncherButton.SetFalse(false);
-            }
             else
-            {
-                UpdateShipList();
-                UpdateWeaponList();
                 EnableGui();
-            }
         }
-        public void EnableGui() { guiEnabled = true; }
-        public void DisableGui() { guiEnabled = false; }
+
+        public void EnableGui() 
+        {
+            UpdateShipList();
+            UpdateWeaponList();
+            guiEnabled = true;
+        }
+
+        public void DisableGui() 
+        {
+            InputLockManager.RemoveControlLock("KCSGUI");
+            guiEnabled = false;
+        }
 
         private void OnShowUI() =>
             OnToggleUI(false);

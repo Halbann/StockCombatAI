@@ -10,6 +10,7 @@ v0.3.0
 
 - Fixed (?) a bug that was causing some ships without control to be counted as alive.
 - Fixed missiles being de-selected in the weapons menu after firing.
+- Fixed weapons menu to prevent out of order firing of stacked missiles ie. "bumper torpedoes".
 - Fixed a bug in the firework burst logic that was causing the incorrect nubmer of shots when a launcher was near empty.
 
 - Spent missiles are now automatically marked as debris.
