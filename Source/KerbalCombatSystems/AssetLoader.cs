@@ -1,106 +1,101 @@
-﻿using System.IO;
+﻿using Steamworks;
+using System.Collections.Generic;
+using System.IO;
+
 using UnityEngine;
 
 namespace KerbalCombatSystems
 {
-    [KSPAddon(KSPAddon.Startup.MainMenu, true)]
-    public class KCSAssets : MonoBehaviour
+    [KSPAddon(KSPAddon.Startup.Instantly, true)]
+    public class Assets : MonoBehaviour
     {
-        private static bool loaded;
-        private static string path;
+        private static bool loaded = false;
 
-        // Assets
-
-        public static Shader LineShader;
-        public static Shader LinePixelShader;
-        public static Shader TestShader;
-        public static GameObject markerPrefab;
-        public static GameObject canvasPrefab;
-
-        public string ShadersPath
+        private static readonly string[] bundleNames = new string[]
         {
-            get
+            "shaders",
+            "ui",
+            "effects"
+        };
+
+        private static Dictionary<string, Object> assets = new Dictionary<string, Object>();
+
+        internal void Awake()
+        {
+            if (loaded)
+                return;
+
+            string path = Path.Combine(
+                KSPUtil.ApplicationRootPath, "GameData", "KCS", "AssetBundles");
+
+            // Load all KCS asset bundles.
+
+            foreach (string bundleName in bundleNames)
             {
-                // todo: shaders for mac and linux.
-                switch (Application.platform)
-                {
-                    //case RuntimePlatform.OSXPlayer:
-                    //    return _bundlePath + Path.DirectorySeparatorChar +
-                    //           "kcsshaders_macosx";
-                    //case RuntimePlatform.WindowsPlayer:
-                    //    return _bundlePath + Path.DirectorySeparatorChar +
-                    //           "kcsshaders_windows";
-                    //case RuntimePlatform.LinuxPlayer:
-                    //    return _bundlePath + Path.DirectorySeparatorChar +
-                    //    "kcsshaders_linux";
-                    default:
-                        return path + Path.DirectorySeparatorChar +
-                               "kcsshaders";
-                }
+                LoadAssetBundle(Path.Combine(path, bundleName));
             }
-        }
 
-        public string UIPath => path + Path.DirectorySeparatorChar + "kcsui";
-
-        private void Awake()
-        {
-            if (loaded) return;
-
-            path = KSPUtil.ApplicationRootPath + "GameData" +
-                Path.DirectorySeparatorChar + "KCS" +
-                Path.DirectorySeparatorChar + "AssetBundles";
-
-            LoadShaderAssets();
-            LoadUIAssets();
             loaded = true;
         }
 
-        private void LoadUIAssets()
+        private void LoadAssetBundle(string path)
         {
-            AssetBundle UIbundle = AssetBundle.LoadFromFile(UIPath);
+            // Check if the asset bundle exists
 
-            if (UIbundle == null)
+            if (!File.Exists(path))
             {
-                Debug.Log("[KCS] Error: Missing UI asset bundle.");
-            }
-
-            markerPrefab = UIbundle.LoadAsset<GameObject>("Assets/Prefabs/Marker.prefab");
-            canvasPrefab = UIbundle.LoadAsset<GameObject>("Assets/Prefabs/KCSCanvas.prefab");
-            UIbundle.Unload(false);
-        }
-
-        private void LoadShaderAssets()
-        {
-            AssetBundle shaderBundle = AssetBundle.LoadFromFile(ShadersPath);
-
-            if (shaderBundle == null)
-            {
-                Debug.Log("[KCS] Error: Missing shaders asset bundle.");
+                Debug.LogError("Missing asset bundle at " + path);
                 return;
             }
 
-            Shader[] shaders = shaderBundle.LoadAllAssets<Shader>();
-            foreach (Shader shader in shaders)
+            // Try to load.
+
+            AssetBundle bundle = AssetBundle.LoadFromFile(path);
+
+            if (bundle == null)
             {
-                if (shader == null) continue;
-
-                switch (shader.name)
-                {
-                    case "GoodLines/Line":
-                        LineShader = shader;
-                        break;
-
-                    case "GoodLines/PixelPerfect":
-                        LinePixelShader = shader;
-                        break;
-
-                    case "Unlit/WorldSpaceNormals":
-                        TestShader = shader;
-                        break;
-                }
+                Debug.LogError("Failed to load asset bundle at " + path);
+                return;
             }
 
-            shaderBundle.Unload(false);
+            // Load all assets in the bundle and add them to the dictionary.
+
+            Object[] bundleAssets = bundle.LoadAllAssets();
+
+            foreach (Object asset in bundleAssets)
+            {
+                assets.Add(asset.name, asset);
+            }
+
+            // Unload the bundle.
+
+            bundle.Unload(false);
+        }
+
+        public static bool TryGetAsset<T>(string name, out T asset) where T : Object
+        {
+            if (assets.TryGetValue(name, out Object obj) && obj is T instance)
+            {
+                asset = instance;
+                return true;
+            }
+            else
+            {
+                asset = default;
+                return false;
+            }
+        }
+
+        public static T GetAsset<T>(string name) where T : Object
+        {
+            if (assets.TryGetValue(name, out Object obj) && obj is T instance)
+            {
+                return instance;
+            }
+            else
+            {
+                throw new KeyNotFoundException($"Asset {name} of type {typeof(T).Name} not found.");
+            }
         }
     }
 }
