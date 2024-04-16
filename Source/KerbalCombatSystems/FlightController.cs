@@ -36,9 +36,9 @@ namespace KerbalCombatSystems
             controllingVessel = gameObject.GetComponent<Part>().vessel;
 
             // initialise debug lines
-            currentVectorLine = KCSDebug.CreateLine(Color.yellow);
-            targetVectorLine = KCSDebug.CreateLine(Color.red);
-            rcsLine = KCSDebug.CreateLine(Color.white);
+            currentVectorLine = Debug.CreateLine(Color.yellow);
+            targetVectorLine = Debug.CreateLine(Color.red);
+            rcsLine = Debug.CreateLine(Color.white);
 
             //rright = KCSDebug.CreateLine(Color.red);
             //rup = KCSDebug.CreateLine(Color.green);
@@ -47,9 +47,9 @@ namespace KerbalCombatSystems
 
         internal void OnDestroy()
         {
-            KCSDebug.DestroyLine(currentVectorLine);
-            KCSDebug.DestroyLine(targetVectorLine);
-            KCSDebug.DestroyLine(rcsLine);
+            Debug.DestroyLine(currentVectorLine);
+            Debug.DestroyLine(targetVectorLine);
+            Debug.DestroyLine(rcsLine);
 
             //KCSDebug.DestroyLine(rup);
             //KCSDebug.DestroyLine(rright);
@@ -129,7 +129,7 @@ namespace KerbalCombatSystems
             //KCSDebug.PlotLine(new[] { origin, origin + forward * 10 * v.ctrlState.Z }, rforward);
 
             Vector3 origin = v.ReferenceTransform.position;
-            KCSDebug.PlotLine(new[] { origin, origin + RCSThrust.normalized * Mathf.Clamp(RCSThrust.magnitude, 0, 15) }, rcsLine);
+            Debug.PlotLine(new[] { origin, origin + RCSThrust.normalized * Mathf.Clamp(RCSThrust.magnitude, 0, 15) }, rcsLine);
         }
 
         void UpdateSAS(Vessel v)
@@ -160,8 +160,8 @@ namespace KerbalCombatSystems
 
             // Update debug lines.
             Vector3 origin = v.ReferenceTransform.position;
-            KCSDebug.PlotLine(new[] { origin, origin + v.ReferenceTransform.up * 15 }, currentVectorLine);
-            KCSDebug.PlotLine(new[] { origin, origin + attitude * 15 }, targetVectorLine);
+            Debug.PlotLine(new[] { origin, origin + v.ReferenceTransform.up * 15 }, currentVectorLine);
+            Debug.PlotLine(new[] { origin, origin + attitude * 15 }, targetVectorLine);
         }
 
         public void Stability(bool enable)

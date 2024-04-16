@@ -2,7 +2,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
-using static KerbalCombatSystems.KCS;
+using static KerbalCombatSystems.Utils;
 
 
 namespace KerbalCombatSystems
@@ -45,8 +45,8 @@ namespace KerbalCombatSystems
             UpdateSettings();
             NextRocket();
 
-            leadLine = KCSDebug.CreateLine(Color.green);
-            if (KCSDebug.showLines)
+            leadLine = Debug.CreateLine(Color.green);
+            if (Debug.showLines)
                 prediction = CreateSphere();
         }
 
@@ -89,7 +89,7 @@ namespace KerbalCombatSystems
             leadVector = target.CoM + Displacement(target.obt_velocity - vessel.obt_velocity, relativeAcceleration, timeToHit);
             leadVector -= origin;
 
-            KCSDebug.PlotLine(new Vector3[] { origin, origin + leadVector }, leadLine);
+            Debug.PlotLine(new Vector3[] { origin, origin + leadVector }, leadLine);
 
             bool onTarget = OnTarget(leadVector.normalized, decoupler.transform.up, targetVector, controller.targetSize, accuracyTolerance);
             if (onTarget)
@@ -113,7 +113,7 @@ namespace KerbalCombatSystems
                     }
 
                     // Create a static pink ball where the hit is predicted to happen.
-                    if (KCSDebug.showLines)
+                    if (Debug.showLines)
                     {
                         GameObject prediction = CreateSphere(timeToHit + 5);
                         prediction.transform.position = origin + leadVector;
@@ -218,7 +218,7 @@ namespace KerbalCombatSystems
             }
 
             // A floating pink ball predicts where the rocket will be when it passes the target.
-            if (KCSDebug.showLines && prediction != null)
+            if (Debug.showLines && prediction != null)
                 prediction.transform.position = pos - (FlightGlobals.ActiveVessel.GetObtVelocity() * time);
 
             return time;
@@ -274,7 +274,7 @@ namespace KerbalCombatSystems
 
         public void OnDestroy()
         {
-            KCSDebug.DestroyLine(leadLine);
+            Debug.DestroyLine(leadLine);
             Destroy(prediction);
         }
 

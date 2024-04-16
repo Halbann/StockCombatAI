@@ -6,7 +6,7 @@ using System.Linq;
 using UnityEngine;
 using KSP.UI.Screens.Flight;
 
-using static KerbalCombatSystems.KCS;
+using static KerbalCombatSystems.Utils;
 
 namespace KerbalCombatSystems
 {
@@ -105,7 +105,7 @@ namespace KerbalCombatSystems
         }
 
         [KSPAction("Launch", KSPActionGroup.Abort)]
-        public void LaunchAction(KSPActionParam param)
+        public void LaunchAction(KSPActionParam _)
         {
             Launch();
         }
@@ -161,10 +161,7 @@ namespace KerbalCombatSystems
         private IEnumerator EscapeSequence()
         {
             // try to pop decoupler
-            if (seperator != null)
-            {
-                seperator.Separate();
-            }
+            seperator?.Separate();
 
             yield return new WaitForFixedUpdate(); // Wait for our new vessel to be created.
 
@@ -175,13 +172,13 @@ namespace KerbalCombatSystems
             {
                 // We didn't find a decoupler and we're still part of a functional parent warship.
 
-                Debug.Log("[KCS]: Failed to launch escape pod on " + vessel.vesselName);
+                Debug.Log("Failed to launch escape pod on " + vessel.vesselName);
 
                 // Abort the escape.
                 yield break;
             }
 
-            KCSController.Log("Escape pod launching from %1", parent);
+            FlightManager.Log("Escape pod launching from %1", parent);
             escaped = true;
 
             yield return new WaitForFixedUpdate(); // Wait for our new vessel to be created.

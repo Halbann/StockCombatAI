@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
-using static KerbalCombatSystems.KCS;
+using static KerbalCombatSystems.Utils;
 
 namespace KerbalCombatSystems
 {
@@ -215,31 +215,33 @@ namespace KerbalCombatSystems
         // Create all necessary materials here. Only gets called once.
         private void CreateMaterials()
         {
-            transparentLineMat = new Material(KCSAssets.LineShader);
+            Shader lineShader = Assets.GetAsset<Shader>("GoodLines/Line");
+
+            transparentLineMat = new Material(lineShader);
             transparentLineMat.SetColor("_Color", new Color(1, 1, 1, rangeRingsOpacity));
             transparentLineMat.SetFloat("_Thickness", 1.3f);
 
-            rangeLineMat = new Material(KCSAssets.LineShader);
+            rangeLineMat = new Material(lineShader);
             rangeLineMat.SetColor("_Color", new Color(1, 1, 1, rangeLinesOpacity));
             rangeLineMat.SetFloat("_Thickness", 1.3f);
 
-            secondaryRangeLineMat = new Material(KCSAssets.LineShader);
+            secondaryRangeLineMat = new Material(lineShader);
             secondaryRangeLineMat.SetColor("_Color", new Color(1, 1, 1, secondaryRangeLinesOpacity));
             secondaryRangeLineMat.SetFloat("_Thickness", 1.3f);
 
-            dashedLineMat = new Material(KCSAssets.LineShader);
+            dashedLineMat = new Material(lineShader);
             dashedLineMat.SetColor("_Color", new Color(1, 1, 1, dashedLinesOpacity));
             dashedLineMat.SetFloat("_Thickness", 1.7f);
 
-            detectionRangeMat = new Material(KCSAssets.LineShader);
+            detectionRangeMat = new Material(lineShader);
             detectionRangeMat.SetColor("_Color", new Color(1f, 0.6f, 0.3f, weaponRangeOpacity));
             detectionRangeMat.SetFloat("_Thickness", 1.7f);
 
-            weaponRangeMat = new Material(KCSAssets.LineShader);
+            weaponRangeMat = new Material(lineShader);
             weaponRangeMat.SetColor("_Color", new Color(1f, 0.3f, 0.3f, weaponRangeOpacity));
             weaponRangeMat.SetFloat("_Thickness", 1.7f);
 
-            elevationLineMat = new Material(KCSAssets.LineShader);
+            elevationLineMat = new Material(lineShader);
             elevationLineMat.SetColor("_Color", new Color(1f, 1f, 1f, elevationLinesOpacity));
             elevationLineMat.SetFloat("_Thickness", 1.3f);
 
@@ -417,9 +419,9 @@ namespace KerbalCombatSystems
 
         private void WatchShipList()
         {
-            if (ships.Count == KCSController.ships.Count) return;
+            if (ships.Count == FlightManager.ships.Count) return;
 
-            ships = KCSController.ships;
+            ships = FlightManager.ships;
             markers.FindAll(m => m != null).ForEach(m => m.DeleteMarker());
             markers.Clear();
             CreateMarkers();
@@ -431,7 +433,7 @@ namespace KerbalCombatSystems
             {
                 if (ship == null) continue;
 
-                var markerObject = Instantiate(KCSAssets.markerPrefab);
+                var markerObject = Instantiate(Assets.GetAsset<GameObject>("Marker"));
                 markerObject.layer = 8;
 
                 // Need to manually correct the shader as it comes out of the prefab as null.
@@ -761,7 +763,7 @@ namespace KerbalCombatSystems
 
         private void DrawWeaponIcons()
         {
-            var allMissiles = KCSController.weaponsInFlight.Concat(KCSController.interceptorsInFlight);
+            var allMissiles = FlightManager.weaponsInFlight.Concat(FlightManager.interceptorsInFlight);
 
             foreach (var wep in allMissiles)
             {

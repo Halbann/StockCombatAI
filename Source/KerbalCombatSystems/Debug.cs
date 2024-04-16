@@ -7,7 +7,7 @@ using UnityEngine;
 namespace KerbalCombatSystems
 {
     [KSPAddon(KSPAddon.Startup.Flight, false)]
-    public class KCSDebug : MonoBehaviour
+    public class Debug : MonoBehaviour
     {
         public static bool showLines;
 
@@ -42,7 +42,7 @@ namespace KerbalCombatSystems
             StartCoroutine(LineCleaner());
         }
 
-        private void Update()
+        internal void Update()
         {
             //on press f12 toggle missile lines
             if (Input.GetKeyDown(KeyCode.F12) && !Input.GetKey(KeyCode.LeftAlt))
@@ -55,7 +55,7 @@ namespace KerbalCombatSystems
                     HideLines(0);
 
 
-                Debug.Log("[KCS]: Lines " + (showLines ? "enabled." : "disabled."));
+                Log("Lines " + (showLines ? "enabled." : "disabled."));
             }
         }
 
@@ -181,7 +181,7 @@ namespace KerbalCombatSystems
 
         private void DrawDebugText()
         {
-            var allMissiles = KCSController.weaponsInFlight.Concat(KCSController.interceptorsInFlight);
+            var allMissiles = FlightManager.weaponsInFlight.Concat(FlightManager.interceptorsInFlight);
 
             GUI.color = Color.white;
 
@@ -199,7 +199,7 @@ namespace KerbalCombatSystems
                     missile.vessel);
             }
 
-            foreach (ModuleShipController ship in KCSController.ships)
+            foreach (ModuleShipController ship in FlightManager.ships)
             {
                 if (ship == null || ship.vessel == null)
                     continue;
@@ -251,6 +251,20 @@ namespace KerbalCombatSystems
         }
 
         #endregion
+
+        #region Logging
+
+        public static void Log(string message)
+        {
+            UnityEngine.Debug.Log("[KCS]: " + message);
+        }
+
+        public static void LogError(string message)
+        {
+            UnityEngine.Debug.LogError("[KCS]: " + message);
+        }
+
+        #endregion
     }
 
     #region Transforms
@@ -288,17 +302,17 @@ namespace KerbalCombatSystems
         // Update is called once per frame
         void Update()
         {
-            if (KCSDebug.showLines)
+            if (Debug.showLines)
             {
                 UpdateLine(xLine, transform.right);
                 UpdateLine(yLine, transform.up);
                 UpdateLine(zLine, transform.forward);
             }
 
-            if (KCSDebug.showLines == drawEnabled)
+            if (Debug.showLines == drawEnabled)
                 return;
 
-            if (KCSDebug.showLines)
+            if (Debug.showLines)
             {
                 xLine.enabled = true;
                 yLine.enabled = true;
@@ -311,7 +325,7 @@ namespace KerbalCombatSystems
                 zLine.enabled = false;
             }
 
-            drawEnabled = KCSDebug.showLines;
+            drawEnabled = Debug.showLines;
         }
 
         void SetupLine(LineRenderer line, Color color)

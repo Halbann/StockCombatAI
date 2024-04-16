@@ -1,7 +1,4 @@
-﻿using System;
-using System.Data.SqlTypes;
-using System.Linq;
-using UnityEngine;
+﻿using System.Linq;
 
 namespace KerbalCombatSystems
 {
@@ -48,9 +45,6 @@ namespace KerbalCombatSystems
                     if (node == null || node.state == "Ready")
                         break;
 
-                    if (node.state == "Disengage")
-                        Debug.Log("hi");
-
                     if (node.state == "Disengage" || node.state == "PreAttached")
                         node.Decouple();
                     else
@@ -58,7 +52,7 @@ namespace KerbalCombatSystems
 
                     break;
                 default:
-                    Debug.Log("[KCS]: Improper Decoupler Designation");
+                    Debug.Log("Improper Decoupler Designation");
                     break;
             }
 
