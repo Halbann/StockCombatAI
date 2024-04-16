@@ -1,5 +1,7 @@
 v0.3.0
 
+- Added tooltips to controller settings.
+
 - Fixed controller part model scaling, controllers should be slightly smaller.
 - Changed controller attachment rules.
 - Added a small variant of the narrow-band scanner.
