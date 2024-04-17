@@ -4,7 +4,6 @@ using System.Linq;
 using System.Reflection;
 
 using UnityEngine.UI;
-using TMPro;
 
 using KSP.UI.TooltipTypes;
 
@@ -45,7 +44,6 @@ namespace KerbalCombatSystems.UI
 
         public void RefreshTooltips()
         {
-            tooltipAdded = false;
             RemoveTooltips();
             AddTooltips();
         }
@@ -58,6 +56,8 @@ namespace KerbalCombatSystems.UI
             tooltipAdded = true;
             AddTooltips();
         }
+
+        // todo: add support for events (buttons).
 
         private void AddTooltips()
         {
@@ -94,7 +94,10 @@ namespace KerbalCombatSystems.UI
 
                 var tooltipPrefab = AssetBase.GetPrefab("Tooltip_TitleAndText")?.GetComponent<Tooltip_TitleAndText>();
                 if (tooltipPrefab == null)
+                {
                     Debug.LogError("Tooltip prefab not found.");
+                    continue;
+                }
 
                 tooltipController.textString = customTooltip.text;
                 tooltipController.titleString = customTooltip.title;
@@ -107,7 +110,10 @@ namespace KerbalCombatSystems.UI
 
                 var selectable = control.partActionItem.gameObject.GetComponentInChildren<Selectable>();
                 if (selectable == null)
+                {
                     Debug.LogError("Tooltip selectable not found.");
+                    continue;
+                }
 
                 // Set selectableBase via reflection.
                 var selectableBase = tooltipController.GetType().GetField("selectableBase", BindingFlags.NonPublic | BindingFlags.Instance);

@@ -46,7 +46,7 @@ namespace KerbalCombatSystems
             NextRocket();
 
             leadLine = Debug.CreateLine(Color.green);
-            if (Debug.showLines)
+            if (Debug.Visible)
                 prediction = CreateSphere();
         }
 
@@ -113,7 +113,7 @@ namespace KerbalCombatSystems
                     }
 
                     // Create a static pink ball where the hit is predicted to happen.
-                    if (Debug.showLines)
+                    if (Debug.Visible)
                     {
                         GameObject prediction = CreateSphere(timeToHit + 5);
                         prediction.transform.position = origin + leadVector;
@@ -218,7 +218,7 @@ namespace KerbalCombatSystems
             }
 
             // A floating pink ball predicts where the rocket will be when it passes the target.
-            if (Debug.showLines && prediction != null)
+            if (Debug.Visible && prediction != null)
                 prediction.transform.position = pos - (FlightGlobals.ActiveVessel.GetObtVelocity() * time);
 
             return time;

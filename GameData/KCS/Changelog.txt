@@ -1,6 +1,9 @@
 v0.3.0
 
 - Added tooltips to controller settings.
+- Raised the maximum weapon range to 15 km.
+- Added a 'Sync Settings' button to the weapon controller that copies all settings to all other weapon controllers on the vessel with the same code.
+- Spent missiles are now automatically marked as debris.
 
 - Fixed controller part model scaling, controllers should be slightly smaller.
 - Changed controller attachment rules.
@@ -12,8 +15,6 @@ v0.3.0
 - Fixed missiles being de-selected in the weapons menu after firing.
 - Fixed weapons menu to prevent out of order firing of stacked missiles ie. "bumper torpedoes".
 - Fixed a bug in the firework burst logic that was causing the incorrect nubmer of shots when a launcher was near empty.
-
-- Spent missiles are now automatically marked as debris.
 
 - Added escape pod direction and delta-v settings.
 - Improved escape pod logic and reliability.

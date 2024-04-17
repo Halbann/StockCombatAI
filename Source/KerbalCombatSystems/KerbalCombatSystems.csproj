@@ -112,6 +112,7 @@
     <Compile Include="FireworkReload.cs" />
     <Compile Include="LineMesh.cs" />
     <Compile Include="AssetLoader.cs" />
+    <Compile Include="Weapon.cs" />
     <Compile Include="Overlay.cs" />
     <Compile Include="DataLink.cs" />
     <Compile Include="RocketTargeting.cs" />
