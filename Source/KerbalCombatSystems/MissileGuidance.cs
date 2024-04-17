@@ -4,7 +4,7 @@ using System.Linq;
 
 using UnityEngine;
 
-using static KerbalCombatSystems.KCS;
+using static KerbalCombatSystems.Utils;
 
 namespace KerbalCombatSystems
 {
@@ -22,6 +22,7 @@ namespace KerbalCombatSystems
         private int shutoffDistance;
         private ModuleWeaponController targetWeapon;
 
+
         // Missile guidance variables.
 
         private Vector3 targetVector;
@@ -32,11 +33,12 @@ namespace KerbalCombatSystems
         public float timeToHit;
         private Vector3 lead;
         private Vector3 interceptVector;
-        private float accuracy;
+        public float accuracy;
         private bool drift;
         public float maxAcceleration;
         private Vector3 rcs;
         private Vector3 propulsionVector;
+
 
         // Components
 
@@ -46,20 +48,18 @@ namespace KerbalCombatSystems
         private List<ModuleRCSFX> rcsThrusters;
         private List<ModuleEngines> engines;
 
-        //private float targetSize;
-        //private int partCount = -1;
 
         // Debugging line variables.
 
         LineRenderer targetLine, rvLine, interceptLine, thrustLine;
-        //GameObject prediction;
+
 
         private IEnumerator Launch()
         {
             // 0. Failsafes for manual fire.
             // todo: some of this should probably transferred to the weapon controller.
 
-            if (controller.target == null && vessel.targetObject == null) 
+            if (controller.target == null && vessel.targetObject == null)
                 yield break;
 
             if (controller.target == null)
@@ -67,32 +67,42 @@ namespace KerbalCombatSystems
                 // The missile was fired manually.
 
                 target = vessel.targetObject.GetVessel();
-                controller.target = target;
+
+                // We don't require a ship controller and only consider ship-side limitations
+                // if a ship controller exists. It is probably more fun this way.
 
                 ModuleShipController firerController = FindController(firer);
                 if (firerController != null)
                 {
-                    // Don't require a ship controller and only consider ship-side limitations
-                    // if a ship controller exists. It is probably more fun this way.
-
                     controller.side = firerController.side;
 
                     if (firerController.maxDetectionRange == 0)
                         firerController.UpdateDetectionRange();
 
                     if (FromTo(vessel, target).magnitude > firerController.maxDetectionRange)
+                    {
+                        FlightManager.OnWeaponFailed($"{ShortenName(target.GetName())} is out of lock range.");
+
                         yield break;
+                    }
                 }
+
+                controller.target = target;
+
+
+                // Meta/flight manager.
 
                 ModuleShipController targetController = FindController(target);
                 if (targetController != null && !targetController.incomingWeapons.Contains(controller))
                     targetController.AddIncoming(controller);
 
-                if (!KCSController.weaponsInFlight.Contains(controller) && !isInterceptor)
-                    KCSController.weaponsInFlight.Add(controller);
+                if (!FlightManager.weaponsInFlight.Contains(controller) && !isInterceptor)
+                    FlightManager.weaponsInFlight.Add(controller);
             }
             else
+            {
                 target = controller.target;
+            }
 
 
             // 1. Separate from firer.
@@ -119,14 +129,19 @@ namespace KerbalCombatSystems
             }
             else
             {
-                Debug.Log("[KCS]: Couldn't find decoupler.");
+                Debug.Log("Couldn't find decoupler.");
             }
 
 
             // 2. Initial setup.
 
-            // turn on engines
+            // Enable resources.
+            vessel.parts.ForEach(p => p.Resources.ToList().ForEach(r => r.flowState = true));
+
+            // Turn on all engines in the highest stage.
             engines = vessel.FindPartModulesImplementing<ModuleEngines>();
+            int highestStage = engines.Max(e => e.part.inverseStage); // Stages are numbered so that 0 = last stage.
+            engines = engines.FindAll(e => e.part.inverseStage == highestStage);
             engines.ForEach(e => e.Activate());
 
             // Get and enable RCS thrusters.
@@ -152,7 +167,7 @@ namespace KerbalCombatSystems
 
             // Setup flight controller.
             fc = part.gameObject.AddComponent<KCSFlightController>();
-            fc.alignmentToleranceforBurn = isInterceptor ? 60 : 20;
+            fc.alignmentToleranceforBurn = isInterceptor ? 60 : 25;
             fc.attitude = vessel.ReferenceTransform.up;
             fc.lerpAttitude = false;
             fc.throttleLerpRate = 99;
@@ -167,6 +182,9 @@ namespace KerbalCombatSystems
             maxAcceleration = maxThrust / vessel.GetTotalMass();
             vessel.targetObject = target;
             shutoffDistance = isInterceptor ? 3 : 10;
+
+
+            // 2.5 Check for front launch.
 
             // If we are launching in the direction of the ship's propulsion, or in an enclosed space,
             // then we need to flag this so the ship can throttle down temporarily.
@@ -189,6 +207,7 @@ namespace KerbalCombatSystems
                     horizontal = Quaternion.AngleAxis(360f * (i / 4f), vRef.up) * vRef.forward;
                     enclosedRay.direction = horizontal;
 
+                    // If the raycast doesn't hit the firer then we are not in an enclosed space.
                     if (!RayIntersectsVessel(firer, enclosedRay))
                     {
                         frontLaunch = 0;
@@ -208,6 +227,7 @@ namespace KerbalCombatSystems
             // 3. Start moving away from firer.
 
             // Check if it's a horizontal launch.
+            // A horizontal launch is a launch where the missile can't simply go forwards to leave the ship.
 
             Ray launchRay = new Ray(vessel.ReferenceTransform.position, vessel.ReferenceTransform.up);
             bool horizontalLaunch = RayIntersectsVessel(firer, launchRay);
@@ -266,12 +286,17 @@ namespace KerbalCombatSystems
             }
             else
             {
+                // Normal away procedure.
+                // We are able to leave the ship by simply moving forwards.
+
                 fc.RCSVector = vessel.ReferenceTransform.up;
 
                 yield return new WaitForSeconds(igniteDelay);
 
                 if (!isInterceptor)
                 {
+                    // Kick
+
                     // Support save files and craft saved before changing to a percentage.
                     if (controller.pulseThrottle < 1)
                         controller.pulseThrottle *= 100;
@@ -285,6 +310,7 @@ namespace KerbalCombatSystems
                 }
                 else
                 {
+                    // Interceptors don't use a kick, they just go!
                     fc.throttle = 1;
                 }
 
@@ -293,11 +319,44 @@ namespace KerbalCombatSystems
             }
 
 
+            // 3.5 Move a minimum distance away from the launch position.
+
+            // Wait until we've reach a minimum distance from the launch position.
+            // Depending on the design (eg. Kerosene), the previous steps might not have given us any time
+            // to clear our backblast or given us enough space to manoeuvre.
+
+            //if (frontLaunch > 0)
+
+            if (controller.clearanceDistance != 0)
+            {
+                Vector3 launchPosition = firer.ReferenceTransform.InverseTransformPoint(vessel.CoM);
+                Vector3 currentPosition;
+                float launchTime = Time.time;
+                bool away = false;
+                float awayTimeout = 2f;
+
+                while (!away)
+                {
+                    currentPosition = firer.ReferenceTransform.InverseTransformPoint(vessel.CoM);
+
+                    away = firer == null
+                        || Time.time - launchTime > awayTimeout
+                        || Vector3.Distance(launchPosition, currentPosition) > controller.clearanceDistance;
+
+                    if (!away)
+                        yield return new WaitForFixedUpdate();
+                }
+            }
+
+
             // 4. Get line of sight to the target.
 
-            Ray targetRay = new Ray();
-            targetRay.origin = vessel.CoM;
-            targetRay.direction = target.CoM - vessel.CoM;
+            Ray targetRay = new Ray
+            {
+                origin = vessel.CoM,
+                direction = target.CoM - vessel.CoM
+            };
+
             bool lineOfSight = !RayIntersectsVessel(firer, targetRay);
 
             Vector3 sideways;
@@ -372,10 +431,10 @@ namespace KerbalCombatSystems
             fairings.ForEach(f => f.DeployFairing());
 
             // initialise debug line renderer
-            targetLine = KCSDebug.CreateLine(Color.magenta);
-            rvLine = KCSDebug.CreateLine(Color.green);
-            interceptLine = KCSDebug.CreateLine(Color.cyan);
-            thrustLine = KCSDebug.CreateLine(new Color(255f / 255f, 165f / 255f, 0f, 1f)); //orange
+            targetLine = Debug.CreateLine(Color.magenta);
+            rvLine = Debug.CreateLine(Color.green);
+            interceptLine = Debug.CreateLine(Color.cyan);
+            thrustLine = Debug.CreateLine(new Color(255f / 255f, 165f / 255f, 0f, 1f)); //orange
 
             // Rename the new vessel.
             string oldName = vessel.vesselName;
@@ -387,9 +446,11 @@ namespace KerbalCombatSystems
             engageAutopilot = true;
             controller.launched = true;
 
-            //var targetController = FindController(target);
-            //targetSize = targetController != null ? targetController.averagedSize : AveragedSize(target);
-            //partCount = vessel.parts.Count;
+            // Enable continuous collision detection.
+            MakeRigidbodiesContinuous();
+
+
+            // Debug - show a sphere where the missile thinks it will hit the target.
 
             //if (isInterceptor)
             //{
@@ -404,8 +465,6 @@ namespace KerbalCombatSystems
             //    prediction.transform.localScale = prediction.transform.localScale * 6;
             //    Destroy(prediction.GetComponent<SphereCollider>());
             //}
-
-            yield break;
         }
 
         private void UpdateGuidance()
@@ -447,6 +506,30 @@ namespace KerbalCombatSystems
 
             targetVectorNormal = interceptVector.normalized;
 
+
+            // Terminal warhead separation check. The design isn't ready yet.
+
+            /*if (!terminal && timeToHit < controller.terminalTime)
+            {
+                terminal = true;
+
+                FindDecouplerChildren(vessel.rootPart, "Warhead").ForEach(s => s.Separate());
+
+                engines = vessel.FindPartModulesImplementing<ModuleEngines>();
+                engines.ForEach(e => e.Activate());
+                engines.RemoveAll(e => !e.EngineIgnited || e.flameout);
+
+                ModuleCommand commander = FindCommand(vessel);
+                propulsionVector = -GetFireVector(engines, rcsThrusters, -vessel.ReferenceTransform.up);
+                AlignReference(commander, propulsionVector.normalized);
+
+                maxThrust = propulsionVector.magnitude;
+                maxAcceleration = maxThrust / vessel.GetTotalMass();
+
+                propulsionVector = vessel.transform.InverseTransformDirection(propulsionVector);
+            }*/
+
+
             //remove engines and thrusters that have been enabled and are dry, destroyed, or disconnected
             engines.RemoveAll(e => e == null || (e.EngineIgnited && e.flameout) || e.vessel != vessel);
             rcsThrusters.RemoveAll(r =>  r == null || !r.useThrottle || (r.isEnabled && r.flameout) || r.vessel != vessel);
@@ -471,18 +554,17 @@ namespace KerbalCombatSystems
 
 
             // Update debug lines.
-            if (KCSDebug.showLines)
+            if (Debug.Visible)
             {
                 Vector3 origin = vessel.CoM;
-                KCSDebug.PlotLine(new[] { origin, origin + (relVelNrm * 15) }, rvLine);
-                KCSDebug.PlotLine(new Vector3[] { origin, origin + vessel.transform.TransformDirection(propulsionVector)}, thrustLine);
+
+                Debug.PlotLine(new[] { origin, origin + (relVelNrm * 15) }, rvLine);
+                Debug.PlotLine(new Vector3[] { origin, origin + vessel.transform.TransformDirection(propulsionVector)}, thrustLine);
 
                 if (isInterceptor)
-                    KCSDebug.PlotLine(new[] { origin, origin + targetVector }, interceptLine);
+                    Debug.PlotLine(new[] { origin, origin + targetVector }, interceptLine);
                 else
-                    KCSDebug.PlotLine(new[] { origin, origin + targetVector }, targetLine);
-                //if (isInterceptor)
-                //    prediction.transform.position = predictedPosWorld;
+                    Debug.PlotLine(new[] { origin, origin + targetVector }, targetLine);
             }
         }
 
@@ -504,30 +586,17 @@ namespace KerbalCombatSystems
 
         public void FixedUpdate()
         {
-            if (engageAutopilot) UpdateGuidance();
-
-            // Works some of the time. Fix if needed in future.
-
-            //if (!controller.hit 
-            //    && target != null 
-            //    && FromTo(vessel, target).magnitude < Mathf.Max(targetSize * 3, 5))
-            //{
-            //    int pc = vessel.parts.Count;
-            //    if (pc < partCount)
-            //        OnHit();
-
-            //    partCount = pc;
-            //}
+            if (engageAutopilot)
+                UpdateGuidance();
         }
 
         public void OnDestroy()
         {
-            KCSDebug.DestroyLine(rvLine);
-            KCSDebug.DestroyLine(targetLine);
-            KCSDebug.DestroyLine(interceptLine);
-            KCSDebug.DestroyLine(thrustLine);
+            Debug.DestroyLine(rvLine);
+            Debug.DestroyLine(targetLine);
+            Debug.DestroyLine(interceptLine);
+            Debug.DestroyLine(thrustLine);
             Destroy(fc);
-            //Destroy(prediction);
         }
 
         public void StopGuidance()
@@ -541,17 +610,50 @@ namespace KerbalCombatSystems
             GameEvents.onVesselRename.Fire(new GameEvents.HostedFromToAction<Vessel, string>(vessel, vessel.name, vessel.name));
         }
 
-        private void OnHit()
+        private void MakeRigidbodiesContinuous()
+        {
+            foreach (Part p in vessel.parts)
+            {
+                if (part.physicalSignificance == Part.PhysicalSignificance.NONE)
+                    continue;
+
+                Rigidbody rb = p.Rigidbody;
+                if (rb == null)
+                    continue;
+
+                rb.collisionDetectionMode = CollisionDetectionMode.ContinuousDynamic;
+            }
+        }
+
+        /*private void OnHit()
         {
             controller.hit = true;
 
             if (!isInterceptor)
             {
                 string missileName = controller.weaponCode == "" ? "missile" : controller.weaponCode + " missile";
-                KCSController.Log($"%1 was hit by a {missileName} fired from %2", target, firer);
+                FlightManager.Log($"%1 was hit by a {missileName} fired from %2", target, firer);
             }
             else
-                KCSController.Log("%1 intercepted a missile", firer);
-        }
+                FlightManager.Log("%1 intercepted a missile", firer);
+        }*/
+
+        /*private void HitCheck()
+        {
+            // todo: Hit check for battle logs. Works some of the time. Fix if needed in future.
+            // Call in fixedupdate.
+            // get part count once during launch.
+
+            if (!controller.hit
+                && target != null
+                && FromTo(vessel, target).magnitude < Mathf.Max(targetSize * 3, 5))
+            {
+                int pc = vessel.parts.Count;
+                if (pc < partCount)
+                    OnHit();
+
+                partCount = pc;
+            }
+        }*/
     }
 }

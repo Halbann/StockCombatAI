@@ -201,6 +201,24 @@ namespace KerbalCombatSystems
         public float pulseThrottle = 50f;
 
 
+        [KSPField(
+            isPersistant = true,
+            guiActive = true,
+            guiActiveEditor = true,
+            guiName = "Clearance Distance",
+            guiUnits = " m",
+            groupName = missileGroupName,
+            groupDisplayName = missileGroupName
+        )]
+        [UI_FloatRange(
+            minValue = 0,
+            maxValue = 20f,
+            stepIncrement = 0.1f,
+            scene = UI_Scene.All
+        )]
+        public float clearanceDistance = 0.5f;
+
+
         [UI.Tooltip(
             text = "How long does the AI need to wait after launching" +
                 " this missile before launching the next missile in a salvo?",
@@ -575,7 +593,7 @@ namespace KerbalCombatSystems
 
             string[] missileFields = { 
                 "terminalVelocity", "useAsInterceptor", "igniteDelay", "pulseThrottle", 
-                "salvoSpacing", "pulseDuration" };
+                "salvoSpacing", "pulseDuration", "clearanceDistance" };
             //"terminalTime"
 
             string[] fireworkFields = {

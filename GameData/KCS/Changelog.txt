@@ -1,9 +1,12 @@
 v0.3.0
 
 - Added tooltips to controller settings.
-- Raised the maximum weapon range to 15 km.
 - Added a 'Sync Settings' button to the weapon controller that copies all settings to all other weapon controllers on the vessel with the same code.
+- Raised the maximum weapon range to 15 km.
+
+- Added a 'Clearance Distance' setting to missiles. It's the minimum distance travelled at which guidance can start following launch. Try using this if you find your missiles are colliding with your own ship.
 - Spent missiles are now automatically marked as debris.
+- Missiles now enable all on-board resources after being launched.
 
 - Fixed controller part model scaling, controllers should be slightly smaller.
 - Changed controller attachment rules.
@@ -13,8 +16,8 @@ v0.3.0
 
 - Fixed (?) a bug that was causing some ships without control to be counted as alive.
 - Fixed missiles being de-selected in the weapons menu after firing.
-- Fixed weapons menu to prevent out of order firing of stacked missiles ie. "bumper torpedoes".
-- Fixed a bug in the firework burst logic that was causing the incorrect nubmer of shots when a launcher was near empty.
+- Fixed the weapons menu to prevent out of order firing of stacked missiles ie. so called "bumper torpedoes".
+- Fixed a bug in the firework burst logic that was causing the incorrect nubmer of shots to fire when a launcher was near empty.
 
 - Added escape pod direction and delta-v settings.
 - Improved escape pod logic and reliability.
@@ -23,7 +26,7 @@ v0.3.0
 
 - Removed detection range scale setting.
 - Removed data link range scale setting.
-- Removed refresh rate setting.
+- Removed AI refresh rate setting.
 
 
 v0.2.1
