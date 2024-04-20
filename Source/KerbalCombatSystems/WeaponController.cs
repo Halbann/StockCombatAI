@@ -42,7 +42,7 @@ namespace KerbalCombatSystems
         public Side side;
         public float mass = -1;
         public int childDecouplers;
-        public int frontLaunch = 0;
+        public LaunchType launchType = LaunchType.Radial;
         public bool missed = false;
         public bool hit = false;
         public bool isInterceptor = false;
@@ -199,24 +199,6 @@ namespace KerbalCombatSystems
             scene = UI_Scene.All
         )]
         public float pulseThrottle = 50f;
-
-
-        [KSPField(
-            isPersistant = true,
-            guiActive = true,
-            guiActiveEditor = true,
-            guiName = "Clearance Distance",
-            guiUnits = " m",
-            groupName = missileGroupName,
-            groupDisplayName = missileGroupName
-        )]
-        [UI_FloatRange(
-            minValue = 0,
-            maxValue = 20f,
-            stepIncrement = 0.1f,
-            scene = UI_Scene.All
-        )]
-        public float clearanceDistance = 0.5f;
 
 
         [UI.Tooltip(
@@ -593,7 +575,7 @@ namespace KerbalCombatSystems
 
             string[] missileFields = { 
                 "terminalVelocity", "useAsInterceptor", "igniteDelay", "pulseThrottle", 
-                "salvoSpacing", "pulseDuration", "clearanceDistance" };
+                "salvoSpacing", "pulseDuration" };
             //"terminalTime"
 
             string[] fireworkFields = {
@@ -673,8 +655,10 @@ namespace KerbalCombatSystems
 
             if (HighLogic.LoadedSceneIsEditor)
                 GameEvents.onEditorVariantApplied.Add(OnVariantApplied);
-            else if (HighLogic.LoadedSceneIsFlight)
-                Setup();
+
+            // todo: why did I add this? it breaks missiles. Presumably to do with something else.
+            //else if (HighLogic.LoadedSceneIsFlight)
+            //    Setup();
 
             UpdateUI();
 

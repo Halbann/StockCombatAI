@@ -613,6 +613,11 @@ namespace KerbalCombatSystems
 
             if (debugVisible != Debug.Visible)
                 Debug.Visible = debugVisible;
+
+            Debug.DrawVesselSizes = GUILayout.Toggle(Debug.DrawVesselSizes, "Draw Vessel Sizes");
+
+            if (GUILayout.Button("Update Vessel Sizes"))
+                Debug.UpdateVesselSizes();
         }
 
         private void SliderSetting(ref float setting, string text, int min, int max)

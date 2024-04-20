@@ -25,6 +25,7 @@ namespace KerbalCombatSystems
 
         // Missile guidance variables.
 
+        public string phase = "Pre-launch";
         private Vector3 targetVector;
         private Vector3 targetVectorNormal;
         private Vector3 relVel;
@@ -49,8 +50,9 @@ namespace KerbalCombatSystems
         private List<ModuleEngines> engines;
 
 
-        // Debugging line variables.
+        // Debugging variables.
 
+        public float Throttle => fc?.throttleActual ?? 0;
         LineRenderer targetLine, rvLine, interceptLine, thrustLine;
 
 
@@ -107,30 +109,16 @@ namespace KerbalCombatSystems
 
             // 1. Separate from firer.
 
-            // find decoupler
-            seperator = FindDecoupler(part);
-
-            // Store the direction the ship is facing.
+            // Store the firer's direction for later use.
             Vector3 firerUp = vessel.ReferenceTransform.up;
 
-            // todo:
-            // electric charge check
-            // fuel check
-            // propulsion check
+            // todo: resource checks
+
+            // Separate.
+            seperator = FindDecoupler(part);
 
             if (seperator != null)
-            {
                 seperator.Separate();
-
-                /*todo: safety checks for thruster backblast
-                seperator.part.maxTemp = double.MaxValue;
-                seperator.part.skinMaxTemp = double.MaxValue;
-                seperator.part.tempExplodeChance = 0;*/
-            }
-            else
-            {
-                Debug.Log("Couldn't find decoupler.");
-            }
 
 
             // 2. Initial setup.
@@ -167,10 +155,10 @@ namespace KerbalCombatSystems
 
             // Setup flight controller.
             fc = part.gameObject.AddComponent<KCSFlightController>();
-            fc.alignmentToleranceforBurn = isInterceptor ? 60 : 25;
+            fc.alignmentToleranceforBurn = isInterceptor ? 80 : 25;
             fc.attitude = vessel.ReferenceTransform.up;
             fc.lerpAttitude = false;
-            fc.throttleLerpRate = 99;
+            fc.lerpThrottle = false;
             fc.RCSPower = 20;
             fc.Drive();
 
@@ -183,40 +171,26 @@ namespace KerbalCombatSystems
             vessel.targetObject = target;
             shutoffDistance = isInterceptor ? 3 : 10;
 
+            // Rename the new vessel.
+            string oldName = vessel.vesselName;
+            string missileName = controller.weaponCode == "" ? "Missile" : controller.weaponCode;
+            string firerName = ShortenName(firer.vesselName);
+            vessel.vesselName = !isInterceptor ? $"{missileName} ({firerName} >> {ShortenName(target.vesselName)})" : $"Interceptor ({firerName})";
+            GameEvents.onVesselRename.Fire(new GameEvents.HostedFromToAction<Vessel, string>(vessel, oldName, vessel.vesselName));
 
-            // 2.5 Check for front launch.
+            // Enable continuous collision detection.
+            MakeRigidbodiesContinuous();
+
+            phase = "Separated";
+
+
+            // 2.5 Check launch type.
 
             // If we are launching in the direction of the ship's propulsion, or in an enclosed space,
             // then we need to flag this so the ship can throttle down temporarily.
-            // todo: wrap this function up with the horizontal launch raycasts
 
-            int frontLaunch = 0;
+            controller.launchType = CheckLaunchType(firerUp);
 
-            if (Vector3.Angle(vessel.ReferenceTransform.up, firerUp) < 50)
-                frontLaunch = 1;
-
-            if (frontLaunch == 0)
-            {
-                Vector3 horizontal;
-                Transform vRef = vessel.ReferenceTransform;
-                Ray enclosedRay = new Ray(vessel.CoM, Vector3.zero);
-                frontLaunch = 2;
-
-                for (int i = 0; i < 4; i++)
-                {
-                    horizontal = Quaternion.AngleAxis(360f * (i / 4f), vRef.up) * vRef.forward;
-                    enclosedRay.direction = horizontal;
-
-                    // If the raycast doesn't hit the firer then we are not in an enclosed space.
-                    if (!RayIntersectsVessel(firer, enclosedRay))
-                    {
-                        frontLaunch = 0;
-                        break;
-                    }
-                }
-            }
-
-            controller.frontLaunch = frontLaunch;
 
             // Had to move this because frontLaunch has to be set before the thread is paused,
             // and frontLaunch requires GetFireVector to modify the reference transform. Not sure if
@@ -226,231 +200,68 @@ namespace KerbalCombatSystems
 
             // 3. Start moving away from firer.
 
-            // Check if it's a horizontal launch.
-            // A horizontal launch is a launch where the missile can't simply go forwards to leave the ship.
-
             Ray launchRay = new Ray(vessel.ReferenceTransform.position, vessel.ReferenceTransform.up);
-            bool horizontalLaunch = RayIntersectsVessel(firer, launchRay);
 
-            if (horizontalLaunch)
+            if (RayIntersectsVessel(firer, launchRay))
             {
-                Vector3 horizontal = firer.ReferenceTransform.forward;
-                bool foundExit = false;
-                Vector3 start = Vector3.ProjectOnPlane(firer.ReferenceTransform.forward, vessel.ReferenceTransform.up);
+                // A horizontal launch is when the missile is blocked from moving forwards.
+                // Therefore we need to move the missile horizontally until we can move forwards.
 
-                // First check directions at 90 degrees to the firer's roll direction.
-                for (int i = 0; i < 4; i++)
-                {
-                    horizontal = Quaternion.AngleAxis(360f * (i / 4f), vessel.ReferenceTransform.up) * start;
-                    launchRay.direction = horizontal;
-
-                    if (foundExit = !RayIntersectsVessel(firer, launchRay))
-                        break;
-                }
-
-                // If we still can't find an exit, check diagonally.
-                // We do this second to prioritise straight exits from large openings.
-                if (!foundExit)
-                {
-                    for (int i = 0; i < 4; i++)
-                    {
-                        horizontal = Quaternion.AngleAxis(360 * i / 4 + 45, vessel.ReferenceTransform.up) * firer.ReferenceTransform.forward;
-                        launchRay.direction = horizontal;
-
-                        if (!RayIntersectsVessel(firer, launchRay))
-                            break;
-                    }
-                }
-
-                fc.RCSVector = horizontal.normalized * 200000f; // idk
-                float checkInterval = 0.1f;
-                float lastChecked = 0;
-
-                while (horizontalLaunch)
-                {
-                    yield return new WaitForFixedUpdate();
-
-                    fc.Drive();
-
-                    if (Time.time - lastChecked > checkInterval)
-                    {
-                        lastChecked = Time.time;
-
-                        launchRay.origin = vessel.ReferenceTransform.position;
-                        launchRay.direction = vessel.ReferenceTransform.up;
-                        horizontalLaunch = CylinderIntersectsVessel(firer, launchRay, 1.25f / 2);
-                    }
-                }
-
-                yield return new WaitForSeconds(igniteDelay);
+                phase = "Horizontal Exit";
+                yield return StartCoroutine(HorizontalExit());
             }
             else
             {
                 // Normal away procedure.
                 // We are able to leave the ship by simply moving forwards.
 
-                fc.RCSVector = vessel.ReferenceTransform.up;
+                // maybe:
+                // if (launchType != LaunchType.Radial && firer.acceleration.magnitude > 0)
+                // skip kick
 
-                yield return new WaitForSeconds(igniteDelay);
-
-                if (!isInterceptor)
-                {
-                    // Kick
-
-                    // Support save files and craft saved before changing to a percentage.
-                    if (controller.pulseThrottle < 1)
-                        controller.pulseThrottle *= 100;
-
-                    fc.throttle = controller.pulseThrottle / 100f;
-                    fc.Drive();
-
-                    yield return new WaitForSeconds(controller.pulseDuration);
-
-                    fc.throttle = 0;
-                }
-                else
-                {
-                    // Interceptors don't use a kick, they just go!
-                    fc.throttle = 1;
-                }
-
-                fc.RCSVector = Vector3.zero;
-                fc.Drive();
+                phase = "Kick";
+                yield return StartCoroutine(Kick());
             }
 
+            phase = "Clearing";
+            yield return StartCoroutine(GetClearance());
 
-            // 3.5 Move a minimum distance away from the launch position.
-
-            // Wait until we've reach a minimum distance from the launch position.
-            // Depending on the design (eg. Kerosene), the previous steps might not have given us any time
-            // to clear our backblast or given us enough space to manoeuvre.
-
-            //if (frontLaunch > 0)
-
-            if (controller.clearanceDistance != 0)
-            {
-                Vector3 launchPosition = firer.ReferenceTransform.InverseTransformPoint(vessel.CoM);
-                Vector3 currentPosition;
-                float launchTime = Time.time;
-                bool away = false;
-                float awayTimeout = 2f;
-
-                while (!away)
-                {
-                    currentPosition = firer.ReferenceTransform.InverseTransformPoint(vessel.CoM);
-
-                    away = firer == null
-                        || Time.time - launchTime > awayTimeout
-                        || Vector3.Distance(launchPosition, currentPosition) > controller.clearanceDistance;
-
-                    if (!away)
-                        yield return new WaitForFixedUpdate();
-                }
-            }
+            controller.launched = true;
 
 
             // 4. Get line of sight to the target.
 
-            Ray targetRay = new Ray
-            {
-                origin = vessel.CoM,
-                direction = target.CoM - vessel.CoM
-            };
-
-            bool lineOfSight = !RayIntersectsVessel(firer, targetRay);
-
-            Vector3 sideways;
-            bool clear = false;
-            float previousTolerance = fc.alignmentToleranceforBurn;
-
-            while (!lineOfSight)
-            {
-                yield return new WaitForSeconds(0.1f);
-                if (target == null) break;
-
-                if (!clear) // Latch clear once true.
-                {
-                    // We don't have line of sight with the target yet, but are we clear of the ship?
-
-                    sideways = vessel.transform.forward;
-                    int blockedCount = 0;
-
-                    for (int i = 0; i < 4; i++)
-                    {
-                        targetRay.origin = vessel.CoM;
-                        sideways = Vector3.Cross(sideways, vessel.ReferenceTransform.up);
-                        targetRay.direction = sideways;
-
-                        if (RayIntersectsVessel(firer, targetRay))
-                            blockedCount++;
-
-                        clear = blockedCount < 2;
-                        if (!clear) break;
-                    }
-                }
-
-                if (clear)
-                {
-                    // We are clear of the ship but it is blocking line of sight with the target.
-                    // Fly towards the target in an arc around the ship until we have line of sight.
-
-                    controller.launched = true; // Trigger early.
-
-                    fc.attitude = Vector3.ProjectOnPlane(FromTo(vessel, target).normalized, FromTo(vessel, firer).normalized);
-                    fc.throttle = 0.5f;
-                    fc.alignmentToleranceforBurn = 60;
-                    fc.Drive();
-                }
-                else if (frontLaunch != 0)
-                {
-                    // We are exiting a front facing weapons bay, match the ship's rotation and acceleration until clear of the bay.
-
-                    if (frontLaunch == 1)
-                        fc.attitude = firer.ReferenceTransform.up;
-
-                    fc.throttle = firer.acceleration.magnitude > 0 ? 1 : 0;
-                    fc.Drive();
-                }
-
-                // Do we have line of sight with the target vessel?
-                targetRay.origin = vessel.CoM;
-                targetRay.direction = target.CoM - vessel.CoM;
-                lineOfSight = !RayIntersectsVessel(firer, targetRay);
-            }
-
-            fc.alignmentToleranceforBurn = previousTolerance;
+            phase = "Acquiring LOS";
+            yield return StartCoroutine(AcquireLOS());
 
 
             // 5. Finish setting up the missile.
 
-            // Remove end cap
+            // Remove end cap.
             List<ModuleDecouplerDesignate> decouplers = FindDecouplerChildren(vessel.rootPart);
             decouplers.ForEach(d => d.Separate());
 
+            // Deploy fairings.
             List<ModuleProceduralFairing> fairings = vessel.FindPartModulesImplementing<ModuleProceduralFairing>();
             fairings.ForEach(f => f.DeployFairing());
 
-            // initialise debug line renderer
+            // Enter guidance.
+            phase = "Guidance";
+            engageAutopilot = true;
+
+            SetupDebugVisuals();
+        }
+
+        private void SetupDebugVisuals()
+        {
+            // Debug lines
             targetLine = Debug.CreateLine(Color.magenta);
             rvLine = Debug.CreateLine(Color.green);
             interceptLine = Debug.CreateLine(Color.cyan);
             thrustLine = Debug.CreateLine(new Color(255f / 255f, 165f / 255f, 0f, 1f)); //orange
 
-            // Rename the new vessel.
-            string oldName = vessel.vesselName;
-            string missileName = controller.weaponCode == "" ? "Missile" : controller.weaponCode;
-            string firerName = ShortenName(firer.vesselName);
-            vessel.vesselName = !isInterceptor ? $"{missileName} ({firerName} >> {ShortenName(target.vesselName)})" : $"Interceptor ({firerName})";
-            GameEvents.onVesselRename.Fire(new GameEvents.HostedFromToAction<Vessel, string>(vessel, oldName, vessel.vesselName));
 
-            engageAutopilot = true;
-            controller.launched = true;
-
-            // Enable continuous collision detection.
-            MakeRigidbodiesContinuous();
-
-
-            // Debug - show a sphere where the missile thinks it will hit the target.
+            // Show a sphere where the interceptor thinks it will hit the target.
 
             //if (isInterceptor)
             //{
@@ -625,6 +436,347 @@ namespace KerbalCombatSystems
             }
         }
 
+        private IEnumerator HorizontalExit()
+        {
+            // Sequence responsible for moving a fowards blocked missile horizontally until it can move forwards.
+
+
+            Vector3 horizontal = firer.ReferenceTransform.forward;
+            bool foundExit = false;
+            Vector3 start = Vector3.ProjectOnPlane(firer.ReferenceTransform.forward, vessel.ReferenceTransform.up);
+
+            Ray ray = new Ray(vessel.ReferenceTransform.position, Vector3.zero);
+
+            // First check directions at 90 degrees to the firer's roll direction.
+            for (int i = 0; i < 4; i++)
+            {
+                horizontal = Quaternion.AngleAxis(360f * (i / 4f), vessel.ReferenceTransform.up) * start;
+                ray.direction = horizontal;
+
+                if (foundExit = !RayIntersectsVessel(firer, ray))
+                    break;
+            }
+
+            // If we still can't find an exit, check diagonally.
+            // We do this second to prioritise straight exits from large openings.
+            if (!foundExit)
+            {
+                for (int i = 0; i < 4; i++)
+                {
+                    horizontal = Quaternion.AngleAxis(360 * i / 4 + 45, vessel.ReferenceTransform.up) * firer.ReferenceTransform.forward;
+                    ray.direction = horizontal;
+
+                    if (!RayIntersectsVessel(firer, ray))
+                        break;
+                }
+            }
+
+            // Translate in the exit direction until forwards path is clear.
+            fc.RCSVector = horizontal.normalized * 200000f; // idk
+            fc.attitude = vessel.ReferenceTransform.up;
+            fc.Drive();
+
+            float checkInterval = 0.1f;
+            float lastChecked = 0;
+            bool clear = false;
+            var wait = new WaitForFixedUpdate();
+
+            while (!clear)
+            {
+                yield return wait;
+
+                fc.Drive();
+
+                if (Time.time - lastChecked > checkInterval)
+                {
+                    lastChecked = Time.time;
+
+                    ray.origin = vessel.ReferenceTransform.position;
+                    ray.direction = vessel.ReferenceTransform.up;
+                    clear = !CylinderIntersectsVessel(firer, ray, 1.25f / 2);
+                }
+            }
+
+            // This little wait should give some margin for us to be sure that we're clear to move forwards.
+            fc.Stability(true);
+            yield return new WaitForSeconds(igniteDelay);
+            fc.Stability(false);
+
+            fc.RCSVector = Vector3.zero;
+            fc.Drive();
+        }
+
+        private IEnumerator DriveFCS()
+        {
+            // Drive FCS in parallel while the missile is waiting in the kick phase.
+
+            var wait = new WaitForFixedUpdate();
+
+            while (true)
+            {
+                fc.Drive();
+                yield return wait;
+            }
+        }
+
+        private IEnumerator Kick()
+        {
+            // Sequence responsible for performing a kick.
+
+            fc.RCSVector = vessel.ReferenceTransform.up * 2;
+            fc.attitude = vessel.ReferenceTransform.up;
+
+            if (!isInterceptor)
+            {
+                fc.throttle = 0;
+                fc.Drive();
+
+
+                // Support save files and craft saved before changing to a percentage.
+                if (controller.pulseThrottle < 1)
+                    controller.pulseThrottle *= 100;
+
+                var driver = StartCoroutine(DriveFCS());
+
+                yield return new WaitForSeconds(igniteDelay);
+
+                fc.throttle = controller.pulseThrottle / 100f;
+                fc.Drive();
+
+                yield return new WaitForSeconds(controller.pulseDuration);
+
+                StopCoroutine(driver);
+                fc.throttle = 0;
+            }
+            else
+            {
+                // Interceptors don't use a kick, they just go!
+                fc.throttle = 1;
+            }
+
+            fc.Drive();
+        }
+
+        private bool CheckClearance()
+        {
+            // Perform raycasts in all cardinal directions to check if the missile is clear of the ship.
+
+            Vector3 start = firer.ReferenceTransform.forward;
+
+            Ray ray = new Ray(vessel.ReferenceTransform.position, Vector3.zero);
+
+            // First check directions at 90 degrees to the firer's roll direction.
+            for (int i = 0; i < 4; i++)
+            {
+                ray.direction = Quaternion.AngleAxis(360f * (i / 4f), vessel.ReferenceTransform.up) * start;
+
+                if (RayIntersectsVessel(firer, ray))
+                    return false;
+            }
+
+            return true;
+        }
+
+        private IEnumerator GetClearance()
+        {
+            // Sequence responsible for getting a separated missile clear of the ship.
+
+            float checkTime = 0;
+            float timeLimit = Time.fixedTime + 5f;
+            float checkInterval = 0.1f;
+            bool clear = false;
+            var wait = new WaitForFixedUpdate();
+
+            while (true)
+            {
+                if (Time.fixedTime > checkTime)
+                {
+                    if (firer == null)
+                        yield break;
+
+                    checkTime = Time.fixedTime + checkInterval;
+                    clear = CheckClearance();
+                }
+
+                if (clear || Time.fixedTime > timeLimit)
+                    break;
+
+                fc.throttle = controller.pulseThrottle / 100f;
+                fc.Drive();
+
+                yield return wait;
+            }
+
+            fc.RCSVector = Vector3.zero;
+            fc.throttle = 0;
+            fc.Drive();
+        }
+
+        private bool RayIntersectSphere(Ray ray, Vector3 centre, float radius)
+        {
+            // Check if a ray intersects a sphere.
+
+            Vector3 toSphere = centre - ray.origin;
+
+            // Check inside.
+            if (toSphere.magnitude < radius)
+                return true;
+
+            ray.direction = ray.direction.normalized;
+
+            // Check dot.
+            if (Vector3.Dot(toSphere.normalized, ray.direction) < 0)
+                return false;
+
+            float a = Vector3.Dot(ray.direction, ray.direction);
+            float b = 2.0f * Vector3.Dot(ray.origin, ray.direction);
+            float c = Vector3.Dot(ray.origin, ray.origin) - radius * radius;
+
+            float discriminant = b * b - 4.0f * a * c;
+
+            return discriminant >= 0;
+        }
+
+        public static Vector3 CalculateCraftSize(List<Part> parts, Part rootPart)
+        {
+            // Returns the size (width, height, depth) of an AABB
+            // centered on the root part of the vessel.
+
+            if (parts.Count == 0 || rootPart == null)
+                return Vector3.zero;
+
+            Bounds vesselBounds = new Bounds(rootPart.transform.root.position, Vector3.zero);
+
+            int count = parts.Count;
+            Part part;
+            Bounds partBounds;
+
+            for (int i = 0; i < count; i++)
+            {
+                part = parts[i];
+                partBounds = new Bounds(part.transform.position, Vector3.zero);
+
+                foreach (var colliderBounds in part.GetColliderBounds())
+                    partBounds.Encapsulate(colliderBounds);
+
+                vesselBounds.Encapsulate(partBounds);
+            }
+
+            // Merge all bounds into one all encapsulating bounds.
+            return vesselBounds.size;
+        }
+
+        private IEnumerator AcquireLOS()
+        {
+            // Sequence responsible for taking a missile from a position where it is
+            // clear of the ship, to having permanent line of sight with the target.
+
+            float previousTolerance = fc.alignmentToleranceforBurn;
+            float losManoeuvreBurnTolerance = 60;
+            var wait = new WaitForFixedUpdate();
+            Ray targetRay = new Ray();
+            Vector3 firerCentre, toTarget, toFirer, proj, firerToTarget, sphereEdge;
+
+            // We can't rely on .vesselSize because it sometimes expands to hundreds of metres after losing parts.
+            Vector3 vesselSize = CalculateCraftSize(firer.parts, firer.rootPart);
+            float firerRadius = vesselSize.magnitude / 2;
+
+            Debug.DrawVesselSize(firer, true, vesselSize);
+
+            while (true)
+            {
+                if (target == null)
+                    break;
+
+                // Does our path intersect a safety bubble around the firer?
+
+                targetRay.origin = vessel.CoM;
+                targetRay.direction = target.CoM - vessel.CoM;
+                firerCentre = firer.rootPart.transform.root.position;
+
+                if (RayIntersectSphere(targetRay, firerCentre, firerRadius))
+                {
+                    toTarget = FromTo(vessel, target).normalized;
+                    toFirer = Vector3.Normalize(firerCentre - vessel.CoM);
+
+                    if (Vector3.Distance(firerCentre, vessel.CoM) < firerRadius)
+                    {
+                        // We are inside the safety bubble.
+                        // Burn towards the target and away from the centre of the bubble.
+
+                        fc.attitude = Vector3.Slerp(toTarget, toFirer * -1, 0.25f);
+                    }
+                    else
+                    {
+                        // We are behind the safety bubble as seen from the target.
+                        // Burn towards the edge of the bubble in the direction of the target.
+
+                        proj = Vector3.ProjectOnPlane(toTarget, toFirer).normalized;
+                        firerToTarget = Vector3.Normalize(target.CoM - firerCentre);
+                        sphereEdge = firerCentre + Vector3.ProjectOnPlane(proj, firerToTarget).normalized * firerRadius;
+
+                        fc.attitude = Vector3.Normalize(sphereEdge - vessel.CoM);   
+                    }
+
+                    fc.throttle = 0.5f;
+                    fc.alignmentToleranceforBurn = losManoeuvreBurnTolerance;
+                    fc.Drive();
+
+                    yield return wait;
+                }
+                else
+                {
+                    // We have LOS.
+
+                    break;
+                }
+            }
+
+            fc.alignmentToleranceforBurn = previousTolerance;
+            fc.RCSVector = Vector3.zero;
+            fc.throttle = 0;
+            fc.attitude = vessel.ReferenceTransform.up;
+            fc.Drive();
+
+            Debug.DrawVesselSize(firer, false);
+        }
+
+        private LaunchType CheckLaunchType(Vector3 firerDirection)
+        {
+            // Front launch - aligned with the direction of the ship's propulsion.
+            // Radial launch - not aligned with the direction of the ship's propulsion.
+            // Enclosed launch - the missile is not aligned with propulsion but is walled in on all sides.
+
+            LaunchType launchType;
+
+            if (Vector3.Angle(vessel.ReferenceTransform.up, firerDirection) < 50)
+            {
+                launchType = LaunchType.Front;
+            }
+            else
+            {
+                Vector3 horizontal;
+                Transform vRef = vessel.ReferenceTransform;
+                Ray enclosedRay = new Ray(vessel.CoM, Vector3.zero);
+                launchType = LaunchType.Enclosed;
+
+                for (int i = 0; i < 4; i++)
+                {
+                    horizontal = Quaternion.AngleAxis(360f * (i / 4f), vRef.up) * vRef.forward;
+                    enclosedRay.direction = horizontal;
+
+                    // If the raycast doesn't hit the firer then we are not in an enclosed space.
+                    if (!RayIntersectsVessel(firer, enclosedRay))
+                    {
+                        launchType = LaunchType.Radial;
+                        break;
+                    }
+                }
+            }
+
+            return launchType;
+        }
+
         /*private void OnHit()
         {
             controller.hit = true;
@@ -655,5 +807,13 @@ namespace KerbalCombatSystems
                 partCount = pc;
             }
         }*/
+    }
+
+    // The distinction is necessary for the ship to know how to behave while firing.
+    public enum LaunchType
+    {
+        Radial,
+        Front,
+        Enclosed,
     }
 }

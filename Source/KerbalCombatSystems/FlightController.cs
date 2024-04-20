@@ -10,13 +10,14 @@ namespace KerbalCombatSystems
         private float angleLerp;
         public bool lerpAttitude = true;
         private float lerpRate;
-        private bool lockAttitude = false;
+        private bool stabilityOn = false;
 
         private bool facingDesiredRotation;
         public float throttle;
         public float throttleActual;
         internal float throttleLerped;
         public float throttleLerpRate = 1;
+        public bool lerpThrottle = true;
         public float alignmentToleranceforBurn = 5;
 
         public Vector3 RCSVector;
@@ -97,7 +98,7 @@ namespace KerbalCombatSystems
             // Move actual throttle towards throttle target gradually.
             throttleLerped = Mathf.MoveTowards(throttleLerped, throttleActual, throttleLerpRate * Time.fixedDeltaTime);
 
-            v.ctrlState.mainThrottle = throttleLerped;
+            v.ctrlState.mainThrottle = lerpThrottle ? throttleLerped : throttleActual;
             //if (FlightGlobals.ActiveVessel != null && v == FlightGlobals.ActiveVessel)
             //    FlightInputHandler.state.mainThrottle = throttleLerped; //so that the on-screen throttle gauge reflects the autopilot throttle
         }
@@ -134,7 +135,7 @@ namespace KerbalCombatSystems
 
         void UpdateSAS(Vessel v)
         {
-            if (attitude == Vector3.zero || lockAttitude) return;
+            if (attitude == Vector3.zero || stabilityOn) return;
             //if (v == null) return;
 
             // SAS must be turned off. Don't know why.
@@ -166,7 +167,7 @@ namespace KerbalCombatSystems
 
         public void Stability(bool enable)
         {
-            lockAttitude = enable;
+            stabilityOn = enable;
 
             var ap = controllingVessel.Autopilot;
             if (ap == null) return;

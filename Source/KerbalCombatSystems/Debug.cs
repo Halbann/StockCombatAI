@@ -202,18 +202,27 @@ namespace KerbalCombatSystems
 
             GUI.color = Color.white;
 
-            foreach (ModuleWeaponController missile in allMissiles)
+            foreach (ModuleWeaponController weapon in allMissiles)
             {
-                if (missile == null || missile.vessel == null)
+                if (weapon == null || weapon.vessel == null)
                     continue;
 
-                VesselLabel("ETA: " 
-                    + missile.timeToHit.ToString("0.00")
-                    + "\n Launched: "
-                    + missile.launched.ToString()
-                    + "\n Missed: "
-                    + missile.missed.ToString(),
-                    missile.vessel);
+                string weaponString = 
+                    "ETA: " + weapon.timeToHit.ToString("0.00")
+                    + $"\n Launched: {weapon.launched}"
+                    + $"\n Missed: {weapon.missed}";
+
+                switch (weapon.weaponType)
+                {
+                    case "Missile":
+                        weaponString += $"\n Phase: {weapon.Missile.phase}";
+                        weaponString += $"\n Throttle: {weapon.Missile.Throttle}";
+                        break;
+                    default:
+                        break;
+                }
+
+                VesselLabel(weaponString, weapon.vessel);
             }
 
             foreach (ModuleShipController ship in FlightManager.ships)
@@ -282,6 +291,162 @@ namespace KerbalCombatSystems
         }
 
         #endregion
+
+        #region Vessel Size
+
+        private static bool _drawVesselSizes = false;
+        public static bool DrawVesselSizes
+        {
+            get => _drawVesselSizes;
+            set
+            {
+                if (_drawVesselSizes == value)
+                    return;
+
+                _drawVesselSizes = value;
+
+                foreach (Vessel vessel in FlightGlobals.Vessels)
+                {
+                    DrawVesselSize(vessel, value);
+                }
+            }
+        }
+
+        public static void DrawVesselSize(Vessel vessel, bool visible, Vector3 size = default)
+        {
+            DrawVesselSize drawSize = vessel.gameObject.GetComponent<DrawVesselSize>();
+            bool exists = drawSize != null;
+
+            if (visible)
+            {
+                if (!exists)
+                    drawSize = vessel.gameObject.AddComponent<DrawVesselSize>();
+
+                if (size != default)
+                    drawSize.vesselSize = size; // Save some computation on debugging.
+                else
+                    drawSize.UpdateSize();
+
+                drawSize.users++;
+            }
+            else if (exists)
+            {
+                drawSize.users--;
+
+                if (drawSize.users < 1)
+                {
+                    Destroy(drawSize);
+                }
+            }
+        }
+
+        public static void UpdateVesselSizes()
+        {
+            foreach (var v in FlightGlobals.VesselsLoaded)
+                v.gameObject.GetComponent<DrawVesselSize>()?.UpdateSize();
+        }
+
+
+
+        #endregion
+    }
+
+    [RequireComponent(typeof(Vessel))]
+    class DrawVesselSize : MonoBehaviour
+    {
+        // Draw a sphere that encompasses the vessel's size.
+
+        private Vessel vessel;
+        private bool visible = false;
+        private GameObject AABB;
+        private GameObject sphere;
+        private bool destroy = false;
+        public int users = 0;
+        public Vector3 vesselSize = Vector3.zero;
+
+        void Awake()
+        {
+            vessel = GetComponent<Vessel>();
+        }
+
+        void FixedUpdate()
+        {
+            if (!destroy && vessel == null || vessel.rootPart == null)
+            {
+                destroy = true;
+                Destroy(this);
+
+                return;
+            }
+
+            if (Debug.Visible && vesselSize != Vector3.zero)
+            {
+                if (!visible)
+                {
+                    CreateSphere();
+                    visible = true;
+                }
+
+                UpdateSphere();
+            }
+            else
+            {
+                if (visible)
+                    DestroySphere();
+
+                visible = false;
+            }
+
+        }
+
+        void OnDestroy()
+        {
+            DestroySphere();
+        }
+
+        void CreateSphere()
+        {
+            AABB = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            sphere = GameObject.CreatePrimitive(PrimitiveType.Sphere);
+
+            var mat = new Material(Shader.Find("Unlit/Transparent"));
+            var colour = new Color(1, 1, 1, 0.2f);
+            var tex = new Texture2D(1, 1);
+            tex.SetPixel(0, 0, colour);
+            tex.Apply();
+            mat.SetTexture("_MainTex", tex);
+
+            AABB.GetComponent<Renderer>().material = mat;
+            sphere.GetComponent<Renderer>().material = mat;
+
+            AABB.GetComponent<Collider>().enabled = false;
+            sphere.GetComponent<Collider>().enabled = false;
+        }
+
+        void DestroySphere()
+        {
+            if (AABB != null)
+            {
+                Destroy(AABB);
+                Destroy(sphere);
+            }
+        }
+
+        void UpdateSphere()
+        {
+            AABB.transform.position = vessel.rootPart.transform.root.position;
+            AABB.transform.eulerAngles = Vector3.zero;
+            AABB.transform.localScale = vesselSize;
+
+            sphere.transform.position = vessel.rootPart.transform.root.position;
+            sphere.transform.localScale = vesselSize.magnitude * Vector3.one;
+            sphere.transform.eulerAngles = Vector3.zero;
+        }
+
+        public void UpdateSize()
+        {
+            vesselSize = ModuleMissile.CalculateCraftSize(vessel.parts, vessel.rootPart);
+        }
     }
 
     #region Transforms
