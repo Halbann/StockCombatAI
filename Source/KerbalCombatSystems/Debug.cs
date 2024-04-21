@@ -212,14 +212,17 @@ namespace KerbalCombatSystems
                     + $"\n Launched: {weapon.launched}"
                     + $"\n Missed: {weapon.missed}";
 
-                switch (weapon.weaponType)
+                if (weapon.setup)
                 {
-                    case "Missile":
-                        weaponString += $"\n Phase: {weapon.Missile.phase}";
-                        weaponString += $"\n Throttle: {weapon.Missile.Throttle}";
-                        break;
-                    default:
-                        break;
+                    switch (weapon.weaponType)
+                    {
+                        case "Missile":
+                            weaponString += $"\n Phase: {weapon.Missile.phase}";
+                            weaponString += $"\n Throttle: {weapon.Missile.Throttle}";
+                            break;
+                        default:
+                            break;
+                    }
                 }
 
                 VesselLabel(weaponString, weapon.vessel);
@@ -292,67 +295,55 @@ namespace KerbalCombatSystems
 
         #endregion
 
-        #region Vessel Size
+        #region Vessel Bounds
 
-        private static bool _drawVesselSizes = false;
-        public static bool DrawVesselSizes
+        private static bool _drawVesselsBounds = false;
+        public static bool DrawVesselsBounds
         {
-            get => _drawVesselSizes;
+            get => _drawVesselsBounds;
             set
             {
-                if (_drawVesselSizes == value)
+                if (_drawVesselsBounds == value)
                     return;
 
-                _drawVesselSizes = value;
+                _drawVesselsBounds = value;
 
                 foreach (Vessel vessel in FlightGlobals.Vessels)
                 {
-                    DrawVesselSize(vessel, value);
+                    DrawVesselBounds(vessel, value);
                 }
             }
         }
 
-        public static void DrawVesselSize(Vessel vessel, bool visible, Vector3 size = default)
+        public static void DrawVesselBounds(Vessel vessel, bool visible)
         {
-            DrawVesselSize drawSize = vessel.gameObject.GetComponent<DrawVesselSize>();
-            bool exists = drawSize != null;
+            DrawVesselBounds drawBounds = vessel.gameObject.GetComponent<DrawVesselBounds>();
+            bool exists = drawBounds != null;
 
             if (visible)
             {
                 if (!exists)
-                    drawSize = vessel.gameObject.AddComponent<DrawVesselSize>();
+                    drawBounds = vessel.gameObject.AddComponent<DrawVesselBounds>();
 
-                if (size != default)
-                    drawSize.vesselSize = size; // Save some computation on debugging.
-                else
-                    drawSize.UpdateSize();
-
-                drawSize.users++;
+                drawBounds.users++;
             }
             else if (exists)
             {
-                drawSize.users--;
+                drawBounds.users--;
 
-                if (drawSize.users < 1)
+                if (drawBounds.users < 1)
                 {
-                    Destroy(drawSize);
+                    Destroy(drawBounds);
                 }
             }
         }
-
-        public static void UpdateVesselSizes()
-        {
-            foreach (var v in FlightGlobals.VesselsLoaded)
-                v.gameObject.GetComponent<DrawVesselSize>()?.UpdateSize();
-        }
-
 
 
         #endregion
     }
 
     [RequireComponent(typeof(Vessel))]
-    class DrawVesselSize : MonoBehaviour
+    class DrawVesselBounds : MonoBehaviour
     {
         // Draw a sphere that encompasses the vessel's size.
 
@@ -362,14 +353,13 @@ namespace KerbalCombatSystems
         private GameObject sphere;
         private bool destroy = false;
         public int users = 0;
-        public Vector3 vesselSize = Vector3.zero;
 
-        void Awake()
+        internal void Awake()
         {
             vessel = GetComponent<Vessel>();
         }
 
-        void FixedUpdate()
+        internal void FixedUpdate()
         {
             if (!destroy && vessel == null || vessel.rootPart == null)
             {
@@ -379,7 +369,7 @@ namespace KerbalCombatSystems
                 return;
             }
 
-            if (Debug.Visible && vesselSize != Vector3.zero)
+            if (Debug.Visible)
             {
                 if (!visible)
                 {
@@ -399,7 +389,7 @@ namespace KerbalCombatSystems
 
         }
 
-        void OnDestroy()
+        internal void OnDestroy()
         {
             DestroySphere();
         }
@@ -434,18 +424,17 @@ namespace KerbalCombatSystems
 
         void UpdateSphere()
         {
-            AABB.transform.position = vessel.rootPart.transform.root.position;
-            AABB.transform.eulerAngles = Vector3.zero;
-            AABB.transform.localScale = vesselSize;
+            Bounds vesselBounds = VesselBounds.GetBoundsLocal(vessel);
+            Vector3 centre = vessel.ReferenceTransform.TransformPoint(vesselBounds.center);
+            Quaternion rotation = vessel.ReferenceTransform.rotation;
 
-            sphere.transform.position = vessel.rootPart.transform.root.position;
-            sphere.transform.localScale = vesselSize.magnitude * Vector3.one;
-            sphere.transform.eulerAngles = Vector3.zero;
-        }
+            AABB.transform.position = centre;
+            AABB.transform.rotation = rotation;
+            AABB.transform.localScale = vesselBounds.size;
 
-        public void UpdateSize()
-        {
-            vesselSize = ModuleMissile.CalculateCraftSize(vessel.parts, vessel.rootPart);
+            sphere.transform.position = centre;
+            sphere.transform.localScale = vesselBounds.size.magnitude * Vector3.one;
+            sphere.transform.rotation = rotation;
         }
     }
 

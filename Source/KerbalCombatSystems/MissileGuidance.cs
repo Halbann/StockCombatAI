@@ -612,6 +612,7 @@ namespace KerbalCombatSystems
             fc.Drive();
         }
 
+        // todo: move to utils.
         private bool RayIntersectSphere(Ray ray, Vector3 centre, float radius)
         {
             // Check if a ray intersects a sphere.
@@ -637,35 +638,6 @@ namespace KerbalCombatSystems
             return discriminant >= 0;
         }
 
-        public static Vector3 CalculateCraftSize(List<Part> parts, Part rootPart)
-        {
-            // Returns the size (width, height, depth) of an AABB
-            // centered on the root part of the vessel.
-
-            if (parts.Count == 0 || rootPart == null)
-                return Vector3.zero;
-
-            Bounds vesselBounds = new Bounds(rootPart.transform.root.position, Vector3.zero);
-
-            int count = parts.Count;
-            Part part;
-            Bounds partBounds;
-
-            for (int i = 0; i < count; i++)
-            {
-                part = parts[i];
-                partBounds = new Bounds(part.transform.position, Vector3.zero);
-
-                foreach (var colliderBounds in part.GetColliderBounds())
-                    partBounds.Encapsulate(colliderBounds);
-
-                vesselBounds.Encapsulate(partBounds);
-            }
-
-            // Merge all bounds into one all encapsulating bounds.
-            return vesselBounds.size;
-        }
-
         private IEnumerator AcquireLOS()
         {
             // Sequence responsible for taking a missile from a position where it is
@@ -678,10 +650,10 @@ namespace KerbalCombatSystems
             Vector3 firerCentre, toTarget, toFirer, proj, firerToTarget, sphereEdge;
 
             // We can't rely on .vesselSize because it sometimes expands to hundreds of metres after losing parts.
-            Vector3 vesselSize = CalculateCraftSize(firer.parts, firer.rootPart);
-            float firerRadius = vesselSize.magnitude / 2;
+            Bounds vesselBounds = VesselBounds.GetBoundsLocal(firer);
+            float firerRadius = vesselBounds.size.magnitude / 2;
 
-            Debug.DrawVesselSize(firer, true, vesselSize);
+            Debug.DrawVesselBounds(firer, true);
 
             while (true)
             {
@@ -692,7 +664,7 @@ namespace KerbalCombatSystems
 
                 targetRay.origin = vessel.CoM;
                 targetRay.direction = target.CoM - vessel.CoM;
-                firerCentre = firer.rootPart.transform.root.position;
+                firerCentre = firer.CoM;
 
                 if (RayIntersectSphere(targetRay, firerCentre, firerRadius))
                 {
@@ -738,7 +710,7 @@ namespace KerbalCombatSystems
             fc.attitude = vessel.ReferenceTransform.up;
             fc.Drive();
 
-            Debug.DrawVesselSize(firer, false);
+            Debug.DrawVesselBounds(firer, false);
         }
 
         private LaunchType CheckLaunchType(Vector3 firerDirection)
