@@ -65,7 +65,7 @@ namespace KerbalCombatSystems
 
         // Battle log variables.
 
-        private static List<string> log = new List<string>();
+        private static readonly List<string> log = new List<string>();
         private static float lastLogged;
         private bool updateOverlayOpacity;
 
@@ -86,6 +86,10 @@ namespace KerbalCombatSystems
 
         internal void Start()
         {
+            // Clear log.
+
+            log.Clear();
+
             // Setup GUI. 
 
             AddToolbarButton();
@@ -126,7 +130,7 @@ namespace KerbalCombatSystems
             HighLogic.CurrentGame.Parameters.CustomParams<GameParameters.AdvancedParams>().EnableFullSASInSandbox = true;   
         }
 
-        private void Update()
+        internal void Update()
         {
             ManageThrottle();
         }
@@ -145,7 +149,7 @@ namespace KerbalCombatSystems
             currentVessel = a;
         }
 
-        void OnDestroy()
+        internal void OnDestroy()
         {
             GameEvents.onVesselCreate.Remove(VesselEventUpdate);
             GameEvents.onVesselDestroy.Remove(VesselEventUpdate);
@@ -334,7 +338,7 @@ namespace KerbalCombatSystems
 
         // GUI functions.
 
-        void OnGUI()
+        internal void OnGUI()
         {
             if (guiEnabled && !guiHidden)
                 DrawGUI();

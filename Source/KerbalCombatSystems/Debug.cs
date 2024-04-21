@@ -76,7 +76,7 @@ namespace KerbalCombatSystems
             }*/
         }
 
-        void OnGUI()
+        internal void OnGUI()
         {
             if (!Visible || Camera.main == null)
                 return;
@@ -101,16 +101,19 @@ namespace KerbalCombatSystems
 
         #region Lines
 
-        public static LineRenderer CreateLine(Color LineColour, float width = 0.5f)
+        public static LineRenderer CreateLine(Color LineColour)
         {
             //spawn new line
             LineRenderer Line = new GameObject().AddComponent<LineRenderer>();
             Line.useWorldSpace = true;
 
             // Create a material for the line with its unique colour.
-            Material LineMaterial = new Material(Shader.Find("Standard"));
-            LineMaterial.color = LineColour;
-            LineMaterial.shader = Shader.Find("Unlit/Color");
+            Material LineMaterial = new Material(Shader.Find("Standard"))
+            {
+                color = LineColour,
+                shader = Shader.Find("Unlit/Color")
+            };
+
             Line.material = LineMaterial;
 
             //make it come to a point
@@ -361,7 +364,7 @@ namespace KerbalCombatSystems
 
         internal void FixedUpdate()
         {
-            if (!destroy && vessel == null || vessel.rootPart == null)
+            if (!destroy && vessel == null)
             {
                 destroy = true;
                 Destroy(this);
@@ -425,8 +428,8 @@ namespace KerbalCombatSystems
         void UpdateSphere()
         {
             Bounds vesselBounds = VesselBounds.GetBoundsLocal(vessel);
-            Vector3 centre = vessel.ReferenceTransform.TransformPoint(vesselBounds.center);
-            Quaternion rotation = vessel.ReferenceTransform.rotation;
+            Vector3 centre = vessel.transform.TransformPoint(vesselBounds.center);
+            Quaternion rotation = vessel.transform.rotation;
 
             AABB.transform.position = centre;
             AABB.transform.rotation = rotation;
@@ -449,7 +452,7 @@ namespace KerbalCombatSystems
         LineRenderer yLine;
         LineRenderer zLine;
 
-        void Start()
+        internal void Start()
         {
             if (!drawTransforms)
             {
@@ -471,7 +474,7 @@ namespace KerbalCombatSystems
         }
 
         // Update is called once per frame
-        void Update()
+        internal void Update()
         {
             if (Debug.Visible)
             {

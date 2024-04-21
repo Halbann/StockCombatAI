@@ -116,9 +116,7 @@ namespace KerbalCombatSystems
 
             // Separate.
             seperator = FindDecoupler(part);
-
-            if (seperator != null)
-                seperator.Separate();
+            seperator?.Separate();
 
 
             // 2. Initial setup.
@@ -664,7 +662,7 @@ namespace KerbalCombatSystems
 
                 targetRay.origin = vessel.CoM;
                 targetRay.direction = target.CoM - vessel.CoM;
-                firerCentre = firer.CoM;
+                firerCentre = firer.transform.TransformPoint(vesselBounds.center);
 
                 if (RayIntersectSphere(targetRay, firerCentre, firerRadius))
                 {

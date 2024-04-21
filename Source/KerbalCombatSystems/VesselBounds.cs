@@ -1,37 +1,42 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+
 using UnityEngine;
 
 namespace KerbalCombatSystems
 {
     public static class VesselBounds
     {
+        private const float cacheTimeout = 10f;
+
         private struct Cache
         {
             internal int partCount;
             internal Vessel vessel;
             internal Bounds bounds;
+            internal float timestamp;
 
             internal Cache(Vessel vessel)
             {
                 partCount = vessel.Parts.Count;
                 bounds = CalculateBoundsLocal(vessel);
                 this.vessel = vessel;
+                timestamp = Time.time;
             }
         }
 
-        private static Dictionary<Guid, Cache> cache = new Dictionary<Guid, Cache>();
+        private static readonly Dictionary<uint, Cache> cache = new Dictionary<uint, Cache>();
 
         public static Bounds GetBoundsLocal(Vessel vessel)
         {
-            var id = vessel.id;
+            var id = vessel.persistentId;
 
             if (cache.TryGetValue(id, out Cache result))
             {
-                if (result.partCount == vessel.Parts.Count)
+                bool expired = Time.time - result.timestamp > cacheTimeout;
+
+                if (!expired || result.partCount == vessel.Parts.Count)
                 {
                     return result.bounds;
                 }
@@ -52,7 +57,7 @@ namespace KerbalCombatSystems
             if (vessel.parts.Count == 0)
                 return default;
 
-            Transform local = vessel.ReferenceTransform;
+            Transform local = vessel.transform;
             Vector3 comLocalspace = local.InverseTransformPoint(vessel.CoM);
             Bounds vesselBounds = new Bounds(comLocalspace, Vector3.zero);
 
