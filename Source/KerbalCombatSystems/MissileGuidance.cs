@@ -21,6 +21,7 @@ namespace KerbalCombatSystems
         private bool isInterceptor;
         private int shutoffDistance;
         private ModuleWeaponController targetWeapon;
+        private bool separated = false;
 
 
         // Missile guidance variables.
@@ -186,6 +187,7 @@ namespace KerbalCombatSystems
             MakeRigidbodiesContinuous();
 
             phase = "Separated";
+            separated = true;
 
 
             // 2.5 Check launch type.
@@ -365,8 +367,6 @@ namespace KerbalCombatSystems
             fc.attitude = targetVectorNormal;
             fc.RCSVector = rcs;
 
-            fc.Drive();
-
 
             // Update debug lines.
             if (Debug.Visible)
@@ -399,10 +399,13 @@ namespace KerbalCombatSystems
             StartCoroutine(Launch());
         }
 
-        public void FixedUpdate()
+        internal void FixedUpdate()
         {
             if (engageAutopilot)
                 UpdateGuidance();
+
+            if (separated)
+                fc?.Drive();
         }
 
         public void OnDestroy()
@@ -412,6 +415,7 @@ namespace KerbalCombatSystems
             Debug.DestroyLine(interceptLine);
             Debug.DestroyLine(thrustLine);
             Destroy(fc);
+            fc = null;
         }
 
         public void StopGuidance()
@@ -489,8 +493,6 @@ namespace KerbalCombatSystems
             {
                 yield return wait;
 
-                fc.Drive();
-
                 if (Time.time - lastChecked > checkInterval)
                 {
                     lastChecked = Time.time;
@@ -510,19 +512,6 @@ namespace KerbalCombatSystems
             fc.Drive();
         }
 
-        private IEnumerator DriveFCS()
-        {
-            // Drive FCS in parallel while the missile is waiting in the kick phase.
-
-            var wait = new WaitForFixedUpdate();
-
-            while (true)
-            {
-                fc.Drive();
-                yield return wait;
-            }
-        }
-
         private IEnumerator Kick()
         {
             // Sequence responsible for performing a kick.
@@ -540,8 +529,6 @@ namespace KerbalCombatSystems
                 if (controller.pulseThrottle < 1)
                     controller.pulseThrottle *= 100;
 
-                var driver = StartCoroutine(DriveFCS());
-
                 yield return new WaitForSeconds(igniteDelay);
 
                 fc.throttle = controller.pulseThrottle / 100f;
@@ -549,7 +536,6 @@ namespace KerbalCombatSystems
 
                 yield return new WaitForSeconds(controller.pulseDuration);
 
-                StopCoroutine(driver);
                 fc.throttle = 0;
             }
             else
@@ -612,8 +598,6 @@ namespace KerbalCombatSystems
                 if (clear || Time.fixedTime > timeLimit)
                     break;
 
-                fc.Drive();
-
                 yield return wait;
             }
 
@@ -667,7 +651,7 @@ namespace KerbalCombatSystems
 
             while (true)
             {
-                if (target == null)
+                if (target == null || firer == null)
                     break;
 
                 // Does our path intersect a safety bubble around the firer?
@@ -702,7 +686,6 @@ namespace KerbalCombatSystems
 
                     fc.throttle = 0.5f;
                     fc.alignmentToleranceforBurn = losManoeuvreBurnTolerance;
-                    fc.Drive();
 
                     yield return wait;
                 }

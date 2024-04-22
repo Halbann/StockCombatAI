@@ -625,7 +625,7 @@ namespace KerbalCombatSystems
             var c = FindController(a);
             if (a != null && c != null)
             {
-                GUILayout.Label($"Active Vessel: {ShortenName(a.vesselName)}");
+                GUILayout.Label($"Active Vessel: <b>{ShortenName(a.vesselName)}</b>");
                 GUILayout.Label($"- State: {c.state}");
 
                 string[] state = new string[]
@@ -648,7 +648,7 @@ namespace KerbalCombatSystems
 
                 if (c.target != null)
                 {
-                    GUILayout.Label($"- Target: {ShortenName(c.target.vesselName)}");
+                    GUILayout.Label($"- Target: <b>{ShortenName(c.target.vesselName)}</b>");
 
                     var targetRange = FromTo(a, c.target).magnitude;
                     GUILayout.Label($"- Target Range: {targetRange:N0} m");

@@ -306,6 +306,9 @@ namespace KerbalCombatSystems
 
         public static void DrawVesselBounds(Vessel vessel, bool visible)
         {
+            if (vessel == null)
+                return;
+
             DrawVesselBounds drawBounds = vessel.gameObject.GetComponent<DrawVesselBounds>();
             bool exists = drawBounds != null;
 
