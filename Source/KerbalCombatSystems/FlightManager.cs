@@ -619,6 +619,47 @@ namespace KerbalCombatSystems
                 Debug.Visible = debugVisible;
 
             Debug.DrawVesselsBounds = GUILayout.Toggle(Debug.DrawVesselsBounds, "Draw Vessel Sizes");
+            Debug.drawText = GUILayout.Toggle(Debug.drawText, "Draw Text");
+
+            var a = FlightGlobals.ActiveVessel;
+            var c = FindController(a);
+            if (a != null && c != null)
+            {
+                GUILayout.Label($"Active Vessel: {ShortenName(a.vesselName)}");
+                GUILayout.Label($"- State: {c.state}");
+
+                string[] state = new string[]
+                {
+                    c.hasWeapons ? "WEP" : "",
+                    c.hasPropulsion ? "PROP" : "",
+                    c.hasControl ? "CTRL" : ""
+                };
+
+                string statusString = string.Join(", ", state.Where(s => s != ""));
+
+                GUILayout.Label($"- Alive: {c.alive} ({statusString})");
+                GUILayout.Label($"- Timer: {c.timeRemaining:0.00}");
+
+                GUILayout.Label($"- Throttle: {c.fc.throttleActual * 100f:0} %");
+                GUILayout.Label($"- Perturbation: {a.perturbation.magnitude:0.0} m/s");
+
+                GUILayout.Label($"- Detection Range: {c.maxDetectionRange:0} m");
+                GUILayout.Label($"- Weapon Range: {c.maxWeaponRange:0} m");
+
+                if (c.target != null)
+                {
+                    GUILayout.Label($"- Target: {ShortenName(c.target.vesselName)}");
+
+                    var targetRange = FromTo(a, c.target).magnitude;
+                    GUILayout.Label($"- Target Range: {targetRange:N0} m");
+                    GUILayout.Label($"- Approach Time: {c.nearInterceptApproachTime:N1} s");
+                    GUILayout.Label($"- Burn Time: {c.nearInterceptBurnTime:N1} s");
+                }
+
+                GUILayout.Label($"- Incoming: {c.incomingWeapons?.Count ?? 0}");
+                GUILayout.Label($"- Evading: {c.dodgeWeapons?.Count ?? 0}");
+                GUILayout.Label($"- Intercepting: {c.weaponsToIntercept?.Count ?? 0}");
+            }
         }
 
         private void SliderSetting(ref float setting, string text, int min, int max)

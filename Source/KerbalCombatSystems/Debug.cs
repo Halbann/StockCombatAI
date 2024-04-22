@@ -33,6 +33,7 @@ namespace KerbalCombatSystems
         private static List<LineRenderer> lines;
         private static List<float> times;
 
+        public static bool drawText;
         public static List<DebugLabelData> debugLabels;
 
         public struct DebugLabelData
@@ -59,30 +60,15 @@ namespace KerbalCombatSystems
             StartCoroutine(LineCleaner());
         }
 
-        internal void Update()
-        {
-            //on press f12 toggle missile lines
-            /*if (Input.GetKeyDown(KeyCode.F12) && !Input.GetKey(KeyCode.LeftAlt))
-            {
-                //switch bool return
-                drawDebugInfo = !drawDebugInfo;
-
-                //removes inactive lines not caught fast enough by the generic line clearer
-                if (!drawDebugInfo)
-                    HideLines(0);
-
-
-                Log("Lines " + (drawDebugInfo ? "enabled." : "disabled."));
-            }*/
-        }
-
         internal void OnGUI()
         {
             if (!Visible || Camera.main == null)
                 return;
 
             InitStyles();
-            DrawDebugText();
+
+            if (drawText)
+                DrawDebugText();
         }
 
         private void InitStyles()

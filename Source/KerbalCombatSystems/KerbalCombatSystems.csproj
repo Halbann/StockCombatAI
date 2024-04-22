@@ -110,7 +110,7 @@
     <Compile Include="Effects\Tracer.cs" />
     <Compile Include="FireworkFixer.cs" />
     <Compile Include="FireworkReload.cs" />
-    <Compile Include="GlobalSuppressions.cs" />
+    <Compile Include="Properties\GlobalSuppressions.cs" />
     <Compile Include="LineMesh.cs" />
     <Compile Include="AssetLoader.cs" />
     <Compile Include="VesselBounds.cs" />

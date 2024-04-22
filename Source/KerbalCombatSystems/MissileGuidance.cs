@@ -126,9 +126,12 @@ namespace KerbalCombatSystems
 
             // Turn on all engines in the highest stage.
             engines = vessel.FindPartModulesImplementing<ModuleEngines>();
-            int highestStage = engines.Max(e => e.part.inverseStage); // Stages are numbered so that 0 = last stage.
-            engines = engines.FindAll(e => e.part.inverseStage == highestStage);
-            engines.ForEach(e => e.Activate());
+            if (engines.Count > 0)
+            {
+                int highestStage = engines.Max(e => e.part.inverseStage); // Stages are numbered so that 0 = last stage.
+                engines = engines.FindAll(e => e.part.inverseStage == highestStage);
+                engines.ForEach(e => e.Activate());
+            }
 
             // Get and enable RCS thrusters.
             rcsThrusters = vessel.FindPartModulesImplementing<ModuleRCSFX>();
@@ -144,6 +147,9 @@ namespace KerbalCombatSystems
 
             // Get a probe core and align its reference transform with the propulsion vector.
             ModuleCommand commander = FindCommand(vessel);
+            if (commander == null)
+                yield break;
+
             commander.MakeReference();
             propulsionVector = -GetFireVector(engines, rcsThrusters, -vessel.ReferenceTransform.up);
             AlignReference(commander, propulsionVector.normalized);
@@ -213,12 +219,12 @@ namespace KerbalCombatSystems
                 // Normal away procedure.
                 // We are able to leave the ship by simply moving forwards.
 
-                // maybe:
-                // if (launchType != LaunchType.Radial && firer.acceleration.magnitude > 0)
-                // skip kick
-
-                phase = "Kick";
-                yield return StartCoroutine(Kick());
+                // Skip the kick phase in poor conditions and go straight to clearing.
+                if (!(controller.launchType != LaunchType.Radial && firer.perturbation.magnitude > 1))
+                {
+                    phase = "Kick";
+                    yield return StartCoroutine(Kick());
+                }
             }
 
             phase = "Clearing";
@@ -585,6 +591,13 @@ namespace KerbalCombatSystems
             bool clear = false;
             var wait = new WaitForFixedUpdate();
 
+            // Full throttle if the ship is accelerating, otherwise use the kick throttle.
+            double firerAcceleration = firer?.perturbation.magnitude ?? 0;
+            float throttle = firerAcceleration > 1 ? 1f : controller.pulseThrottle / 100f;
+            fc.throttle = throttle;
+
+            fc.attitude = vessel.ReferenceTransform.up;
+
             while (true)
             {
                 if (Time.fixedTime > checkTime)
@@ -599,7 +612,6 @@ namespace KerbalCombatSystems
                 if (clear || Time.fixedTime > timeLimit)
                     break;
 
-                fc.throttle = controller.pulseThrottle / 100f;
                 fc.Drive();
 
                 yield return wait;

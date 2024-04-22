@@ -1,7 +1,12 @@
 ﻿using System.Linq;
 
+using KerbalCombatSystems.UI;
+
 namespace KerbalCombatSystems
 {
+    // todo: this shoud be a module on the controller that provides
+    // a button to click to set a decoupler. With no decoupler being "Auto".
+
     public class ModuleDecouplerDesignate : PartModule
     {
         [KSPField(isPersistant = true)]
@@ -10,10 +15,17 @@ namespace KerbalCombatSystems
         [KSPField(isPersistant = true)]
         public bool seperated = false;
 
-        private const string groupName = "KCS Designation";
+        private const string groupName = "Designation";
         public readonly static string[] types = new string[] { "Default", "Warhead", "EscapePod" };
         public readonly static string[] typeNames = new string[] { "Default", "Warhead", "Escape Pod" };
 
+        [Tooltip(
+            title = "Designation",
+            text = "How should the AI think of this separator?\n"
+            + "\n<b>Default:</b> Holds a weapon."
+            + "\n<b>Warhead:</b> Part of a weapon."
+            + "\n<b>Escape Pod:</b> Holds an escape pod."
+        )]
         [KSPField(
             isPersistant = true,
             guiActive = true,
@@ -25,9 +37,19 @@ namespace KerbalCombatSystems
         [UI_ChooseOption(controlEnabled = true, affectSymCounterparts = UI_Scene.None)]
         public string decouplerDesignation = "Default";
 
-        public override void OnAwake()
+        private TooltipController tooltipController;
+
+        public override void OnStart(StartState state)
         {
+            base.OnStart(state);
+
             SetupTypes();
+            tooltipController = new TooltipController(this);
+        }
+
+        internal void OnDestroy()
+        {
+            tooltipController?.Dispose();
         }
 
         public void Separate()
@@ -61,6 +83,7 @@ namespace KerbalCombatSystems
 
         private void SetupTypes()
         {
+            // Pre-0.3.0 support.
             if (decouplerDesignation == "Escape Pod")
                 decouplerDesignation = "EscapePod";
 
