@@ -296,7 +296,7 @@ namespace KerbalCombatSystems
             relVel = vessel.GetObtVelocity() - target.GetObtVelocity();
             relVelNrm = relVel.normalized;
             relVelmag = relVel.magnitude;
-            maxAcceleration = maxThrust / vessel.GetTotalMass();
+            maxAcceleration = maxThrust / (float)vessel.totalMass;
 
             if (!isInterceptor)
             {
