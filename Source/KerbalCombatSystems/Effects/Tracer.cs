@@ -67,13 +67,14 @@ namespace KerbalCombatSystems.Effects
             Width = _width;
             Colour = _colour;
 
+            if (rb == null) rb = gameObject.GetComponent<Rigidbody>();
+
             startPosWorld = transform.position;
         }
 
         internal void Start()
         {
             // Get rigidbody
-            rb = rb ?? gameObject.GetComponent<Rigidbody>();
 
             if (rb == null)
             {
@@ -84,9 +85,17 @@ namespace KerbalCombatSystems.Effects
 
                 return;
             }
+
+            UpdateTracer();
         }
 
-        internal void Update()
+        internal void Update() =>
+            UpdateTracer();
+
+        internal void OnCollisionEnter() =>
+            startPosWorld = transform.position;
+
+        internal void UpdateTracer()
         {
             if (destroy)
                 return;

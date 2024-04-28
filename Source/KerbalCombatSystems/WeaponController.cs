@@ -258,7 +258,10 @@ namespace KerbalCombatSystems
         public void ShareSettings()
         {
             if (weaponCode == "")
+            {
+                ScreenMessages.PostScreenMessage($"Can't synchronise a weapon without a weapon code.");
                 return;
+            }
 
             List<ModuleWeaponController> modules;
 
@@ -275,9 +278,10 @@ namespace KerbalCombatSystems
                 return;
             }
 
+            int count = 0;
             foreach (ModuleWeaponController module in modules)
             {
-                if (module.weaponCode == weaponCode)
+                if (module.weaponCode == weaponCode && module != this)
                 {
                     foreach (BaseField field in module.Fields)
                     {
@@ -289,8 +293,15 @@ namespace KerbalCombatSystems
 
                     if (HighLogic.LoadedSceneIsFlight && module.setup)
                         module.UpdateSettings();
+
+                    count++;
                 }
             }
+
+            if (count > 0)
+                ScreenMessages.PostScreenMessage($"Copied settings to {count} other {weaponCode} controller{(count > 1 ? "s" : "")}.");
+            else
+                ScreenMessages.PostScreenMessage($"No other {weaponCode} controllers found.");
         }
 
         public void Setup()
@@ -424,6 +435,20 @@ namespace KerbalCombatSystems
             float mass = CalculateMass(decoupler, false);
 
             return thrust / mass;
+        }
+
+        internal bool Identical(ModuleWeaponController otherWeapon)
+        {
+            // Check that a weapon is functionally identical to another weapon.
+            // For creating salvos.
+
+            if (otherWeapon == null)
+                return false;
+
+            if (weaponCode != "")
+                return weaponCode == otherWeapon.weaponCode;
+            else
+                return Approximately(dryMass, otherWeapon.dryMass, 0.05f);
         }
     }
 }

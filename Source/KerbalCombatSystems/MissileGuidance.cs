@@ -552,19 +552,21 @@ namespace KerbalCombatSystems
             // Perform raycasts in all cardinal directions to check if the missile is clear of the ship.
 
             Vector3 start = firer.ReferenceTransform.forward;
-
             Ray ray = new Ray(vessel.ReferenceTransform.position, Vector3.zero);
+            PrepareRaycast(firer);
+            bool hit = false;
 
             // First check directions at 90 degrees to the firer's roll direction.
             for (int i = 0; i < 4; i++)
             {
                 ray.direction = Quaternion.AngleAxis(360f * (i / 4f), vessel.ReferenceTransform.up) * start;
+                hit = Raycast(ray, 50);
 
-                if (RayIntersectsVessel(firer, ray))
-                    return false;
+                if (hit) break;
             }
 
-            return true;
+            FinishRaycast();
+            return !hit;
         }
 
         private IEnumerator GetClearance()
@@ -581,7 +583,6 @@ namespace KerbalCombatSystems
             double firerAcceleration = firer?.perturbation.magnitude ?? 0;
             float throttle = firerAcceleration > 1 ? 1f : controller.pulseThrottle / 100f;
             fc.throttle = throttle;
-
             fc.attitude = vessel.ReferenceTransform.up;
 
             while (true)
@@ -604,32 +605,6 @@ namespace KerbalCombatSystems
             fc.RCSVector = Vector3.zero;
             fc.throttle = 0;
             fc.Drive();
-        }
-
-        // todo: move to utils.
-        private bool RayIntersectSphere(Ray ray, Vector3 centre, float radius)
-        {
-            // Check if a ray intersects a sphere.
-
-            Vector3 toSphere = centre - ray.origin;
-
-            // Check inside.
-            if (toSphere.magnitude < radius)
-                return true;
-
-            ray.direction = ray.direction.normalized;
-
-            // Check dot.
-            if (Vector3.Dot(toSphere.normalized, ray.direction) < 0)
-                return false;
-
-            float a = Vector3.Dot(ray.direction, ray.direction);
-            float b = 2.0f * Vector3.Dot(ray.origin, ray.direction);
-            float c = Vector3.Dot(ray.origin, ray.origin) - radius * radius;
-
-            float discriminant = b * b - 4.0f * a * c;
-
-            return discriminant >= 0;
         }
 
         private IEnumerator AcquireLOS()

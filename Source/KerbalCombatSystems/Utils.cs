@@ -6,7 +6,7 @@ using UnityEngine;
 
 namespace KerbalCombatSystems
 {
-    public static partial class KCS
+    public static partial class Utils
     {
         #region GetProperty
         public static float AveragedSize(Vessel v)
@@ -41,7 +41,7 @@ namespace KerbalCombatSystems
 
         public static float GetMaxAcceleration(Vessel v)
         {
-            return GetMaxThrust(v) / v.GetTotalMass();
+            return GetMaxThrust(v) / (float)v.totalMass;
         }
 
         public static float GetMaxThrust(Vessel v)
@@ -60,7 +60,7 @@ namespace KerbalCombatSystems
             return engines.Sum(e => e.MaxThrustOutputVac(true));
         }
 
-        public static Vector3 GetFireVector(List<ModuleEngines> engines, List<ModuleRCSFX> RCS = null, Vector3 thrustVector = default(Vector3))
+        public static Vector3 GetFireVector(List<ModuleEngines> engines, List<ModuleRCSFX> RCS = null, Vector3 thrustVector = default)
         {
             // Place linears first to establish a direction, not currently needed
             //RCS.Sort((a, b) => a.thrusterTransforms.Count().CompareTo(b.thrusterTransforms.Count()));
@@ -137,7 +137,6 @@ namespace KerbalCombatSystems
         public static string ShortenName(string name)
         {
             name = name.Split('(').First();
-            name = name.Split('[').First();
             name = name.Replace(" - ", " ");
             name = name.Replace("-class", "");
             name = name.Replace("Heavy ", "");
@@ -221,7 +220,7 @@ namespace KerbalCombatSystems
 
         public static ModuleShipController FindController(Vessel v)
         {
-            var ship = KCSController.ships.Find(m => m.vessel == v);
+            var ship = FlightManager.ships.Find(m => m.vessel == v);
 
             if (ship == null)
                 return v.FindPartModuleImplementing<ModuleShipController>();
@@ -295,15 +294,14 @@ namespace KerbalCombatSystems
 
         public static Color Desaturate(Color color, float sat)
         {
-            float h, s, v;
-            Color.RGBToHSV(color, out h, out s, out v);
+            Color.RGBToHSV(color, out float h, out float s, out float v);
 
             return Color.HSVToRGB(h, s * sat, v);
         }
 
         #endregion
 
-        #region Physics Calculations
+        #region Physics
         public static Vector3 FromTo(Vessel v1, Vessel v2)
         {
             return v2.transform.position - v1.transform.position;
@@ -337,19 +335,21 @@ namespace KerbalCombatSystems
             return Vector3.Angle(tv1.normalized, tv2.normalized);
         }
 
-        public static float Integrate(float d, float a, float i = 0.1f, float v = 0)
+        // Not in use.
+
+        /*public static float Integrate(float d, float a, float i = 0.1f, float v = 0)
         {
             float t = 0;
 
             while (d > 0)
             {
-                v = v + a * i;
-                d = d - v * i;
-                t = t + i;
+                v += a * i;
+                d -= v * i;
+                t += i;
             }
 
             return t;
-        }
+        }*/
 
         public static float SolveTime(float distance, float acceleration, float vel = 0)
         {
@@ -384,48 +384,24 @@ namespace KerbalCombatSystems
             return (v1.transform.position - v2.transform.position).magnitude;
         }
 
-        public static bool RayIntersectsVessel(Vessel v, Ray r, Color color = default)
+        public static float ToAngle(this float angle)
         {
-            RaycastHit hitInfo;
-
-            foreach (Part p in v.parts)
-            {
-                foreach (Collider c in p.GetPartColliders())
-                {
-                    if (c.Raycast(r, out hitInfo, 50f))
-                        return true;
-                }
-            }
-
-            return false;
+            angle = (angle + 180) % 360;
+            return angle > 0 ? angle - 180 : angle + 180;
         }
 
-        public static bool CylinderIntersectsVessel(Vessel v, Ray r, float radius, int sides = 4)
-        {
-            Ray edgeRay = new Ray(r.origin, r.direction);
-            Vector3 cylinderEdge = Vector3.ProjectOnPlane(Vector3.up, r.direction).normalized * radius;
-            RaycastHit hitInfo;
-
-            for (int i = 0; i < sides; i++)
-            {
-                edgeRay.origin = r.origin + (Quaternion.AngleAxis(360f * (i / (float)sides), r.direction) * cylinderEdge);
-                
-                foreach (Part p in v.parts)
-                {
-                    foreach (Collider c in p.GetPartColliders())
-                    {
-                        if (c.Raycast(edgeRay, out hitInfo, 50f))
-                            return true;
-                    }
-                }
-            }
-
-            return false;
-        }
-
-        static float AngleDifference(float a, float b)
+        public static float AngleDifference(float a, float b)
         {
             return (a - b + 540) % 360 - 180;
+        }
+
+        #endregion
+
+        #region Maths
+
+        public static bool Approximately(float a, float b, float margin)
+        {
+            return Mathf.Abs(a - b) < a * margin;
         }
 
         #endregion

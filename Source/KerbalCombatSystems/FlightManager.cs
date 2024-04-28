@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
@@ -56,7 +56,7 @@ namespace KerbalCombatSystems
 
         // Weapon variables.
 
-        List<ModuleWeaponController> weaponList;
+        List<ModuleWeaponController> weaponList = new List<ModuleWeaponController>();
         ModuleWeaponController selectedWeapon;
         private Vessel currentVessel;
         private static float launchFailureTime = float.NegativeInfinity;
@@ -107,6 +107,8 @@ namespace KerbalCombatSystems
             GameEvents.onHideUI.Add(OnHideUI);
             GameEvents.onShowUI.Add(OnShowUI);
 
+            GameEvents.onVesselChange.Add(OnVesselChange);
+
             foreach (var a in AssemblyLoader.loadedAssemblies)
             {
                 if (!hasPRE && a.assembly.FullName.Contains("PhysicsRangeExtender"))
@@ -155,6 +157,11 @@ namespace KerbalCombatSystems
             GameEvents.onVesselDestroy.Remove(VesselEventUpdate);
             GameEvents.onVesselGoOffRails.Remove(VesselEventUpdate);
             GameEvents.onVesselGoOnRails.Remove(VesselEventUpdate);
+
+            GameEvents.onVesselChange.Remove(OnVesselChange);
+
+            GameEvents.onHideUI.Remove(OnHideUI);
+            GameEvents.onShowUI.Remove(OnShowUI);
 
             RemoveToolbarButton();
         }
@@ -218,40 +225,46 @@ namespace KerbalCombatSystems
 
         private void UpdateWeaponList()
         {
-            // Collect a sorted, collapsed list of usable
-            // weapons on the active vessel for display in the flight UI.
+            // Collect a sorted, collapsed list of usable weapons on the active vessel for display in the flight UI.
 
+            weaponList.Clear();
+
+            if (FlightGlobals.ActiveVessel == null) return;
             var c = FlightGlobals.ActiveVessel.FindPartModuleImplementing<ModuleShipController>();
             if (c == null)
-            {
-                weaponList = new List<ModuleWeaponController>();
                 return;
-            };
 
             c.CheckWeapons();
-            weaponList = c.weapons;
+            if (c.weapons.Count < 1)  return;
 
-            // Separate out the uncoded weapons.
-            var ungroupedMissiles = weaponList.FindAll(m => m.weaponCode == "");
-            weaponList = weaponList.Except(ungroupedMissiles).ToList();
+            // We want one weapon per weapon type (weaponisidentical), the one with the lowest number of child decouplers
 
-            // Get one weapon per weapon code, the one with the fewest child decouplers.
-            weaponList = weaponList
-                .GroupBy(m => m.weaponCode)
-                .Select(g => g.OrderBy(m => m.childDecouplers).First())
-                .ToList();
-            
-            weaponList = weaponList.OrderByDescending(m => m.weaponCode).ToList();
+            List<List<ModuleWeaponController>> weaponGroups = new List<List<ModuleWeaponController>>();
+            foreach (var w in c.weapons)
+            {
+                bool foundGroup = false;
 
-            // Get one weapon per weapon of a certain mass, the one with the fewest child decouplers.
-            ungroupedMissiles = ungroupedMissiles
-                .GroupBy(m => Math.Round(m.mass, 1))
-                .Select(g => g.OrderBy(m => m.childDecouplers).First())
-                .ToList();
-            
-            ungroupedMissiles = ungroupedMissiles.OrderByDescending(m => m.mass).ToList();
-            weaponList = weaponList.Concat(ungroupedMissiles).ToList();
+                foreach (var group in weaponGroups)
+                {
+                    if (group.Count > 0 && w.Identical(group[0]))
+                    {
+                        group.Add(w);
+                        foundGroup = true;
+                    }
+                }
+
+                if (foundGroup)
+                    continue;
+
+                weaponGroups.Add(new List<ModuleWeaponController> { w });
+            }
+
+            weaponGroups.Sort((a, b) => a[0].weaponCode.Equals("").CompareTo(b[0].weaponCode.Equals("")));
+            weaponList.AddRange(weaponGroups.Select(g => g.OrderBy(w => w.childDecouplers).First()));
         }
+
+        private void OnVesselChange(Vessel data) =>
+            UpdateWeaponList();
 
         public void ToggleAIs()
         {
@@ -466,6 +479,9 @@ namespace KerbalCombatSystems
 
                 foreach (var controller in ships)
                 {
+                    if (controller == null)
+                        continue;
+
                     c = controller;
                     v = c.vessel;
 
@@ -527,19 +543,7 @@ namespace KerbalCombatSystems
                     string weaponName = string.Format("{0}\n<color=#808080ff>Type: {1}, Mass: {2} t</color>",
                         code, w.weaponType, w.mass.ToString("0.0"));
 
-                    bool sameAsSelected = false;
-                    if (selectedWeapon != null)
-                    {
-                        if (w.weaponCode != "")
-                        {
-                            if (w.weaponCode == selectedWeapon.weaponCode)
-                                sameAsSelected = true;
-                        }
-                        else if (Mathf.Approximately((float)Math.Round(w.mass, 1), (float)Math.Round(selectedWeapon.mass, 1)))
-                            sameAsSelected = true;
-                    }
-
-                    if (GUILayout.Toggle(w == selectedWeapon || sameAsSelected, weaponName, GUI.skin.button))
+                    if (GUILayout.Toggle(w == selectedWeapon || w.Identical(selectedWeapon), weaponName, GUI.skin.button))
                         selectedWeapon = w;
                 }
             }

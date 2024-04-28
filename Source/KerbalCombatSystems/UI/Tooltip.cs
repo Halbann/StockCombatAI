@@ -22,7 +22,7 @@ namespace KerbalCombatSystems.UI
     // This class is used inside each part module to manage the creation and destruction of tooltip objects.
 
     // todo: implement as monobehaviour for easier destruction.
-    public class TooltipController
+    public class TooltipController : IDisposable
     {
         public Part part;
         public PartModule module;
@@ -38,6 +38,11 @@ namespace KerbalCombatSystems.UI
             Setup();
         }
 
+        ~TooltipController()
+        {
+            Dispose();
+        }
+
         private void Setup()
         {
             GameEvents.onPartActionUIShown.Add(OnPartActionUIShown);
@@ -51,6 +56,9 @@ namespace KerbalCombatSystems.UI
 
         private void OnPartActionUIShown(UIPartActionWindow _, Part windowPart)
         {
+            if (part == null || module == null)
+                return;
+
             if (tooltipAdded || windowPart.persistentId != part.persistentId)
                 return;
 
