@@ -123,7 +123,7 @@
     <Compile Include="CombatRobotics.cs" />
     <Compile Include="DecouplerDesignator.cs" />
     <Compile Include="EscapePod.cs" />
-    <Compile Include="Settings.cs" />
+    <Compile Include="SaveSettings.cs" />
     <Compile Include="UI\PowerSlider.cs" />
     <Compile Include="UI\Tooltip.cs" />
     <Compile Include="Utils.cs" />
