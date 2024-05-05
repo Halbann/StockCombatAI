@@ -7,6 +7,8 @@ using System.Diagnostics.CodeAnalysis;
 
 // I just think it's ugly.
 [assembly: SuppressMessage("Style", "IDE0017:Simplify object initialization", Justification = "<Pending>", Scope = "member", Target = "~M:KerbalCombatSystems.DrawTransform.SetupLine(UnityEngine.LineRenderer,UnityEngine.Color)")]
+[assembly: SuppressMessage("Style", "IDE0017:Simplify object initialization", Justification = "<Pending>", Scope = "member", Target = "~M:KerbalCombatSystems.Debug2.Line.CreateLine(UnityEngine.Color,System.Single,System.Single)~UnityEngine.LineRenderer")]
 
 // Not compatible with Unity Object null check.
 [assembly: SuppressMessage("Style", "IDE0074:Use compound assignment", Justification = "<Pending>", Scope = "member", Target = "~M:KerbalCombatSystems.ModuleShipController.AddIncoming(KerbalCombatSystems.ModuleWeaponController)")]
+

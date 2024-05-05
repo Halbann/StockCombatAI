@@ -36,7 +36,6 @@ namespace KerbalCombatSystems
         )]
         public bool animate = true;
 
-
         public override void OnLoad(ConfigNode node)
         {
             base.OnLoad(node);

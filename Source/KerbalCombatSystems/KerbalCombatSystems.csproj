@@ -107,6 +107,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="ClosestTimeToCPA.cs" />
+    <Compile Include="Debug\Line.cs" />
     <Compile Include="Effects\Tracer.cs" />
     <Compile Include="FireworkFixer.cs" />
     <Compile Include="FireworkReload.cs" />
