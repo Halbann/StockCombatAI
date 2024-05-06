@@ -19,7 +19,7 @@
 
 
         // Boilerplate.
-
+        
         public override string Section => "KCS";
         public override string DisplaySection => "KCS";
         public override int SectionOrder => 1;
@@ -30,7 +30,7 @@
 
         // Custom parameters.
 
-        public static bool AllowWithdrawalRef => Instance.allowWithdrawal;
+        public static bool AllowWithdrawal => Instance.allowWithdrawal;
         [GameParameters.CustomParameterUI("Allow Withdrawal",
             toolTip = "Are ships ever allowed to retreat from combat?")]
         public bool allowWithdrawal = true;

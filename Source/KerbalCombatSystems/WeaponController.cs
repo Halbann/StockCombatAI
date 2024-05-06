@@ -50,10 +50,8 @@ namespace KerbalCombatSystems
         public List<ModuleWeaponController> interceptedBy = new List<ModuleWeaponController>();
         public float timeToHit = -1;
 
-        public ModuleMissile Missile
-        {
-            get => (ModuleMissile)typeModule;
-        }
+        public ModuleMissile Missile => (ModuleMissile)typeModule;
+        public ModuleFirework Firework => (ModuleFirework)typeModule;
 
         #region Weapon Code
 
@@ -189,6 +187,12 @@ namespace KerbalCombatSystems
 
         #endregion
 
+        public override void OnAwake()
+        {
+            base.OnAwake();
+            FlightManager.Register(this);
+        }
+
         public override void OnStartFinished(StartState state)
         {
             weaponCode = weaponCode.ToUpper();
@@ -229,6 +233,8 @@ namespace KerbalCombatSystems
             GameEvents.onPartActionUIDismiss.Remove(OnPartActionUIDismiss);
 
             tooltips?.Dispose();
+
+            FlightManager.Unregister(this);
         }
 
         private void OnPartActionUIDismiss(Part data)

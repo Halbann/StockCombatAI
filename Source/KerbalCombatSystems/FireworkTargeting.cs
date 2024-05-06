@@ -10,6 +10,9 @@ namespace KerbalCombatSystems
     {
         public static float fireworkSpeed = 100f;
 
+        public int AmmoCount =>
+            (int)fireworkLaunchers.Sum(l => l == null ? 0 : l.fireworkShots);
+
         // Firework Targetting variables.
         public bool firing = false;
         Vessel target;

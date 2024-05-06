@@ -58,6 +58,7 @@ namespace KerbalCombatSystems
             debugLabels = new List<DebugLabelData>();
 
             StartCoroutine(LineCleaner());
+            gameObject.AddComponent<Debug2.Line>();
         }
 
         internal void OnGUI()
@@ -87,7 +88,7 @@ namespace KerbalCombatSystems
 
         #region Lines
 
-        public static LineRenderer CreateLine(Color LineColour)
+        public static LineRenderer CreateLine(Color LineColour, float width = 0.1f)
         {
             //spawn new line
             LineRenderer Line = new GameObject().AddComponent<LineRenderer>();
@@ -104,8 +105,8 @@ namespace KerbalCombatSystems
 
             //make it come to a point
             //Line.startWidth = width * 0.4f;
-            Line.startWidth = 0.1f;
-            Line.endWidth = 0.1f;
+            Line.startWidth = width;
+            Line.endWidth = width;
 
             // Don't draw until the line is first plotted.
             Line.positionCount = 0;
@@ -225,9 +226,9 @@ namespace KerbalCombatSystems
                 VesselLabel("State: "
                     + ship.state
                     + "\n Burn Time: "
-                    + ship.nearInterceptBurnTime.ToString("0.00")
+                    + ship.interceptStoppingDistance.ToString("0.00")
                     + "\n Intercept Time: "
-                    + ship.nearInterceptApproachTime.ToString("0.00")
+                    + ship.distanceToIntercept.ToString("0.00")
                     + "\n Throttle: "
                     + ship.fc.throttleLerped.ToString("0.00")
                     + "\n Current Weapon: "
