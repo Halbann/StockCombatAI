@@ -2,7 +2,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
-using static KerbalCombatSystems.KCS;
+using static KerbalCombatSystems.Utils;
 
 namespace KerbalCombatSystems
 {
@@ -21,9 +21,6 @@ namespace KerbalCombatSystems
         Vector3 aimVector;
         Vector3 origin;
 
-        // Debugging line variables.
-        LineRenderer aimLine;
-
         // stored settings
         private int roundBurst;
         private float burstSpacing;
@@ -38,9 +35,6 @@ namespace KerbalCombatSystems
         public override void Setup()
         {
             UpdateSettings();
-
-            // initialise debug line renderer
-            aimLine = KCSDebug.CreateLine(new Color(196f / 255f, 208f / 255f, 164f / 255f, 1f));
 
             //get list of fireworks
             FindFireworks(part.parent);
@@ -72,7 +66,7 @@ namespace KerbalCombatSystems
 
                 // Update debug lines.
                 origin = firingPart.transform.position;
-                KCSDebug.PlotLine(new[] { origin, origin + (aimVector * 15) }, aimLine);
+                // draw aim vector
             }
 
             //once aligned correctly start the firing sequence
@@ -157,11 +151,6 @@ namespace KerbalCombatSystems
 
                 fireworkLaunchers.Add(firework);
             }
-        }
-
-        public void OnDestroy()
-        {
-            KCSDebug.DestroyLine(aimLine);
         }
 
         public override void UpdateSettings()
