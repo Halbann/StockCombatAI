@@ -33,6 +33,10 @@
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
   <ItemGroup>
+    <Reference Include="alglib, Version=1.0.0.0, Culture=neutral, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>ReferencesThirdParty\alglib.dll</HintPath>
+    </Reference>
     <Reference Include="Assembly-CSharp">
       <HintPath>References\Assembly-CSharp.dll</HintPath>
       <Private>False</Private>
@@ -41,6 +45,10 @@
       <SpecificVersion>False</SpecificVersion>
       <HintPath>References\Assembly-CSharp-firstpass.dll</HintPath>
       <Private>False</Private>
+    </Reference>
+    <Reference Include="MechJebLib, Version=1.0.0.0, Culture=neutral, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>ReferencesThirdParty\MechJebLib.dll</HintPath>
     </Reference>
     <Reference Include="System" />
     <Reference Include="System.Core" />
@@ -111,10 +119,14 @@
     <Compile Include="Effects\Tracer.cs" />
     <Compile Include="FireworkFixer.cs" />
     <Compile Include="FireworkReload.cs" />
+    <Compile Include="MechJeb.cs" />
     <Compile Include="Properties\GlobalSuppressions.cs" />
     <Compile Include="LineMesh.cs" />
     <Compile Include="AssetLoader.cs" />
     <Compile Include="Raycasts.cs" />
+    <Compile Include="Ship\ShipSettings.cs" />
+    <Compile Include="Ship\StatusChecker.cs" />
+    <Compile Include="Ship\Targeting.cs" />
     <Compile Include="VesselBounds.cs" />
     <Compile Include="Weapon.cs" />
     <Compile Include="Overlay.cs" />

@@ -5,33 +5,40 @@ namespace KerbalCombatSystems
 {
     class ModuleCombatRobotics : PartModule
     {
+        public enum Variant
+        {
+            Basic,
+            Ship,
+            Weapon
+        }
+
         [KSPField(isPersistant = true)]
-        public string roboticsType; //Basic, Ship, Weapon
+        public string roboticsType; // Basic, Ship, Weapon
 
-        private ModuleRoboticController KAL;
+        private ModuleRoboticController module;
 
-        public float SequenceLength => KAL.SequenceLength;
+        public float Duration => module.SequenceLength;
+        public string Tag => module.displayName;
 
         public override void OnStart(StartState state)
         {
             if (HighLogic.LoadedSceneIsEditor)
                 GameEvents.onEditorVariantApplied.Add(OnVariantApplied);
 
-            KAL = part.FindModuleImplementing<ModuleRoboticController>();
+            module = part.FindModuleImplementing<ModuleRoboticController>();
         }
 
-        //KCS KALs only have two states
-        public void KALTrigger(bool extend)
+        public void Set(bool extend)
         {
-            KAL.SetLoopMode(SequenceLoopOptions.Once);
-            KAL.ToggleControllerEnabled(true);
-            KAL.SetDirection(SequenceDirectionOptions.Forward);
+            module.SetLoopMode(SequenceLoopOptions.Once);
+            module.SetDirection(SequenceDirectionOptions.Forward);
+            module.ToggleControllerEnabled(true);
 
             // Reverse the direction prior to playing if we're retracting.
             if (!extend)
-                KAL.ToggleDirection();
+                module.ToggleDirection();
 
-            KAL.SequencePlay();
+            module.SequencePlay();
         }
 
         private void OnVariantApplied(Part appliedPart, PartVariant variant)

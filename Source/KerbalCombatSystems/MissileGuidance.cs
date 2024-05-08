@@ -79,10 +79,10 @@ namespace KerbalCombatSystems
                 {
                     controller.side = firerController.side;
 
-                    if (firerController.maxDetectionRange == 0)
-                        firerController.UpdateDetectionRange();
+                    if (firerController.maxLockRange == 0)
+                        firerController.UpdateLockRange();
 
-                    if (FromTo(vessel, target).magnitude > firerController.maxDetectionRange)
+                    if (VesselDistance(vessel, firer) > firerController.maxLockRange)
                     {
                         FlightManager.OnWeaponFailed($"{ShortenName(target.GetName())} is out of lock range.");
 

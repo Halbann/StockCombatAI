@@ -1,15 +1,15 @@
-﻿using UnityEngine;
+using UnityEngine;
 
 namespace KerbalCombatSystems
 {
-    static partial class KCS
+    static partial class Utils
     {
 
         // Originally written by Brett Ryland and josuenos. Copied from https://github.com/BrettRyland/BDArmory
         // This code is distributed under CC-BY-SA 2.0: https://creativecommons.org/licenses/by-sa/2.0/
 
         // Predict the next time to the closest point of approach within the next maxTime seconds for two accelerating rigidbodies.
-        public static float ClosestTimeToCPA(Vector3 relPosition, Vector3 relVelocity, Vector3 relAcceleration, float maxTime)
+        public static float ClosestTimeToCPA(Vector3 relPosition, Vector3 relVelocity, Vector3 relAcceleration = default, float maxTime = 9999)
         {
             float A = Vector3.Dot(relAcceleration, relAcceleration) / 2f;
             float B = Vector3.Dot(relVelocity, relAcceleration) * 3f / 2f;

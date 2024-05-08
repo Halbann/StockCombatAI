@@ -9,12 +9,6 @@ namespace KerbalCombatSystems
     public static partial class Utils
     {
         #region GetProperty
-        public static float AveragedSize(Vessel v)
-        {
-            Vector3 size = v.vesselSize;
-            return (size.x + size.y + size.z) / 3;
-        }
-
         public static float FuelMass(List<Part> parts)
         {
             float totalMass = 0;
@@ -39,25 +33,19 @@ namespace KerbalCombatSystems
             return totalMass;
         }
 
-        public static float GetMaxAcceleration(Vessel v)
+        public static float GetMaxThrust(List<ModuleEngines> engines)
         {
-            return GetMaxThrust(v) / (float)v.totalMass;
-        }
+            float thrust = 0;
 
-        public static float GetMaxThrust(Vessel v)
-        {
-            List<ModuleEngines> engines = v.FindPartModulesImplementing<ModuleEngines>();
-            engines.RemoveAll(e => !e.EngineIgnited || !e.isOperational);
-            float thrust = engines.Sum(e => e.MaxThrustOutputVac(true));
-
-            List<ModuleRCSFX> RCS = v.FindPartModulesImplementing<ModuleRCSFX>();
-            foreach (ModuleRCS thruster in RCS)
+            foreach (ModuleEngines engine in engines)
             {
-                if (thruster.useThrottle)
-                    thrust += thruster.thrusterPower;
+                if (!StatusChecker.Healthy(engine))
+                    continue;
+
+                thrust += engine.MaxThrustOutputVac(true);
             }
 
-            return engines.Sum(e => e.MaxThrustOutputVac(true));
+            return thrust;
         }
 
         public static Vector3 GetFireVector(List<ModuleEngines> engines, List<ModuleRCSFX> RCS = null, Vector3 thrustVector = default)
@@ -160,22 +148,6 @@ namespace KerbalCombatSystems
             return name;
         }
 
-        public static void TryToggle(bool direction, ModuleAnimationGroup animation)
-        {
-            if (direction && animation.isDeployed == false)
-            {
-                //try deploy if not already
-                animation.DeployModule();
-            }
-            else if (!direction && animation.isDeployed == true)
-            {
-                //try retract if not already
-                animation.RetractModule();
-            }
-
-            //do nothing otherwise
-        }
-
         // Create and set a new control point for a command module (commander) pointing along a world space vector (direction).
         // Uses: controlling missiles from the the average engine direction to allow for mistaken/unconventional probe core orientation.
         public static void AlignReference(ModuleCommand commander, Vector3 direction)
@@ -228,10 +200,9 @@ namespace KerbalCombatSystems
             return ship;
         }
 
-        // Search up the part tree to find a separator.
         public static ModuleDecouplerDesignate FindDecoupler(Part origin, string type = "Default")
         {
-            if (type == null) type = "Default";
+            // Search up the part tree to find a separator.
 
             Part currentPart;
             Part nextPart = origin.parent;
@@ -250,7 +221,7 @@ namespace KerbalCombatSystems
                 if (type != "" && module.decouplerDesignation != type) continue;
 
                 //strike any decouplers without any child parts
-                if (!currentPart.FindChildParts<Part>(false).ToList().Any()) continue;
+                if (!currentPart.FindChildParts<Part>(false).Any()) continue;
 
                 return module;
             }
@@ -261,8 +232,6 @@ namespace KerbalCombatSystems
         // Search the children of a specified part for separators.
         public static List<ModuleDecouplerDesignate> FindDecouplerChildren(Part root, string type = "Default")
         {
-            if (type == null) type = "Default";
-
             List<Part> childParts = root.FindChildParts<Part>(true).ToList();
             childParts.Insert(0, root); //check the parent itself
 
@@ -319,37 +288,43 @@ namespace KerbalCombatSystems
                 MoI.z.Equals(0) ? float.MaxValue : torque.z / MoI.z);
         }
 
-        public static bool OnTarget(Vector3 targetAim, Vector3 currentAim, Vector3 relativePosition, float targetSize, float tolerance)
+        public static float GetTolerance(Vector3 relativePosition, float targetSize, float tolerance)
         {
-            // Scale the accuracy requirement (in degrees) based on the distance and size of the target.
+            // Determine the accuracy requirement (in degrees) based on the distance and size of the target.
             Vector3 targetRadius = Vector3.ProjectOnPlane(Vector3.up, relativePosition.normalized).normalized * (targetSize / 2) * tolerance;
             float aimTolerance = Vector3.Angle(relativePosition, relativePosition + targetRadius);
 
-            return Vector3.Angle(targetAim.normalized, currentAim) < aimTolerance;
+            return aimTolerance;
         }
 
-        public static float AngularVelocity(Vessel v, Vessel t)
+        public static bool OnTarget(Vector3 targetAim, Vector3 currentAim, Vector3 relativePosition, float targetSize, float tolerance)
         {
-            Vector3 tv1 = FromTo(v, t);
-            Vector3 tv2 = tv1 + RelVel(v, t);
-            return Vector3.Angle(tv1.normalized, tv2.normalized);
+            float requirement = GetTolerance(relativePosition, targetSize, tolerance);
+            float current = Vector3.Angle(targetAim.normalized, currentAim);
+
+            return current < requirement;
         }
 
-        // Not in use.
+        public static float AngularVelocity(Vessel v, Vessel t, float window) =>
+            Vector3.Angle(v.Pos(t), v.Pos(t) + v.Vel(t) * window) / window;
 
-        /*public static float Integrate(float d, float a, float i = 0.1f, float v = 0)
-        {
-            float t = 0;
+        /// <summary>
+        /// Get the relative position of a target vessel in the reference frame of the vessel.
+        /// </summary>
+        public static Vector3 Pos(this Vessel vessel, Vessel target) =>
+            target.Pos() - vessel.Pos();
 
-            while (d > 0)
-            {
-                v += a * i;
-                d -= v * i;
-                t += i;
-            }
+        /// <summary>
+        /// Get the relative velocity of a target vessel in the reference frame of the vessel.
+        /// </summary>
+        public static Vector3 Vel(this Vessel vessel, Vessel target) =>
+            target.Vel() - vessel.Vel();
 
-            return t;
-        }*/
+        public static Vector3 Pos(this Vessel vessel) =>
+            vessel.CoM;
+
+        public static Vector3 Vel(this Vessel vessel) =>
+            vessel.obt_velocity;
 
         public static float SolveTime(float distance, float acceleration, float vel = 0)
         {
@@ -362,21 +337,43 @@ namespace KerbalCombatSystems
             return x;
         }
 
-        public static float SolveDistance(float time, float acceleration, float vel = 0)
+        public static Vector3 PredictPosition(Vector3 position, Vector3 velocity, Vector3 acceleration, float time)
         {
-            return (vel * time) + 0.5f * acceleration * Mathf.Pow(time, 2);
+            return position + Displacement(velocity, acceleration, time);
         }
 
-        public static Vector3 TargetLead(Vessel target, Part firer, float travelVelocity)
+        public static Vector3 PredictPosition(Vector3 position, Vector3 velocity, float time)
         {
-            Vector3 relPos = target.CoM - firer.transform.position;
-            Vector3 relVel = target.GetObtVelocity() - firer.vessel.GetObtVelocity();
-            Vector3 relAcc = target.acceleration - firer.vessel.acceleration;
+            return position + velocity * time;
+        }
 
-            float timeToHit = ClosestTimeToCPA(relPos, relVel + (relPos.normalized * travelVelocity * -1), relAcc, 60);
-            Vector3 leadPosition = PredictPosition(relPos, relVel, relAcc, timeToHit);
+        public static Vector3 Displacement(Vector3 velocity, Vector3 acceleration, float time)
+        {
+            return velocity * time + 0.5f * acceleration * Mathf.Pow(time, 2);
+        }
 
-            return leadPosition;
+        public static Vector3 Displacement(Vector3 velocity, Vector3 acceleration, Vector3 jerk, float time)
+        {
+            return velocity * time
+                + 0.5f * acceleration * Mathf.Pow(time, 2)
+                + (1f / 6f) * jerk * Mathf.Pow(time, 3);
+        }
+
+        public static float Displacement(float speed, float acceleration, float jerk, float time)
+        {
+            return Displacement(speed, acceleration, time)
+                + (1f / 6f) * jerk * Mathf.Pow(time, 3);
+        }
+
+        public static float Displacement(float speed, float acceleration, float time)
+        {
+            return speed * time
+                + 0.5f * acceleration * Mathf.Pow(time, 2);
+        }
+
+        public static float Displacement(float speed, float acceleration)
+        {
+            return Mathf.Pow(speed, 2) / (2 * acceleration);
         }
 
         public static float VesselDistance(Vessel v1, Vessel v2)
@@ -395,6 +392,11 @@ namespace KerbalCombatSystems
             return (a - b + 540) % 360 - 180;
         }
 
+        public static Vector3 ClosestApproach(Vector3 pos, Vector3 vel)
+        {
+            return pos + vel * ClosestTimeToCPA(pos, vel);
+        }
+
         #endregion
 
         #region Maths
@@ -402,6 +404,28 @@ namespace KerbalCombatSystems
         public static bool Approximately(float a, float b, float margin)
         {
             return Mathf.Abs(a - b) < a * margin;
+        }
+
+        public static float Map(float value, float a, float b, float min, float max)
+        {
+            float position = Mathf.InverseLerp(a, b, value);
+            return Mathf.Lerp(min, max, position);
+        }
+
+        #endregion
+
+        #region Projectile Leading
+
+        public static Vector3 TargetLead(Vessel target, Part firer, float travelVelocity)
+        {
+            Vector3 relPos = target.CoM - firer.transform.position;
+            Vector3 relVel = target.GetObtVelocity() - firer.vessel.GetObtVelocity();
+            Vector3 relAcc = target.acceleration - firer.vessel.acceleration;
+
+            float timeToHit = ClosestTimeToCPA(relPos, relVel + (relPos.normalized * travelVelocity * -1), relAcc, 60);
+            Vector3 leadPosition = PredictPosition(relPos, relVel, relAcc, timeToHit);
+
+            return leadPosition;
         }
 
         #endregion
@@ -416,24 +440,5 @@ namespace KerbalCombatSystems
         B
     }
 
-    /*public static class VesselExtensions
-    {
-        public static Vector3 Velocity(this Vessel v)
-        {
-            return v.rootPart.Rigidbody.velocity;
-        }
-    }*/
-
-    /*public class KCSShip
-    {
-        public Vessel v;
-        public float initialMass;
-
-        public KCSShip(Vessel ship, float mass)
-        {
-            v = ship;
-            initialMass = mass;
-        }
-    }*/
     #endregion
 }

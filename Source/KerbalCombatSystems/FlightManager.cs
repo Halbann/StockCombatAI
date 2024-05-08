@@ -341,7 +341,7 @@ namespace KerbalCombatSystems
 
             string colour = "#808080";
             if (c != null && c.alive)
-                colour = c.SideColour();
+                colour = c.Colour;
 
             text = text.Replace("%1", string.Format("<color={1}>{0}</color>", ShortenName(v1.GetDisplayName()), colour));
 
@@ -357,7 +357,7 @@ namespace KerbalCombatSystems
 
                     colour = "#808080";
                     if (c != null && c.alive)
-                        colour = c.SideColour();
+                        colour = c.Colour;
 
                     text = text.Replace("%2", string.Format("<color={1}>{0}</color>", ShortenName(v2.GetDisplayName()), colour));
                 }
@@ -544,7 +544,7 @@ namespace KerbalCombatSystems
                     if (GUILayout.Button(AI))
                         controller.ToggleAI();
 
-                    string sideText = $"<color={controller.SideColour()}>{controller.side}</color>";
+                    string sideText = $"<color={controller.Colour}>{controller.side}</color>";
                     if (GUILayout.Button(sideText))
                     {
                         controller.ToggleSide();
@@ -700,9 +700,9 @@ namespace KerbalCombatSystems
                     GUILayout.Label($"- Target Range: {targetRange:N0} m");
                     GUILayout.Label($"- Distance to CPA: {c.distanceToIntercept:N1} m");
                     GUILayout.Label($"- Stopping Distance: {c.interceptStoppingDistance:N1} m");
-                    GUILayout.Label($"- Stop Time: {Time.fixedTime + c.interceptStopTime:N1} s (T-{c.interceptStopTime:N1} s)");
+                    //GUILayout.Label($"- Stop Time: {Time.fixedTime + c.interceptStopTime:N1} s (T-{c.interceptStopTime:N1} s)");
                     GUILayout.Label($"- Time: {Time.fixedTime:N1} s");
-                    GUILayout.Label($"- Flip Iterations: {c.interceptFlipIterations} s");
+                    //GUILayout.Label($"- Flip Iterations: {c.interceptFlipIterations} s");
                 }
 
                 GUILayout.Label($"- Incoming: {c.incomingWeapons?.Count ?? 0}");

@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Collections;
@@ -40,7 +40,8 @@ namespace KerbalCombatSystems
         public bool launched = false;
 
         public Side side;
-        public float mass = -1;
+        public float mass = -1f;
+        public float dryMass = -1f;
         public int childDecouplers;
         public LaunchType launchType = LaunchType.Radial;
         public bool missed = false;
@@ -213,7 +214,7 @@ namespace KerbalCombatSystems
             {
                 if (massTypes.Contains(weaponType))
                 {
-                    CalculateMass();
+                    UpdateMass();
                     CountChildDecouplers();
                 }
             }
@@ -382,27 +383,28 @@ namespace KerbalCombatSystems
         // todo: These functions are only relevant to certain types.
         // Mostly missiles.
 
-        private float CalculateMass(Part decoupler = null, bool useLast = true)
+        private void UpdateMass(Part decoupler = null)
         {
-            if (mass > 0 && useLast) return mass;
-
             if (decoupler == null)
             {
-                var module = FindDecoupler(part);
-                if (module == null) return 1.0f;
-                decoupler = module.part;
+                decoupler = FindDecoupler(part)?.part;
+                if (decoupler == null)
+                    return;
             }
 
-            float totalMass = 0;
+            mass = 0;
+            dryMass = 0;
             var parts = decoupler.FindChildParts<Part>(true);
 
             foreach (Part part in parts)
             {
-                if (part.partInfo.category == PartCategories.Coupling) break;
-                totalMass = totalMass + part.mass + part.GetResourceMass();
-            }
+                // todo: not compatible with compound missiles.
+                if (part.partInfo.category == PartCategories.Coupling)
+                    break;
 
-            return mass = totalMass;
+                mass += part.mass + part.GetResourceMass();
+                dryMass += part.mass;
+            }
         }
 
         private void CountChildDecouplers()
@@ -437,7 +439,10 @@ namespace KerbalCombatSystems
             }
 
             float thrust = engines.Sum(e => e.MaxThrustOutputVac(true));
-            float mass = CalculateMass(decoupler, false);
+
+            // todo: investigate if this happens. I don't think it should?
+            if (mass == 0)
+                throw new Exception($"[KCS]: Trying to calculate acceleration on {vessel.vesselName} {weaponCode} but mass is {mass}.");
 
             return thrust / mass;
         }

@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 
@@ -281,7 +281,7 @@ namespace KerbalCombatSystems
                 centre.up = MainCamera.getReferenceFrame() * Vector3.up;
         }
 
-        private void Update()
+        protected void Update()
         {
             if (!UpdateActiveVessel())
                 return;
@@ -363,10 +363,10 @@ namespace KerbalCombatSystems
                         || !ship.controllerRunning
                         || !ship.alive
                         || ship.state == "Withdrawing"
-                        || ship.target == null)
+                        || ship.Target == null)
                         continue;
 
-                    dashedLines.AddRange(DashedLine(ship.vessel.CoM, ship.target.CoM, dashLength, dashSpacing));
+                    dashedLines.AddRange(DashedLine(ship.vessel.CoM, ship.Target.CoM, dashLength, dashSpacing));
                 }
 
                 if (dashedLines.Count > 0 || dashedLinesMesh.Positions.Count > 0)
@@ -378,10 +378,10 @@ namespace KerbalCombatSystems
 
                 if (!ReferenceEquals(activeController, null))
                 {
-                    if (activeController.maxDetectionRange > 0 &&
-                        detectionRange != activeController.maxDetectionRange)
+                    if (activeController.maxLockRange > 0 &&
+                        detectionRange != activeController.maxLockRange)
                     {
-                        detectionRange = activeController.maxDetectionRange;
+                        detectionRange = activeController.maxLockRange;
 
                         detectionRangeLines.Clear();
                         detectionRangeLines.AddRange(DashedCircle(2, 1, AvoidRangeOverlap(detectionRange)));
@@ -736,9 +736,9 @@ namespace KerbalCombatSystems
             var shipsTargeting = ships.FindAll(ship => ship.controllerRunning
                                                         && ship.state != "Withdrawing"
                                                         && ship.alive
-                                                        && ship.target != null);
+                                                        && ship.Target != null);
 
-            var shipTargets = shipsTargeting.Select(ship => ship.target).ToList();
+            var shipTargets = shipsTargeting.Select(ship => ship.Target).ToList();
 
             foreach (var ship in ships)
             {
@@ -747,7 +747,7 @@ namespace KerbalCombatSystems
                 currentIconColour = Color.grey;
 
                 if (ship.alive)
-                    ColorUtility.TryParseHtmlString(ship.SideColour(), out currentIconColour);
+                    ColorUtility.TryParseHtmlString(ship.Colour, out currentIconColour);
 
                 // Draw a diamond icon with the ship's team colour.
                 // TODO: use different regular polygons for each team for colour-blindness.
@@ -757,14 +757,14 @@ namespace KerbalCombatSystems
                 // Increase the size of the ring to make concentric circles with other ships that have the same target.
                 if (shipsTargeting.Contains(ship))
                 {
-                    shipTargets.Remove(ship.target);
-                    int shipTargetCount = shipTargets.FindAll(t => t.persistentId == ship.target.persistentId).Count;
+                    shipTargets.Remove(ship.Target);
+                    int shipTargetCount = shipTargets.FindAll(t => t.persistentId == ship.Target.persistentId).Count;
                     shipTargetCount = Mathf.Min(shipTargetCount, maxTargetCircles - 1);
 
                     if (ship.vessel.persistentId == FlightGlobals.ActiveVessel.persistentId)
                         currentIconColour = activeTargetColour;
 
-                    DrawIcon(ship.target.CoM, targetCircles[shipTargetCount], Vector2.one * targetCircles[shipTargetCount].width, currentIconColour);
+                    DrawIcon(ship.Target.CoM, targetCircles[shipTargetCount], Vector2.one * targetCircles[shipTargetCount].width, currentIconColour);
                 }
             }
         }

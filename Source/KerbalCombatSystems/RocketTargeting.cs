@@ -1,9 +1,10 @@
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
-using UnityEngine;
-using static KerbalCombatSystems.Utils;
 
+using UnityEngine;
+
+using static KerbalCombatSystems.Utils;
 
 namespace KerbalCombatSystems
 {
@@ -128,6 +129,16 @@ namespace KerbalCombatSystems
             return leadVector.normalized;
         }
 
+        internal static float GetConsumptionRate(List<ModuleEngines> engines)
+        {
+            // Measure total fuel consumption in tons per second.
+            float consumptionRate = 0;
+            foreach (var e in engines)
+                consumptionRate += Mathf.Lerp(e.minFuelFlow, e.maxFuelFlow, 1 * 0.01f * e.thrustPercentage) * e.flowMultiplier; // throttle = 1
+
+            return consumptionRate;
+        }
+
         // Runs a simulation to find out how long it will take for a rocket to reach its target.
         public float Calculate()
         {
@@ -135,8 +146,6 @@ namespace KerbalCombatSystems
 
             // Find out which parts of the vessel make up the rocket.
             var rocketParts = decoupler.part.FindChildParts<Part>(true).ToList();
-            float consumptionRate = 0;
-
             if (rocketParts.Count < 1)
                 return -1;
 
@@ -147,18 +156,13 @@ namespace KerbalCombatSystems
             foreach (var p in rocketParts)
             {
                 eng = p.FindModuleImplementing<ModuleEngines>();
-                if (eng == null)
-                    continue;
-
-                engines.Add(eng);
-
-                // Measure total fuel consumption in tons per second.
-                consumptionRate += Mathf.Lerp(eng.minFuelFlow, eng.maxFuelFlow, 1 * 0.01f * eng.thrustPercentage) * eng.flowMultiplier; // throttle = 1
+                if (eng != null) engines.Add(eng);
             }
 
             if (engines.Count < 1)
                 return -1;
 
+            float consumptionRate = GetConsumptionRate(engines);
             Vector3 thrustVector = GetFireVector(engines) * -1;
             aimVector = thrustVector.normalized;
 

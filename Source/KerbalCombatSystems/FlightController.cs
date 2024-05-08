@@ -92,6 +92,8 @@ namespace KerbalCombatSystems
             //if (throttle == 0 && throttleLerped == 0) return;
             //if (v == null) return;
 
+            throttle = Mathf.Clamp(throttle, 0, 1);
+
             facingDesiredRotation = error < alignmentToleranceforBurn;
             throttleActual = facingDesiredRotation ? throttle : 0;
 
@@ -136,7 +138,8 @@ namespace KerbalCombatSystems
         void UpdateSAS(Vessel v)
         {
             if (attitude == Vector3.zero || stabilityOn) return;
-            //if (v == null) return;
+
+            attitude = attitude.normalized;
 
             // SAS must be turned off. Don't know why.
             if (v.ActionGroups[KSPActionGroup.SAS])
@@ -157,6 +160,8 @@ namespace KerbalCombatSystems
                 attitudeLerped = Vector3.Lerp(attitudeLerped, attitude, lerpRate * Time.deltaTime);
             }
 
+            // This doesn't work for a few moments after flight begins.
+            // I wonder if a custom PID would have the same problem.
             ap.SAS.SetTargetOrientation(throttleLerped > 0 && lerpAttitude ? attitudeLerped : attitude, false);
 
             // Update debug lines.
