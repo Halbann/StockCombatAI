@@ -88,7 +88,7 @@ namespace KerbalCombatSystems
 
         public void SetWeaponCode(string code)
         {
-            weaponCode = code.ToUpper();
+            weaponCode = code;
             UpdateWeaponCodeUI();
         }
 
@@ -195,7 +195,6 @@ namespace KerbalCombatSystems
 
         public override void OnStartFinished(StartState state)
         {
-            weaponCode = weaponCode.ToUpper();
             UpdateWeaponCodeUI();
 
             if (!types.Contains(weaponType))
@@ -287,7 +286,7 @@ namespace KerbalCombatSystems
             int count = 0;
             foreach (ModuleWeaponController module in modules)
             {
-                if (module.weaponCode == weaponCode && module != this)
+                if (module.weaponCode.ToLower() == weaponCode.ToLower() && module != this)
                 {
                     foreach (BaseField field in module.Fields)
                     {
@@ -452,7 +451,7 @@ namespace KerbalCombatSystems
                 return false;
 
             if (weaponCode != "")
-                return weaponCode == otherWeapon.weaponCode;
+                return weaponCode.ToLower() == otherWeapon.weaponCode.ToLower();
             else
                 return Approximately(dryMass, otherWeapon.dryMass, 0.05f);
         }

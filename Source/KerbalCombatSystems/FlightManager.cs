@@ -25,7 +25,7 @@ namespace KerbalCombatSystems
         private static int windowWidth = 400;
         private static int windowHeight = 700;
         private static int shipButtonWidth = 310;
-        private static int shipButtonHeight = 57;
+        private static int shipButtonHeight = 71;
         private static int settingsScrollHeight = 340;
         private static Rect windowRect = new Rect((Screen.width * 0.85f) - (windowWidth / 2), (Screen.height / 2) - (windowHeight / 2), 0, 0);
         private GUIStyle boxStyle;
@@ -296,6 +296,13 @@ namespace KerbalCombatSystems
             }
         }
 
+        public static void UpdateTargeting()
+        {
+            foreach (var controller in ships)
+                if (controller?.controllerRunning ?? false)
+                    controller.targeting.Update();
+        }
+
         public void FireSelectedWeapon()
         {
             if (selectedWeapon == null)
@@ -487,7 +494,7 @@ namespace KerbalCombatSystems
         private void ShipsGUI()
         {
             GUILayout.BeginVertical(boxStyle);
-            scrollViewHeight = (int)Mathf.Max(Mathf.Min(Screen.height * 0.5f, shipButtonHeight * ships.Count), 5 * shipButtonHeight);
+            scrollViewHeight = (int)Mathf.Max(Mathf.Min(Screen.height * 0.5f, shipButtonHeight * ships.Count), 4 * shipButtonHeight);
             scrollPosition = GUILayout.BeginScrollView(scrollPosition, false, false, GUILayout.Height(scrollViewHeight));
             
             if (ships.Count > 0)
@@ -563,13 +570,12 @@ namespace KerbalCombatSystems
             scrollViewHeight = Mathf.Max(Mathf.Min(15 * 30, 30 * weaponList.Count), 5 * 30);
             scrollPosition = GUILayout.BeginScrollView(
                 scrollPosition, false, false, GUILayout.Height(scrollViewHeight));
-            string weaponName, code;
+            string weaponName;
             bool selected;
 
             foreach (var w in weaponList)
             {
-                code = w.weaponCode == "" ? w.weaponType : w.weaponCode;
-                weaponName = code;
+                weaponName = w.weaponCode == "" ? w.weaponType : w.weaponCode;
                 weaponName += $"\n<color=#808080ff>";
                 weaponName += $"Type: {w.weaponType}";
 
