@@ -1,7 +1,9 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
+
 using UnityEngine;
+
 using static KerbalCombatSystems.Utils;
 
 namespace KerbalCombatSystems
@@ -46,12 +48,13 @@ namespace KerbalCombatSystems
         private List<ModuleShipController> ships = new List<ModuleShipController>();
         private ModuleShipController activeController;
         private static Transform centre;
-        internal static FlightCamera mainCamera;
         private static float closeCamDistance = 50;
         private static float farCamDistance = 2000;
         private Vessel activeVessel;
         private float detectionRange;
         private float weaponRange;
+        internal static FlightCamera MainCamera =>
+            FlightCamera.fetch;
 
         private static bool runOnce = true;
         internal static bool hideOverlay = false;
@@ -256,32 +259,36 @@ namespace KerbalCombatSystems
 
         #region Update
 
-        private void FixedUpdate()
+        private bool UpdateActiveVessel()
         {
-            if (FlightGlobals.ActiveVessel == null) return;
+            if (FlightGlobals.ActiveVessel == null)
+                return false;
+
             if (activeVessel != FlightGlobals.ActiveVessel)
             {
                 activeVessel = FlightGlobals.ActiveVessel;
                 activeController = FindController(activeVessel);
             }
 
-            if (mainCamera == null)
-                mainCamera = FlightCamera.fetch;
+            return true;
+        }
 
-            //if (hideOverlay || activeController == null)
-            //    return;
-
-            if (mainCamera.mode == FlightCamera.Modes.LOCKED)
+        private void UpdateReferenceFrame()
+        {
+            if (MainCamera.mode == FlightCamera.Modes.LOCKED)
                 centre.up = FlightGlobals.ActiveVessel.ReferenceTransform.forward;
             else
-                centre.up = mainCamera.getReferenceFrame() * Vector3.up;
+                centre.up = MainCamera.getReferenceFrame() * Vector3.up;
         }
 
         private void Update()
         {
+            if (!UpdateActiveVessel())
+                return;
+
             if (activeController == null
                 || MapView.MapIsEnabled
-                || mainCamera == null
+                || MainCamera == null
                 || FlightGlobals.ActiveVessel == null
                 || !activeController.controllerRunning)
             {
@@ -302,10 +309,11 @@ namespace KerbalCombatSystems
                 }
             }
 
+            UpdateReferenceFrame();
+            centre.position = activeVessel.CoM;
+
             if (Input.GetKeyDown(quickToggleZoomKey))
                 DistanceToggle();
-
-            centre.position = activeVessel.CoM;
 
             if (hideOverlay)
                 return;
@@ -314,7 +322,7 @@ namespace KerbalCombatSystems
 
             // Show the overlay lines only when the camera is zoomed out.
 
-            float cameraDistance = Vector3.Distance(mainCamera.transform.position, centre.position);
+            float cameraDistance = Vector3.Distance(MainCamera.transform.position, centre.position);
             linesOpacity = Mathf.MoveTowards(linesOpacity, cameraDistance > 650 ? 1 : 0, 6 * Time.unscaledDeltaTime);
 
             if (linesOpacity != linesOpacityLast)
@@ -489,15 +497,15 @@ namespace KerbalCombatSystems
         // Quickly switch to the camera range needed for the overlay to display.
         internal static void DistanceToggle()
         {
-            if (mainCamera.Distance > 650)
+            if (MainCamera.Distance > 650)
             {
-                farCamDistance = Mathf.Max(mainCamera.Distance, 2000);
-                mainCamera.SetDistance(closeCamDistance);
+                farCamDistance = Mathf.Max(MainCamera.Distance, 2000);
+                MainCamera.SetDistance(closeCamDistance);
             }
             else
             {
-                closeCamDistance = Mathf.Min(mainCamera.Distance, 100);
-                mainCamera.SetDistance(farCamDistance);
+                closeCamDistance = Mathf.Min(MainCamera.Distance, 100);
+                MainCamera.SetDistance(farCamDistance);
             }
         }
 
@@ -1031,8 +1039,8 @@ namespace KerbalCombatSystems
             transform.forward = centre.up;
 
             // Maintain a fixed screen size.
-            if (Overlay.mainCamera != null)
-                transform.localScale = Vector3.one * Overlay.markerScale * (Vector3.Distance(transform.position, Overlay.mainCamera.transform.position) / 1000);
+            if (Overlay.MainCamera != null)
+                transform.localScale = Vector3.one * Overlay.markerScale * (Vector3.Distance(transform.position, Overlay.MainCamera.transform.position) / 1000);
         }
 
         internal void DeleteMarker()
