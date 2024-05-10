@@ -4,10 +4,10 @@ using System.IO;
 
 using UnityEngine;
 
-namespace KerbalCombatSystems
+namespace KerbalCombatSystems.Data
 {
     [KSPAddon(KSPAddon.Startup.Instantly, true)]
-    public class Assets : MonoBehaviour
+    public class AssetBundles : MonoBehaviour
     {
         private static bool loaded = false;
 
@@ -86,7 +86,7 @@ namespace KerbalCombatSystems
             }
         }
 
-        public static T GetAsset<T>(string name) where T : Object
+        public static T Get<T>(string name) where T : Object
         {
             if (assets.TryGetValue(name, out Object obj) && obj is T instance)
             {

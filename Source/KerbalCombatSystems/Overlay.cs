@@ -1,14 +1,16 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 
 using UnityEngine;
 
 using static KerbalCombatSystems.Utils;
+using KerbalCombatSystems.Data;
 
 namespace KerbalCombatSystems
 {
     [KSPAddon(KSPAddon.Startup.Flight, false)]
+    [Settings(category = "Overlay", displayName = "Overlay", visible = true)]
     class Overlay : MonoBehaviour
     {
         #region Fields
@@ -218,7 +220,7 @@ namespace KerbalCombatSystems
         // Create all necessary materials here. Only gets called once.
         private void CreateMaterials()
         {
-            Shader lineShader = Assets.GetAsset<Shader>("GoodLines/Line");
+            Shader lineShader = AssetBundles.Get<Shader>("GoodLines/Line");
 
             transparentLineMat = new Material(lineShader);
             transparentLineMat.SetColor("_Color", new Color(1, 1, 1, rangeRingsOpacity));
@@ -441,7 +443,7 @@ namespace KerbalCombatSystems
             {
                 if (ship == null) continue;
 
-                var markerObject = Instantiate(Assets.GetAsset<GameObject>("Marker"));
+                var markerObject = Instantiate(AssetBundles.Get<GameObject>("Marker"));
                 markerObject.layer = 8;
 
                 // Need to manually correct the shader as it comes out of the prefab as null.

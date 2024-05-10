@@ -6,6 +6,7 @@ using UnityEngine;
 using KSP.UI.Screens;
 
 using static KerbalCombatSystems.Utils;
+using KerbalCombatSystems.Data;
 
 namespace KerbalCombatSystems
 {
@@ -440,7 +441,13 @@ namespace KerbalCombatSystems
             foreach (var m in modes)
             {
                 if (GUILayout.Toggle(mode == m, m, buttonStyle))
+                {
+                    // Save settings when switching off settings page.
+                    if (mode != m && mode == "Settings")
+                        GlobalSettings.Save();
+
                     mode = m;
+                }
             }
 
             GUILayout.EndHorizontal();
@@ -769,6 +776,7 @@ namespace KerbalCombatSystems
         {
             InputLockManager.RemoveControlLock("KCSGUI");
             guiEnabled = false;
+            GlobalSettings.Save();
         }
 
         private void OnShowUI() =>

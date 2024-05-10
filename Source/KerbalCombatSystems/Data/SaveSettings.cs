@@ -1,7 +1,10 @@
-﻿namespace KerbalCombatSystems
+﻿namespace KerbalCombatSystems.Data
 {
     public class KCSSaveSettings : GameParameters.CustomParameterNode
     {
+        // This class needs to have a redundant name because the name
+        // is used unqualifed in plain text in the save file.
+
         // Instance.
 
         private static KCSSaveSettings instance;

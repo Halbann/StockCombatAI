@@ -7,6 +7,7 @@ using UnityEngine;
 
 using static KerbalCombatSystems.Utils;
 using KerbalCombatSystems.UI;
+using KerbalCombatSystems.Data;
 
 namespace KerbalCombatSystems
 {
