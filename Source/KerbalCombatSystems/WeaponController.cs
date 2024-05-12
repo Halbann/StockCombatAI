@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Collections;
@@ -196,6 +196,7 @@ namespace KerbalCombatSystems
 
         public override void OnStartFinished(StartState state)
         {
+            UpgradeSettings();
             UpdateWeaponCodeUI();
 
             if (!types.Contains(weaponType))
@@ -326,12 +327,6 @@ namespace KerbalCombatSystems
                     break;
                 case "Firework":
                     moduleName = "ModuleFirework";
-                    break;
-                case "MassCannon":
-                    moduleName = "ModuleMassCannon";
-                    break;
-                case "Bomb":
-                    moduleName = "ModuleBomb";
                     break;
                 default:
                     Debug.LogError($"Couldn't find a module for {weaponType}.");

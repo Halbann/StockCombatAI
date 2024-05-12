@@ -1,6 +1,6 @@
-using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Linq;
+using System.Reflection;
 
 using UnityEngine;
 
@@ -428,6 +428,123 @@ namespace KerbalCombatSystems
             return leadPosition;
         }
 
+        public struct Lead
+        {
+            public Vector3 direction;
+            public float time;
+        }
+
+        public static Lead TargetLead(Vessel target, Vessel firer, float travelVelocity, Transform muzzle, Vector3 perturbationLast)
+        {
+            Vector3 bulletEffectiveVelocity, bulletRelativeVelocity, targetPredictedPosition;
+            Vector3 bulletRelativeAcceleration, bulletDropOffset;
+
+            Transform fireTransform = muzzle;
+            Vector3 firePosition = fireTransform.position; // Bullets are initially placed up to 1 frame ahead (iTime).
+            Vector3 firerVelocity = firer.rb_velocity;
+            Vector3 targetPosition = target.CoM;
+            Vector3 targetVelocity = target.rb_velocity;
+
+            float maxTargetingRange = 2500f;
+            Vector3 finalTarget;
+            Vector3 firingDirection = fireTransform.up;
+
+            Vector3 bulletRelativePosition = targetPosition - fireTransform.position;
+            float timeToCPA = Mathf.Sqrt(bulletRelativePosition.sqrMagnitude / (targetVelocity - (firerVelocity + travelVelocity * firingDirection)).sqrMagnitude);
+
+            Vector3d avgTargetAcc = (GetOrbitalAcceleration(target) + GetOrbitalAcceleration(target, timeToCPA)) / 2;
+            Vector3 targetJerk = (target.perturbation - perturbationLast) / Time.fixedDeltaTime;
+            Vector3 targetAcceleration;
+
+            Vessel active = FlightGlobals.ActiveVessel;
+            Vector3 bulletAcceleration = (GetOrbitalAcceleration(active) + GetOrbitalAcceleration(active, timeToCPA)) / 2;
+
+            int count = 0;
+            do
+            {
+                targetAcceleration = avgTargetAcc + target.perturbation;
+
+                bulletEffectiveVelocity = firerVelocity + travelVelocity * firingDirection;
+                bulletRelativePosition = targetPosition - firePosition;
+                bulletRelativeVelocity = targetVelocity - bulletEffectiveVelocity;
+                bulletRelativeAcceleration = targetAcceleration - bulletAcceleration;
+
+                timeToCPA = ClosestTimeToCPAJerk(bulletRelativePosition, bulletRelativeVelocity, bulletRelativeAcceleration, targetJerk, maxTargetingRange / bulletEffectiveVelocity.magnitude);
+
+                targetPredictedPosition = PredictPosition(targetPosition, targetVelocity, targetAcceleration, timeToCPA);
+                targetPredictedPosition += 1.0f / 6.0f * targetJerk * timeToCPA * timeToCPA * timeToCPA;
+
+                bulletDropOffset = -0.5f * bulletAcceleration * timeToCPA * timeToCPA;
+                finalTarget = targetPredictedPosition + bulletDropOffset - firerVelocity * timeToCPA;
+
+                firingDirection = (finalTarget - firePosition).normalized;
+            } while (++count < 10);
+
+
+            // The cubic solver is innaccurate when the relative acceleration changes.
+            // We can use the previous result to inform the initial terms of an integration.
+            // I can't remember what situation this was for, but it's not used in the current implementation.
+
+            /*if (targetJerk.magnitude > 1)
+            {
+                float simulatedTimeToCPA = TimeToCPAIntegrate(
+                    bulletRelativePosition,
+                    bulletRelativeVelocity,
+                    bulletRelativeAcceleration,
+                    targetJerk,
+                    maxTargetingRange / bulletEffectiveVelocity.magnitude,
+                    Time.fixedDeltaTime);
+
+                timeToCPA = simulatedTimeToCPA;
+
+                targetPredictedPosition = PredictPosition(targetPosition, targetVelocity, targetAcceleration, timeToCPA);
+                targetPredictedPosition += 1.0f / 6.0f * targetJerk * timeToCPA * timeToCPA * timeToCPA;
+
+                bulletDropOffset = -0.5f * bulletAcceleration * timeToCPA * timeToCPA;
+                finalTarget = targetPredictedPosition + bulletDropOffset - firerVelocity * timeToCPA;
+            }*/
+
+            return new Lead { direction = finalTarget - fireTransform.position, time = timeToCPA };
+        }
+
+        public static Vector3 GetOrbitalAcceleration(Vessel vessel, float timeOffset = 0)
+        {
+            if (vessel == null)
+                return Vector3d.zero;
+
+            Vector3d acc = Vector3.zero;
+            CelestialBody mainBody = vessel.mainBody;
+
+            double UToffset = Planetarium.GetUniversalTime() + timeOffset;
+            Vector3d vesselCoMOffset = vessel.transform.InverseTransformPoint(vessel.CoM);
+
+            Vector3d position = vessel.orbit.getPositionAtUT(UToffset) + vesselCoMOffset;
+            Vector3d velocity = vessel.orbit.getOrbitalVelocityAtUT(UToffset);
+            velocity = velocity.xzy - mainBody.getRFrmVel(position);
+
+            acc += FlightGlobals.getGeeForceAtPosition(position, mainBody);
+            acc += FlightGlobals.getCoriolisAcc(velocity, mainBody);
+            acc += FlightGlobals.getCentrifugalAcc(position, mainBody);
+
+            return acc * PhysicsGlobals.GraviticForceMultiplier;
+        }
+
+        #endregion
+
+        #region Reflection
+
+        public static void SetField(this object instance, string name, object value)
+        {
+            var toolModeField = instance.GetType().GetField(name, BindingFlags.NonPublic | BindingFlags.Instance);
+            toolModeField.SetValue(instance, value);
+        }
+
+        public static T GetField<T>(this object instance, string name)
+        {
+            var toolModeField = instance.GetType().GetField(name, BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.Public);
+            return (T)toolModeField.GetValue(instance);
+        }
+
         #endregion
     }
 
@@ -441,4 +558,68 @@ namespace KerbalCombatSystems
     }
 
     #endregion
+}
+
+namespace KerbalCombatSystems
+{
+    public class IntegrationLayer
+    {
+        public float gain = 1f;
+        public float gainTuned = 0f;
+        public float saturation = 45f;
+
+        public float integration = 0f;
+        public float error = 0f;
+        public float errorLast = 0f;
+        public float errorRate = 0f;
+
+        public static bool useDerivative = false;
+
+        public IntegrationLayer()
+        {
+        }
+
+        public IntegrationLayer(float gain, float saturation)
+        {
+            this.gain = gain;
+            this.saturation = saturation;
+        }
+
+        public float Update(float error, float deltaTime)
+        {
+            //float saturationTuned = error * 1f;
+            //float gainTuned = 22.5f / saturationTuned;
+            //float gainTuned = (1 - Mathf.Clamp01(error / 22.5f)) * 2f;
+            //float saturationTuned = Mathf.Clamp(22.5f / gainTuned, 0, 22.5f);
+
+            //float gainTuned = gain;
+            //float saturationTuned = 22.5f / gainTuned;
+
+            errorRate = Mathf.Abs(error - errorLast) / deltaTime;
+            errorLast = error;
+
+            if (Mathf.Abs(error) > saturation * 2)
+                integration = 0f;
+
+            if (Mathf.Abs(error) > saturation)
+                return integration * gainTuned;
+
+            //float saturationTuned = saturation;
+
+            // Scale integral gain such that is inversely proportional to the error rate of change.
+            //gainTuned = gain * (1 - Mathf.Clamp01(Mathf.Abs(errorRate) / 2));
+
+            if (useDerivative)
+                gainTuned = Mathf.Clamp(gain * (1 - Mathf.Abs(errorRate) / saturation), 0.1f, gain);
+            else
+                gainTuned = gain;
+
+            //gainTuned = gain;
+            float saturationTuned = 22.5f / gainTuned;
+            //float saturationTuned = 5;
+
+            integration = Mathf.Clamp(integration + error * deltaTime, -saturationTuned, saturationTuned);
+            return integration * gainTuned;
+        }
+    }
 }
