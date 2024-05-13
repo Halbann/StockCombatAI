@@ -4,6 +4,7 @@ using System.Linq;
 
 using UnityEngine;
 using KSP.UI.Screens;
+using KSP.UI;
 
 using static KerbalCombatSystems.Utils;
 using KerbalCombatSystems.Data;
@@ -23,11 +24,14 @@ namespace KerbalCombatSystems
         private bool guiEnabled = false;
         private bool guiHidden;
 
-        private static int windowWidth = 400;
-        private static int windowHeight = 700;
-        private static int shipButtonWidth = 310;
-        private static int shipButtonHeight = 71;
-        private static int settingsScrollHeight = 340;
+        public static int windowWidth = 400;
+        public static int windowHeight = 700;
+        public static int shipButtonWidth = 310;
+        public static int shipButtonHeight = 71;
+        public static int weaponButtonHeight = 41;
+        public static int settingsScrollHeight = 340;
+        public static int logScrollHeight = 350;
+
         private static Rect windowRect = new Rect((Screen.width * 0.85f) - (windowWidth / 2), (Screen.height / 2) - (windowHeight / 2), 0, 0);
         private GUIStyle boxStyle;
         private GUIStyle smallTextButtonStyle;
@@ -38,8 +42,8 @@ namespace KerbalCombatSystems
         private Vector2 scrollPosition;
         private Vector2 settingsScrollPosition;
         private static Vector2 logScrollPosition;
-        private const int logScrollHeight = 350;
         private static bool scrollLock = false;
+        private RectTransform clickBlocker;
 
         private readonly string[] modes = { "Ships", "Weapons", "Log", "Settings", "Debug" };
         private string mode = "Ships";
@@ -52,6 +56,7 @@ namespace KerbalCombatSystems
         public static List<ModuleWeaponController> weaponsInFlight = new List<ModuleWeaponController>();
         public static List<ModuleWeaponController> interceptorsInFlight = new List<ModuleWeaponController>();
         private float lastUpdateTime;
+        private float lastWeaponUpdateTime;
 
 
         // Weapon variables.
@@ -86,6 +91,7 @@ namespace KerbalCombatSystems
 
             // Setup GUI. 
             AddToolbarButton();
+            CreateClickBlocker();
 
             UpdateWeaponsTab();
             UpdateMasterLists();
@@ -100,6 +106,7 @@ namespace KerbalCombatSystems
             GameEvents.onShowUI.Add(OnShowUI);
 
             GameEvents.onVesselChange.Add(OnVesselChange);
+            GameEvents.onVesselWasModified.Add(OnVesselModified);
 
             GameEvents.onGameSceneLoadRequested.Add(OnGameSceneLoadRequested);
 
@@ -123,7 +130,7 @@ namespace KerbalCombatSystems
 
             // Change game settings.
 
-            HighLogic.CurrentGame.Parameters.CustomParams<GameParameters.AdvancedParams>().EnableFullSASInSandbox = true;   
+            HighLogic.CurrentGame.Parameters.CustomParams<GameParameters.AdvancedParams>().EnableFullSASInSandbox = true;
         }
 
         private void OnGameSceneLoadRequested(GameScenes data)
@@ -161,6 +168,7 @@ namespace KerbalCombatSystems
             GameEvents.onVesselGoOnRails.Remove(VesselEventUpdate);
 
             GameEvents.onVesselChange.Remove(OnVesselChange);
+            GameEvents.onVesselWasModified.Remove(OnVesselModified);
 
             GameEvents.onHideUI.Remove(OnHideUI);
             GameEvents.onShowUI.Remove(OnShowUI);
@@ -168,6 +176,7 @@ namespace KerbalCombatSystems
             GameEvents.onGameSceneLoadRequested.Remove(OnGameSceneLoadRequested);
 
             RemoveToolbarButton();
+            Destroy(clickBlocker?.gameObject);
 
             ships.Clear();
             weaponsInFlight.Clear();
@@ -246,7 +255,7 @@ namespace KerbalCombatSystems
             weaponList.Clear();
 
             if (FlightGlobals.ActiveVessel == null) return;
-            var controller = FlightGlobals.ActiveVessel.FindPartModuleImplementing<ModuleShipController>();
+            var controller = FindController(FlightGlobals.ActiveVessel);
             if (controller == null) return;
 
             controller.CheckWeapons();
@@ -283,6 +292,16 @@ namespace KerbalCombatSystems
 
         private void OnVesselChange(Vessel data) =>
             UpdateWeaponsTab();
+
+        private void OnVesselModified(Vessel vessel)
+        {
+            if (Time.fixedTime - lastWeaponUpdateTime > Time.fixedDeltaTime 
+                && vessel.persistentId == FlightGlobals.ActiveVessel.persistentId)
+            {
+                UpdateWeaponsTab();
+                lastWeaponUpdateTime = Time.fixedTime;
+            }
+        }
 
         public void ToggleAIs()
         {
@@ -392,6 +411,13 @@ namespace KerbalCombatSystems
                 GUILayout.Height(0),
                 GUILayout.Width(windowWidth)
             );
+
+            if (clickBlocker != null)
+            {
+                // Update click blocker. This prevents clicking through the IMGUI (important for part action window opening).
+                clickBlocker.sizeDelta = new Vector2(windowRect.width, windowRect.height);
+                clickBlocker.anchoredPosition = new Vector2(windowRect.x - 0.5f * Screen.width, 0.5f * Screen.height - windowRect.y);
+            }
         }
 
         private void FillWindow(int windowID)
@@ -540,8 +566,10 @@ namespace KerbalCombatSystems
 
                     GUILayout.BeginHorizontal();
 
-                    if (GUILayout.Button(craftText, GUILayout.Width(shipButtonWidth)))
+                    if (GUILayout.Button(craftText, GUILayout.Width(shipButtonWidth)) && Event.current.button == 0)
                         FlightGlobals.ForceSetActiveVessel(vessel);
+
+                    OpenPartWindow(controller.part);
 
                     // Side and AI buttons.
                     GUILayout.BeginVertical();
@@ -574,7 +602,8 @@ namespace KerbalCombatSystems
         {
             GUILayout.BeginVertical(boxStyle);
 
-            scrollViewHeight = Mathf.Max(Mathf.Min(15 * 30, 30 * weaponList.Count), 5 * 30);
+            float listHeight = Mathf.Min(Screen.height * 0.5f, weaponButtonHeight * weaponList.Count);
+            scrollViewHeight = (int)Mathf.Max(listHeight, 4 * weaponButtonHeight);
             scrollPosition = GUILayout.BeginScrollView(
                 scrollPosition, false, false, GUILayout.Height(scrollViewHeight));
             string weaponName;
@@ -594,8 +623,10 @@ namespace KerbalCombatSystems
                 weaponName += $"</color>";
 
                 selected = w == selectedWeapon || w.Identical(selectedWeapon);
-                if (GUILayout.Toggle(selected, weaponName, GUI.skin.button))
+                if (GUILayout.Toggle(selected, weaponName, GUI.skin.button) && Event.current.button == 0)
                     selectedWeapon = w;
+
+                OpenPartWindow(w.part);
             }
 
             // Remove the selected weapon after it has been fired and we have selected its sibling.
@@ -615,6 +646,21 @@ namespace KerbalCombatSystems
                 GUILayout.Label("Launch failed: " + launchFailureReason);
                 GUI.color = Color.white;
             }
+        }
+
+        private void OpenPartWindow(Part part)
+        {
+            if (Event.current.type != EventType.Repaint)
+                return;
+
+            if (Event.current.button == 1)
+            {
+                Rect rect = GUILayoutUtility.GetLastRect();
+                if (rect.Contains(Event.current.mousePosition))
+                    UIPartActionController.Instance.SpawnPartActionWindow(part);
+            }
+
+            return;
         }
 
         private void LogGUI()
@@ -660,8 +706,6 @@ namespace KerbalCombatSystems
 
             GUILayout.EndScrollView();
             GUILayout.EndVertical();
-
-            GUILayout.Label("This menu is a placeholder. Settings changes are not permanent.");
         }
 
         private void DebugGUI()
@@ -770,6 +814,7 @@ namespace KerbalCombatSystems
             UpdateMasterLists();
             UpdateWeaponsTab();
             guiEnabled = true;
+            clickBlocker.gameObject.SetActive(true);
         }
 
         public void DisableGui() 
@@ -777,6 +822,7 @@ namespace KerbalCombatSystems
             InputLockManager.RemoveControlLock("KCSGUI");
             guiEnabled = false;
             GlobalSettings.Save();
+            clickBlocker.gameObject.SetActive(false);
         }
 
         private void OnShowUI() =>
@@ -791,6 +837,19 @@ namespace KerbalCombatSystems
 
             if ((Overlay.hideWithUI || !hide) && HighLogic.LoadedSceneIsFlight && !Overlay.overlayUnavailable)
                 Overlay.SetVisibility(!hide);
+        }
+
+        private void CreateClickBlocker()
+        {
+            var canvas = UIMasterController.Instance.mainCanvas;
+            var blocker = new GameObject(nameof(FlightManager) + "ClickBlocker");
+            blocker.transform.SetParent(canvas.transform);
+            clickBlocker = blocker.AddComponent<RectTransform>();
+            clickBlocker.pivot = new Vector2(0f, 1f);
+            blocker.AddComponent<CanvasRenderer>();
+            blocker.AddComponent<UnityEngine.UI.Text>();
+
+            clickBlocker.gameObject.SetActive(false);
         }
 
         #endregion
