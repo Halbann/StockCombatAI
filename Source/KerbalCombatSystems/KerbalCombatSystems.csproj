@@ -33,6 +33,9 @@
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
   <ItemGroup>
+    <Reference Include="0Harmony">
+      <HintPath>ReferencesThirdParty\0Harmony.dll</HintPath>
+    </Reference>
     <Reference Include="alglib, Version=1.0.0.0, Culture=neutral, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
       <HintPath>ReferencesThirdParty\alglib.dll</HintPath>
@@ -118,6 +121,9 @@
     <Compile Include="Data\GlobalSettings.cs" />
     <Compile Include="Debug\Line.cs" />
     <Compile Include="Effects\Tracer.cs" />
+    <Compile Include="Fireworks\Fixer.cs" />
+    <Compile Include="Fireworks\Patch.cs" />
+    <Compile Include="Fireworks\Replacement.cs" />
     <Compile Include="MechJeb.cs" />
     <Compile Include="Properties\GlobalSuppressions.cs" />
     <Compile Include="LineMesh.cs" />

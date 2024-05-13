@@ -203,6 +203,10 @@ namespace KerbalCombatSystems
             fc.lerpThrottle = false;
             fc.throttle = 0;
             fc.Drive();
+
+            if (vessel == FlightGlobals.ActiveVessel)
+                FlightInputHandler.state.mainThrottle = 0;
+
             controllerRunning = false;
             controllerActive = false;
             targeting.ClearTarget();
