@@ -41,7 +41,6 @@ namespace KerbalCombatSystems.Weapon
         private Vessel Target => controller.target;
         private Vessel targetLast;
         private Vector3 targetPerturbationLast;
-        private Vector3 leadDirection;
         private Vector3 muzzleDirection;
         private Vector3 sasDirection;
         private Lead lead;
@@ -86,7 +85,6 @@ namespace KerbalCombatSystems.Weapon
 
             // Calculate lead.
             lead = TargetLead(Target, vessel, launcher.shellVelocity, muzzleTransform, targetPerturbationLast);
-            leadDirection = lead.direction.normalized;
 
             // Debug jerk.
             if (Debug.Visible)
@@ -96,11 +94,11 @@ namespace KerbalCombatSystems.Weapon
             targetPerturbationLast = Target.perturbation;
 
             // Lead SAS using integral term.
-            sasDirection = LeadSAS(leadDirection);
+            sasDirection = LeadSAS(lead.direction);
 
             // Start a firing sequence when correctly aligned.
             if (!firing && OnTarget(
-                leadDirection, muzzleDirection, Target.CoM - muzzleTransform.position,
+                lead.direction, muzzleDirection, Target.CoM - muzzleTransform.position,
                 controller.targetSize, controller.accuracyTolerance))
             {
                 Fire();
@@ -226,10 +224,10 @@ namespace KerbalCombatSystems.Weapon
         #region Debug
 
         private static Material debugProjectileMat;
-        public static float debugProjectileSize = 1f;
-        public static float debugLineSize = 0.3f;
+        public static float debugProjectileSize = 0.5f;
+        public static float debugLineSize = 0.2f;
         public static float debugLineAlpha = 0.3f;
-        public static bool debugShell = false;
+        public static bool debugShell = true;
 
         private void DebugPerturbation(Vector3 perturbation, Vector3 perturbationLast)
         {
@@ -237,7 +235,7 @@ namespace KerbalCombatSystems.Weapon
 
             Vector3 pertRate = (perturbation - perturbationLast) / Time.fixedDeltaTime;
             Vector3 jerkOffset = 1f / 6f * pertRate * Mathf.Pow(lead.time, 3);
-            Line.Draw(Target.CoM, jerkOffset, Color.cyan, 0.5f, 1f);
+            Line.Draw(Target.CoM, jerkOffset, Color.cyan, 0.5f, 0.5f);
         }
 
         private void DebugAim()
@@ -246,16 +244,16 @@ namespace KerbalCombatSystems.Weapon
             Color lime = new Color(196f / 255f, 208f / 255f, 164f / 255f, 1f);
 
             Line.Draw(origin, muzzleDirection, 15f, lime, debugLineAlpha, debugLineSize);
-            Line.Draw(origin, leadDirection, 15f, Color.red, debugLineAlpha, debugLineSize);
+            Line.Draw(origin, lead.direction, 15f, Color.red, debugLineAlpha, debugLineSize);
             Line.Draw(origin, sasDirection, 15f, Color.blue, debugLineAlpha, debugLineSize);
 
-            float error = Vector3.Angle(muzzleDirection, leadDirection);
+            float error = Vector3.Angle(muzzleDirection, lead.direction);
             float tolerance = GetTolerance(Target.CoM - muzzleTransform.position, controller.targetSize, controller.accuracyTolerance);
             string text = $"Error: {error:F4}\n Tolerance: {tolerance:F4}";
             Debug.DrawDebugLabel(text, transform.position);
 
             if (debugShell)
-                DebugShell(origin, leadDirection.normalized * launcher.shellVelocity, lead.time);
+                DebugShell(origin, lead.direction * launcher.shellVelocity, lead.time);
         }
 
         private void DebugShell(Vector3 position, Vector3 velocity, float lifetime)

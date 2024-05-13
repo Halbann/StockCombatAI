@@ -416,95 +416,61 @@ namespace KerbalCombatSystems
 
         #region Projectile Leading
 
-        public static Vector3 TargetLead(Vessel target, Part firer, float travelVelocity)
-        {
-            Vector3 relPos = target.CoM - firer.transform.position;
-            Vector3 relVel = target.GetObtVelocity() - firer.vessel.GetObtVelocity();
-            Vector3 relAcc = target.acceleration - firer.vessel.acceleration;
-
-            float timeToHit = ClosestTimeToCPA(relPos, relVel + (relPos.normalized * travelVelocity * -1), relAcc, 60);
-            Vector3 leadPosition = PredictPosition(relPos, relVel, relAcc, timeToHit);
-
-            return leadPosition;
-        }
-
         public struct Lead
         {
             public Vector3 direction;
             public float time;
         }
 
-        public static Lead TargetLead(Vessel target, Vessel firer, float travelVelocity, Transform muzzle, Vector3 perturbationLast)
+        public static Lead TargetLead(Vessel target, Vessel firer, float muzzleSpeed, Transform muzzle, Vector3 perturbationLast)
         {
-            Vector3 bulletEffectiveVelocity, bulletRelativeVelocity, targetPredictedPosition;
-            Vector3 bulletRelativeAcceleration, bulletDropOffset;
-
-            Transform fireTransform = muzzle;
-            Vector3 firePosition = fireTransform.position; // Bullets are initially placed up to 1 frame ahead (iTime).
+            // Direction, absolute positions and velocities.
+            Vector3 firingDirection = muzzle.up;
             Vector3 firerVelocity = firer.rb_velocity;
-            Vector3 targetPosition = target.CoM;
             Vector3 targetVelocity = target.rb_velocity;
 
-            float maxTargetingRange = 2500f;
-            Vector3 finalTarget;
-            Vector3 firingDirection = fireTransform.up;
+            // Position and velocity.
+            Vector3 pos = target.CoM - muzzle.position;
+            Vector3 velVessel = targetVelocity - firerVelocity;
 
-            Vector3 bulletRelativePosition = targetPosition - fireTransform.position;
-            float timeToCPA = Mathf.Sqrt(bulletRelativePosition.sqrMagnitude / (targetVelocity - (firerVelocity + travelVelocity * firingDirection)).sqrMagnitude);
+            // Acceleration and jerk.
+            // todo: wtf was I cooking here.
+            float maxTime = 2500f / muzzleSpeed;
+            float timeToCPA = Mathf.Sqrt(pos.sqrMagnitude / (targetVelocity - (firerVelocity + muzzleSpeed * firingDirection)).sqrMagnitude);
+            timeToCPA = Mathf.Min(timeToCPA, maxTime);
 
             Vector3d avgTargetAcc = (GetOrbitalAcceleration(target) + GetOrbitalAcceleration(target, timeToCPA)) / 2;
-            Vector3 targetJerk = (target.perturbation - perturbationLast) / Time.fixedDeltaTime;
-            Vector3 targetAcceleration;
+            Vector3 jerk = (target.perturbation - perturbationLast) / Time.fixedDeltaTime;
+            Vector3 targetAcceleration = avgTargetAcc + target.perturbation;
 
             Vessel active = FlightGlobals.ActiveVessel;
             Vector3 bulletAcceleration = (GetOrbitalAcceleration(active) + GetOrbitalAcceleration(active, timeToCPA)) / 2;
+            
+            Vector3 acc = targetAcceleration - bulletAcceleration;
+
+            // Changing variables.
+            Vector3 velProjectileAbs;
+            Vector3 velProjectile;
+            Vector3 prediction;
 
             int count = 0;
             do
             {
-                targetAcceleration = avgTargetAcc + target.perturbation;
+                // Guess at firing velocity.
+                velProjectileAbs = firerVelocity + muzzleSpeed * firingDirection;
+                velProjectile = targetVelocity - velProjectileAbs;
 
-                bulletEffectiveVelocity = firerVelocity + travelVelocity * firingDirection;
-                bulletRelativePosition = targetPosition - firePosition;
-                bulletRelativeVelocity = targetVelocity - bulletEffectiveVelocity;
-                bulletRelativeAcceleration = targetAcceleration - bulletAcceleration;
+                // Calculate the flight time with a quartic.
+                timeToCPA = ClosestTimeToCPAJerk(pos, velProjectile, acc, jerk, maxTime);
 
-                timeToCPA = ClosestTimeToCPAJerk(bulletRelativePosition, bulletRelativeVelocity, bulletRelativeAcceleration, targetJerk, maxTargetingRange / bulletEffectiveVelocity.magnitude);
+                // Use time to predict the target's position at the time of closest approach.
+                prediction = pos + Displacement(velVessel, acc, jerk, timeToCPA);
+                firingDirection = Vector3.Normalize(prediction);
 
-                targetPredictedPosition = PredictPosition(targetPosition, targetVelocity, targetAcceleration, timeToCPA);
-                targetPredictedPosition += 1.0f / 6.0f * targetJerk * timeToCPA * timeToCPA * timeToCPA;
-
-                bulletDropOffset = -0.5f * bulletAcceleration * timeToCPA * timeToCPA;
-                finalTarget = targetPredictedPosition + bulletDropOffset - firerVelocity * timeToCPA;
-
-                firingDirection = (finalTarget - firePosition).normalized;
+                //Line.Draw(muzzle.position, prediction, Color.red, 0.2f, 0.5f);
             } while (++count < 10);
 
-
-            // The cubic solver is innaccurate when the relative acceleration changes.
-            // We can use the previous result to inform the initial terms of an integration.
-            // I can't remember what situation this was for, but it's not used in the current implementation.
-
-            /*if (targetJerk.magnitude > 1)
-            {
-                float simulatedTimeToCPA = TimeToCPAIntegrate(
-                    bulletRelativePosition,
-                    bulletRelativeVelocity,
-                    bulletRelativeAcceleration,
-                    targetJerk,
-                    maxTargetingRange / bulletEffectiveVelocity.magnitude,
-                    Time.fixedDeltaTime);
-
-                timeToCPA = simulatedTimeToCPA;
-
-                targetPredictedPosition = PredictPosition(targetPosition, targetVelocity, targetAcceleration, timeToCPA);
-                targetPredictedPosition += 1.0f / 6.0f * targetJerk * timeToCPA * timeToCPA * timeToCPA;
-
-                bulletDropOffset = -0.5f * bulletAcceleration * timeToCPA * timeToCPA;
-                finalTarget = targetPredictedPosition + bulletDropOffset - firerVelocity * timeToCPA;
-            }*/
-
-            return new Lead { direction = finalTarget - fireTransform.position, time = timeToCPA };
+            return new Lead { direction = firingDirection, time = timeToCPA };
         }
 
         public static Vector3 GetOrbitalAcceleration(Vessel vessel, float timeOffset = 0)
@@ -512,16 +478,18 @@ namespace KerbalCombatSystems
             if (vessel == null)
                 return Vector3d.zero;
 
-            Vector3d acc = Vector3.zero;
             CelestialBody mainBody = vessel.mainBody;
+            Vector3d acc = Vector3.zero;
+            Vector3d vesselCoMOffset = vessel.transform.InverseTransformPoint(vessel.CoM); // this is insane?
 
+            // Work out state vectors at UT.
             double UToffset = Planetarium.GetUniversalTime() + timeOffset;
-            Vector3d vesselCoMOffset = vessel.transform.InverseTransformPoint(vessel.CoM);
 
             Vector3d position = vessel.orbit.getPositionAtUT(UToffset) + vesselCoMOffset;
             Vector3d velocity = vessel.orbit.getOrbitalVelocityAtUT(UToffset);
             velocity = velocity.xzy - mainBody.getRFrmVel(position);
 
+            // Build up total acceleration, lacking drift correction.
             acc += FlightGlobals.getGeeForceAtPosition(position, mainBody);
             acc += FlightGlobals.getCoriolisAcc(velocity, mainBody);
             acc += FlightGlobals.getCentrifugalAcc(position, mainBody);

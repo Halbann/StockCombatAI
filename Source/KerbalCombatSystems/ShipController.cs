@@ -1012,7 +1012,10 @@ namespace KerbalCombatSystems
             float targetMass = (float)target.totalMass;
 
             // Order the available weapons based on the suitability of the their mass compared to the target. 
-            return weapons.OrderBy(w => Mathf.Abs(targetMass - (w.mass * w.targetMassRatio))).ToList();
+            return weapons
+                .OrderBy(w => Mathf.Abs(targetMass - (w.mass * w.targetMassRatio)))
+                .Where(w => w.canFire)
+                .ToList();
         }
 
         private ModuleWeaponController GetPreferredWeapon(Vessel target, List<ModuleWeaponController> weapons)
