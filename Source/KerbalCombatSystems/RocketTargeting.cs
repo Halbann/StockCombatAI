@@ -10,6 +10,17 @@ namespace KerbalCombatSystems
 {
     public class ModuleRocket : ModuleWeapon
     {
+        public override Part AimPart 
+        {
+            get
+            {
+                if (decoupler == null || decoupler.part.vessel != vessel)
+                    NextRocket();
+
+                return decoupler.part;
+            }
+        }
+
         Vessel target;
         ModuleWeaponController controller;
         LineRenderer leadLine;
@@ -254,7 +265,7 @@ namespace KerbalCombatSystems
                 module.throttleLocked = true;
             }
 
-            if (vessel.GetReferenceTransformPart() == controller.aimPart)
+            if (vessel.GetReferenceTransformPart() == AimPart)
                 FindController(vessel).RestoreReferenceTransform();
 
             decoupler.Separate();
@@ -273,7 +284,6 @@ namespace KerbalCombatSystems
             }
 
             decoupler = decouplers.Last();
-            controller.aimPart = decoupler.part;
         }
 
         public void OnDestroy()

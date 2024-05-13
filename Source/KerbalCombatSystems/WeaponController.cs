@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Collections;
@@ -9,6 +9,7 @@ using KSP.UI.Screens;
 
 using static KerbalCombatSystems.Utils;
 using KerbalCombatSystems.UI;
+using KerbalCombatSystems.Weapon;
 
 namespace KerbalCombatSystems
 {
@@ -29,7 +30,9 @@ namespace KerbalCombatSystems
         // hidden at lower level.
 
         // Specific to rockets and fireworks.
-        public Part aimPart;
+        public Part AimPart =>
+            typeModule.AimPart;
+
         public float targetSize;
 
         [KSPField(isPersistant = true)]

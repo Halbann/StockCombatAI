@@ -141,7 +141,7 @@
     <Compile Include="Utils.cs" />
     <Compile Include="Debug.cs" />
     <Compile Include="FlightManager.cs" />
-    <Compile Include="FireworkTargeting.cs" />
+    <Compile Include="Weapon\Firework.cs" />
     <Compile Include="MissileGuidance.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="ObjectTracking.cs" />

@@ -504,20 +504,21 @@ namespace KerbalCombatSystems
                         // the weapon takes control of the turret. But is that a good idea?
                         // Turret weapons should work in parallel with ship movement, not as part of it.
 
-                        if (!currentProjectile.fireSymmetry /*&& !currentProjectile.isTurret*/)
+                        float alignment = Vector3.Dot(currentProjectile.AimPart.transform.up, vessel.ReferenceTransform.up);
+                        if (alignment < 0.99f && !currentProjectile.fireSymmetry /*&& !currentProjectile.isTurret*/)
                         {
                             originalReferenceTransform = vessel.GetReferenceTransformPart();
-                            vessel.SetReferenceTransform(currentProjectile.aimPart);
+                            vessel.SetReferenceTransform(currentProjectile.AimPart);
                         }
 
                         // todo: box raycast.
 
                         currentProjectile.targetSize = TargetController.averagedSize;
-                        currentProjectile.UpdateSettings();
                       
                         while (UnderTimeLimit() && Target != null && currentProjectile.canFire)
                         {
-                            fc.attitude = currentProjectile.Aim();
+                            Vector3 aim = currentProjectile.Aim();
+                            fc.attitude = aim == Vector3.zero ? vessel.ReferenceTransform.up : aim;
                             fc.RCSVector = Vector3.ProjectOnPlane(RelVel(vessel, Target), FromTo(vessel, Target)) * -1;
 
                             relVel = Target.GetObtVelocity() - vessel.GetObtVelocity();
@@ -526,8 +527,12 @@ namespace KerbalCombatSystems
                             yield return waitForFixedUpdate;
                         }
 
+                        if (!currentProjectile.canFire)
+                            statusChecker.CheckStatus();
+
                         //if (!currentProjectile.isTurret)
-                        RestoreReferenceTransform();
+                        if (originalReferenceTransform != null)
+                            RestoreReferenceTransform();
 
                         fc.lerpAttitude = true;
                         fc.RCSVector = Vector3.zero;
@@ -1612,6 +1617,7 @@ namespace KerbalCombatSystems
         internal void RestoreReferenceTransform()
         {
             vessel.SetReferenceTransform(originalReferenceTransform);
+            originalReferenceTransform = null;
         }
 
         internal void RefreshIncoming()

@@ -64,8 +64,9 @@ namespace KerbalCombatSystems
         const string missileGroup = "Missile Settings";
 
         private static readonly string[] missileFields = {
-                "terminalVelocity", "useAsInterceptor", "igniteDelay", "pulseThrottle",
-                "salvoSpacing", "pulseDuration" };
+            "terminalVelocity", "useAsInterceptor", "igniteDelay", "pulseThrottle",
+            "salvoSpacing", "pulseDuration" 
+        };
 
         [WeaponField("Speed Limit", missileGroup, speed)]
         [UI_FloatRange(
@@ -209,7 +210,9 @@ namespace KerbalCombatSystems
         const string rocketGroupName = "Rocket Settings";
 
         private static readonly string[] rocketFields = {
-                "firingInterval", "fireCountdown", "accuracyTolerance", "fireSymmetry" };
+            "firingInterval", "fireCountdown", "accuracyTolerance",
+            "fireSymmetry"
+        };
 
         [WeaponField("Firing Interval", rocketGroupName, time)]
         [UI_FloatRange(
