@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 
@@ -72,7 +72,6 @@ namespace KerbalCombatSystems
 
         private static readonly List<string> log = new List<string>();
         private static float lastLogged;
-        private bool updateOverlayOpacity;
 
 
         // Dependency variables.
@@ -459,7 +458,7 @@ namespace KerbalCombatSystems
                 ToggleGui();
 
             if (GUI.Button(new Rect(windowRect.width - (18 * 2 + 8), 2, 24, 16), "O", smallTextButtonStyle))
-                Overlay.DistanceToggle();
+                Overlay.Instance.DistanceToggle();
 
             GUILayout.BeginVertical();
             GUILayout.BeginHorizontal();
@@ -684,28 +683,30 @@ namespace KerbalCombatSystems
             GUILayout.Label("Overlay", titleStyle);
 
             Overlay.useElevationArcs = GUILayout.Toggle(Overlay.useElevationArcs, "Use Elevation Arcs");
-            Overlay.hideWithUI = GUILayout.Toggle(Overlay.hideWithUI, "Hide with UI");
+            Overlay.hideWithUI = GUILayout.Toggle(Overlay.hideWithUI, "Hide With UI");
+            Overlay.hideWhenOffline = GUILayout.Toggle(Overlay.hideWhenOffline, "Hide When Offline");
 
-            SliderSetting(ref Overlay.globalOpacity, "Global Opacity", 0, 4);
-            SliderSetting(ref Overlay.rangeRingsOpacity, "Range Rings Opacity", 0, 1);
-            SliderSetting(ref Overlay.rangeLinesOpacity, "Range Lines Opacity", 0, 1);
-            SliderSetting(ref Overlay.secondaryRangeLinesOpacity, "Secondary Lines Opacity", 0, 1);
-            SliderSetting(ref Overlay.dashedLinesOpacity, "Target Lines Opacity", 0, 1);
-            SliderSetting(ref Overlay.elevationLinesOpacity, "Elevation Lines Opacity", 0, 1);
-            SliderSetting(ref Overlay.markerOpacity, "Marker Opacity", 0, 1);
+            bool updateOpacity = false;
+            SliderSetting(ref Overlay.globalBrightness, "Overall Brightness", 0, 2, ref updateOpacity);
+            SliderSetting(ref Overlay.rangeBrightness, "Range Brightness", 0, 2, ref updateOpacity);
+            SliderSetting(ref Overlay.targetBrightness, "Target Brightness", 0, 2, ref updateOpacity);
+            SliderSetting(ref Overlay.elevationBrightness, "Elevation Brightness", 0, 2, ref updateOpacity);
+            SliderSetting(ref Overlay.iconBrightness, "Icon Brightness", 0, 2, ref updateOpacity);
 
-            if (updateOverlayOpacity)
-            {
-                updateOverlayOpacity = false;
+            if (updateOpacity)
                 Overlay.UpdateOpacity();
-            }
 
             // Hidden until CC supports fireworks.
             //GUILayout.Label("Gameplay", titleStyle);
             //SliderSetting(ref ModuleFirework.fireworkSpeed, "Firework Speed", 100, 500);
 
+            GUILayout.FlexibleSpace();
             if (GUILayout.Button("Reset All"))
+            {
                 GlobalSettings.ResetAll();
+                Overlay.UpdateOpacity();
+            }
+            GUILayout.FlexibleSpace();
 
             GUILayout.EndScrollView();
             GUILayout.EndVertical();
@@ -765,7 +766,7 @@ namespace KerbalCombatSystems
             }
         }
 
-        private void SliderSetting(ref float setting, string text, int min, int max)
+        private void SliderSetting(ref float setting, string text, int min, int max, ref bool update)
         {
             GUILayout.BeginHorizontal();
 
@@ -777,8 +778,8 @@ namespace KerbalCombatSystems
 
             GUILayout.Label(setting.ToString(), centeredText, GUILayout.Width(windowWidth * 0.13f));
 
-            if (setting != settingLast && text.Contains("opacity"))
-                updateOverlayOpacity = true;
+            if (setting != settingLast)
+                update = true;
 
             GUILayout.EndHorizontal();
         }
@@ -837,9 +838,6 @@ namespace KerbalCombatSystems
         private void OnToggleUI(bool hide)
         {
             guiHidden = hide;
-
-            if ((Overlay.hideWithUI || !hide) && HighLogic.LoadedSceneIsFlight && !Overlay.overlayUnavailable)
-                Overlay.SetVisibility(!hide);
         }
 
         private void CreateClickBlocker()

@@ -8,6 +8,8 @@ using UnityEngine;
 using System.Linq;
 
 public class LineMeshData {
+    public int totalCount;
+
     private Vector3[] verticies;
     private Vector3[] prevs;
     private Vector3[] nexts;
@@ -62,7 +64,7 @@ public class LineMeshData {
     }
 
     public void SetLinesFromPoints(List<List<Vector3>> lines) {
-        int totalCount = lines.Select(points => points.Count).Sum();
+        totalCount = lines.Select(points => points.Count).Sum();
 
         //Vertices, prev, next, direction, triangles
         verticies = new Vector3[totalCount*2];

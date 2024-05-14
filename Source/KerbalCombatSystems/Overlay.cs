@@ -1,8 +1,10 @@
-using System;
+﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 
 using UnityEngine;
+using KSP.UI;
 
 using static KerbalCombatSystems.Utils;
 using KerbalCombatSystems.Data;
@@ -15,24 +17,57 @@ namespace KerbalCombatSystems
     {
         #region Fields
 
+        // State.
+
+        public static Overlay Instance { get; private set; }
+        private static bool runOnce = true;
+        private static bool available = false;
+        public static bool Available
+        {
+            get => available;
+            set
+            {
+                if (available != value)
+                {
+                    available = value;
+                    SetVisibility(value);
+                }
+            }
+        }
+
+
+        // Global settings.
+
+        [Setting] public static bool useElevationArcs = true;
+        [Setting] public static bool hideWhenOffline = true;
+        [Setting] public static bool hideWithUI = true;
+        [Setting] public static KeyCode quickToggleZoomKey = KeyCode.O;
+
+        [Setting] public static float globalBrightness = 1f;
+        [Setting] public static float rangeBrightness = 1f;
+        [Setting] public static float targetBrightness = 1f;
+        [Setting] public static float elevationBrightness = 1f;
+        [Setting] public static float iconBrightness = 1f;
+
+
+        // Static configuration.
+
+        public static float globalOpacityScalar = 1f;
+        public static float rangeOpacityScalar = 0.8f;
+        public static float targetOpacityScalar = 1f;
+        public static float elevationOpacityScalar = 1.3f;
+        public static float iconOpacityScalar = 1f;
+        public static float shipnameOpacity = 1f;
+
+
+        // Final range is multiplied by size.
+        public float[] ranges = { 5, 10, 20, 30, 40, 50, 75, 100, 150, 200, 300, 400, 500 };
         public static int circleSteps = 120;
         public static int numberOfRangeLines = 4;
         public static float size = 100.0f;
-        public static bool useElevationArcs = true;
-        public static bool hideWithUI = true;
-
-        public static float rangeRingsOpacity = 0.1f;
-        public static float rangeLinesOpacity = 0.1f;
-        public static float secondaryRangeLinesOpacity = 0.05f;
-        public static float dashedLinesOpacity = 0.1f;
-        public static float elevationLinesOpacity = 0.15f;
-        public static float weaponRangeOpacity = 0.3f;
-        public static float markerOpacity = 0.3f;
-        public static float rangeNumberOpacity = 0.2f;
-        public static float shipnameOpacity = 0.6f;
-        public static float globalOpacity = 1.6f;
 
         public static float markerScale = 10;
+
         public static float iconSize = 25;
         public static float reticleStackSize = 10;
         public static int shipFontSize = 14;
@@ -42,25 +77,53 @@ namespace KerbalCombatSystems
         public static float dashLength = 0.1f;
         public static float dashScaling = 1;
 
-        public static KeyCode quickToggleZoomKey = KeyCode.O;
+        public static float transitionDuration = 1.5f;
+        public static float transitionBase = 2f;
 
-        // Final range is multiplied by size.
-        public float[] ranges = { 5, 10, 20, 30, 40, 50, 75, 100, 150, 200, 300, 400, 500 };
 
-        private List<ModuleShipController> ships = new List<ModuleShipController>();
-        private ModuleShipController activeController;
-        private static Transform centre;
-        private static float closeCamDistance = 50;
-        private static float farCamDistance = 2000;
-        private Vessel activeVessel;
-        private float detectionRange;
-        private float weaponRange;
+        // Variables.
+
         internal static FlightCamera MainCamera =>
             FlightCamera.fetch;
+        private List<ModuleShipController> ships = new List<ModuleShipController>();
+        private int shipsCount = 0;
+        private ModuleShipController activeController;
+        private static Transform centre;
+        private Vessel activeVessel;
 
-        private static bool runOnce = true;
-        internal static bool hideOverlay = false;
-        internal static bool overlayUnavailable = false;
+        private static float farCamDistance = 2000;
+        private static float closeCamDistance = 50;
+
+        private float detectionRange;
+        private float weaponRange;
+
+        private static float finalOpacity;
+        private static float currentOpacity;
+        private float linesOpacityLast = -1;
+
+        private Coroutine transitionCoroutine;
+        private bool transitionDirection;
+        private float transitionTime;
+
+
+        // Data. todo: refactor this using struct.
+
+        //struct LineContainer
+        //{
+        //    public GameObject gameObject;
+        //    public LineMesh lineMesh;
+        //    public List<List<Vector3>> lines;
+        //    public Material material;
+
+        //    public LineContainer(float thickness, float colour)
+        //    {
+
+        //    }
+        //}
+
+        //private static List<LineContainer> xlines = new List<LineContainer>();
+        //private static List<LineContainer> ylines = new List<LineContainer>();
+        //private static List<LineContainer> etclines = new List<LineContainer>();
 
         private static LineMesh rangeLinesMesh;
         private static LineMesh secondaryRangeLinesMesh;
@@ -86,9 +149,6 @@ namespace KerbalCombatSystems
         private static Material weaponRangeMat;
         private static Material elevationLineMat;
 
-        private static float linesOpacity;
-        private float linesOpacityLast = -1;
-
         private static List<Marker> markers = new List<Marker>();
         private static Material markerMaterial;
 
@@ -100,10 +160,10 @@ namespace KerbalCombatSystems
         private Rect drawIconRect = new Rect();
 
         private GUIStyle rangeNumberStyle;
-        private static Color rangeNumberColour = new Color(1, 1, 1, rangeNumberOpacity);
+        private static Color rangeNumberColour = new Color(1, 1, 1, 1);
 
         private GUIStyle shipNameStyle;
-        private Color shipNameColour = new Color(1, 1, 1, shipnameOpacity);
+        private Color shipNameColour = new Color(1, 1, 1, 1);
 
         //public int gridX = 41;
         //public int gridY = 41;
@@ -117,8 +177,10 @@ namespace KerbalCombatSystems
 
         #region Start
 
-        private void Start()
+        protected void Start()
         {
+            Instance = this;
+
             if (runOnce)
             {
                 runOnce = false;
@@ -167,8 +229,6 @@ namespace KerbalCombatSystems
             // This is necessary to make the overlay invisible to additional cameras by default (multi-cam, hull-cam, docking-cam, etc).
             // Layer 8 is only used by the game in the editor I believe.
             FlightCamera.fetch.mainCamera.cullingMask |= (1 << 8);
-
-            overlayUnavailable = false;
         }
 
         private void CreateFixedLines()
@@ -217,43 +277,44 @@ namespace KerbalCombatSystems
             secondaryRangeLinesMesh.SetLinesFromPoints(secondaryRangeLines);
         }
 
-        // Create all necessary materials here. Only gets called once.
         private void CreateMaterials()
         {
             Shader lineShader = AssetBundles.Get<Shader>("GoodLines/Line");
 
             transparentLineMat = new Material(lineShader);
-            transparentLineMat.SetColor("_Color", new Color(1, 1, 1, rangeRingsOpacity));
+            transparentLineMat.SetColor("_Color", new Color(1, 1, 1, 1));
             transparentLineMat.SetFloat("_Thickness", 1.3f);
 
             rangeLineMat = new Material(lineShader);
-            rangeLineMat.SetColor("_Color", new Color(1, 1, 1, rangeLinesOpacity));
+            rangeLineMat.SetColor("_Color", new Color(1, 1, 1, 1));
             rangeLineMat.SetFloat("_Thickness", 1.3f);
 
             secondaryRangeLineMat = new Material(lineShader);
-            secondaryRangeLineMat.SetColor("_Color", new Color(1, 1, 1, secondaryRangeLinesOpacity));
+            secondaryRangeLineMat.SetColor("_Color", new Color(1, 1, 1, 1));
             secondaryRangeLineMat.SetFloat("_Thickness", 1.3f);
 
             dashedLineMat = new Material(lineShader);
-            dashedLineMat.SetColor("_Color", new Color(1, 1, 1, dashedLinesOpacity));
+            dashedLineMat.SetColor("_Color", new Color(1, 1, 1, 1));
             dashedLineMat.SetFloat("_Thickness", 1.7f);
 
             detectionRangeMat = new Material(lineShader);
-            detectionRangeMat.SetColor("_Color", new Color(1f, 0.6f, 0.3f, weaponRangeOpacity));
+            detectionRangeMat.SetColor("_Color", new Color(1f, 0.6f, 0.3f, 1));
             detectionRangeMat.SetFloat("_Thickness", 1.7f);
 
             weaponRangeMat = new Material(lineShader);
-            weaponRangeMat.SetColor("_Color", new Color(1f, 0.3f, 0.3f, weaponRangeOpacity));
+            weaponRangeMat.SetColor("_Color", new Color(1f, 0.3f, 0.3f, 1));
             weaponRangeMat.SetFloat("_Thickness", 1.7f);
 
             elevationLineMat = new Material(lineShader);
-            elevationLineMat.SetColor("_Color", new Color(1f, 1f, 1f, elevationLinesOpacity));
+            elevationLineMat.SetColor("_Color", new Color(1f, 1f, 1f, 1));
             elevationLineMat.SetFloat("_Thickness", 1.3f);
 
             markerMaterial = new Material(Shader.Find("Sprites/Default"));
             markerMaterial.color = Color.white;
 
             iconMat = new Material(Shader.Find("Legacy Shaders/Particles/Alpha Blended"));
+
+            UpdateOpacity();
         }
 
         #endregion
@@ -261,79 +322,30 @@ namespace KerbalCombatSystems
 
         #region Update
 
-        private bool UpdateActiveVessel()
-        {
-            if (FlightGlobals.ActiveVessel == null)
-                return false;
-
-            if (activeVessel != FlightGlobals.ActiveVessel)
-            {
-                activeVessel = FlightGlobals.ActiveVessel;
-                activeController = FindController(activeVessel);
-            }
-
-            return true;
-        }
-
-        private void UpdateReferenceFrame()
-        {
-            if (MainCamera.mode == FlightCamera.Modes.LOCKED)
-                centre.up = FlightGlobals.ActiveVessel.ReferenceTransform.forward;
-            else
-                centre.up = MainCamera.getReferenceFrame() * Vector3.up;
-        }
-
         protected void Update()
         {
-            if (!UpdateActiveVessel())
+            UpdateActiveVessel();
+            Available = CheckAvailability();
+            if (!Available)
                 return;
 
-            if (activeController == null
-                || MapView.MapIsEnabled
-                || MainCamera == null
-                || FlightGlobals.ActiveVessel == null
-                || !activeController.controllerRunning)
-            {
-                if (!overlayUnavailable)
-                {
-                    overlayUnavailable = true;
-                    SetVisibility(false);
-                }
+            if (Input.GetKeyDown(quickToggleZoomKey) && !PauseMenu.isOpen)
+                DistanceToggle();
 
-                return;
-            }
-            else
-            {
-                if (overlayUnavailable)
-                {
-                    overlayUnavailable = false;
-                    SetVisibility(true);
-                }
-            }
-
+            WatchShipList();
             UpdateReferenceFrame();
             centre.position = activeVessel.CoM;
 
-            if (Input.GetKeyDown(quickToggleZoomKey))
-                DistanceToggle();
-
-            if (hideOverlay)
-                return;
-
-            WatchShipList();
-
             // Show the overlay lines only when the camera is zoomed out.
-
             float cameraDistance = Vector3.Distance(MainCamera.transform.position, centre.position);
-            linesOpacity = Mathf.MoveTowards(linesOpacity, cameraDistance > 650 ? 1 : 0, 6 * Time.unscaledDeltaTime);
-
-            if (linesOpacity != linesOpacityLast)
+            currentOpacity = Mathf.MoveTowards(currentOpacity, cameraDistance > 650 ? 1 : 0, 6 * Time.unscaledDeltaTime);
+            if (currentOpacity != linesOpacityLast)
             {
                 UpdateOpacity();
-                linesOpacityLast = linesOpacity;
+                linesOpacityLast = currentOpacity;
             }
 
-            if (linesOpacity <= 0) return;
+            if (currentOpacity <= 0) return;
 
             if (ships.Count > 0)
             {
@@ -371,7 +383,7 @@ namespace KerbalCombatSystems
                     dashedLines.AddRange(DashedLine(ship.vessel.CoM, ship.Target.CoM, dashLength, dashSpacing));
                 }
 
-                if (dashedLines.Count > 0 || dashedLinesMesh.Positions.Count > 0)
+                if (dashedLines.Count > 0 || dashedLinesMesh.MeshData.totalCount > 0)
                     dashedLinesMesh.SetLinesFromPoints(dashedLines);
 
                 // Display max weapon range (red) and max detection range (blue) as rings on the overlay.
@@ -403,6 +415,65 @@ namespace KerbalCombatSystems
             }
         }
 
+        private void UpdateActiveVessel()
+        {
+            if (FlightGlobals.ActiveVessel == null)
+            {
+                activeController = null;
+                return;
+            }
+
+            if (activeVessel != FlightGlobals.ActiveVessel)
+            {
+                activeVessel = FlightGlobals.ActiveVessel;
+                activeController = FindController(activeVessel);
+            }
+        }
+
+        private void UpdateReferenceFrame()
+        {
+            if (MainCamera.mode == FlightCamera.Modes.LOCKED)
+                centre.up = FlightGlobals.ActiveVessel.ReferenceTransform.forward;
+            else
+                centre.up = MainCamera.getReferenceFrame() * Vector3.up;
+        }
+
+        private bool CheckAvailability()
+        {
+            bool hide = FlightGlobals.ActiveVessel == null
+                || activeController == null
+                || MapView.MapIsEnabled
+                || PauseMenu.isOpen
+                || MainCamera == null
+                || (hideWhenOffline && !activeController.controllerRunning)
+                || (hideWithUI && !UIMasterController.Instance.IsUIShowing);
+
+            return !hide;
+        }
+
+        internal static void SetVisibility(bool visible)
+        {
+            if (rangeLinesMesh == null)
+                return;
+
+            var linemeshes = new List<LineMesh>() {
+                rangeLinesMesh,
+                secondaryRangeLinesMesh,
+                rangeRingsMesh,
+                elevationLinesMesh,
+                dashedLinesMesh,
+                detectionRangeMesh,
+                weaponRangeMesh
+            };
+
+            foreach (var linemesh in linemeshes)
+            {
+                linemesh.gameObject.GetComponent<MeshRenderer>().enabled = visible;
+            }
+
+            markers.FindAll(m => m != null).ForEach(m => m.gameObject.SetActive(visible));
+        }
+
         private float AvoidRangeOverlap(float distance)
         {
             float margin = 0.05f;
@@ -429,9 +500,10 @@ namespace KerbalCombatSystems
 
         private void WatchShipList()
         {
-            if (ships.Count == FlightManager.ships.Count) return;
+            if (shipsCount == FlightManager.ships.Count) return;
 
             ships = FlightManager.ships;
+            shipsCount = ships.Count;
             markers.FindAll(m => m != null).ForEach(m => m.DeleteMarker());
             markers.Clear();
             CreateMarkers();
@@ -456,59 +528,100 @@ namespace KerbalCombatSystems
             }
         }
 
-        // Fade in/out the entire overlay by updating the alpha values of the individual materials.
-        // Every material that needs to fade with the overlay must be updated here.
-        // TODO: store materials in a list and update automatically.
-        internal static void UpdateOpacity()
+        public static void UpdateOpacity()
         {
-            Color rangeRingsColour = transparentLineMat.GetColor("_Color");
-            rangeRingsColour.a = rangeRingsOpacity * linesOpacity * globalOpacity;
-            transparentLineMat.SetColor("_Color", rangeRingsColour);
+            finalOpacity = currentOpacity * globalBrightness * globalOpacityScalar;
 
-            Color rangeLinesColour = rangeLineMat.GetColor("_Color");
-            rangeLinesColour.a = rangeLinesOpacity * linesOpacity * globalOpacity;
-            rangeLineMat.SetColor("_Color", rangeLinesColour);
+            float rangeOpacity = rangeOpacityScalar * rangeBrightness;
+            UpdateMaterialOpacity(transparentLineMat, 0.3f * rangeOpacity);
+            UpdateMaterialOpacity(rangeLineMat, 0.3f * rangeOpacity);
+            UpdateMaterialOpacity(secondaryRangeLineMat, 0.15f * rangeOpacity);
+            UpdateMaterialOpacity(detectionRangeMat, 1f * rangeOpacity);
+            UpdateMaterialOpacity(weaponRangeMat, 1f * rangeOpacity);
+            rangeNumberColour.a = 0.6f * rangeOpacity * finalOpacity;
 
-            Color secondaryRangeLinesColour = secondaryRangeLineMat.GetColor("_Color");
-            secondaryRangeLinesColour.a = secondaryRangeLinesOpacity * linesOpacity * globalOpacity;
-            secondaryRangeLineMat.SetColor("_Color", secondaryRangeLinesColour);
+            UpdateMaterialOpacity(dashedLineMat, 0.25f * targetBrightness * targetOpacityScalar);
 
-            Color dashedLinesColour = dashedLineMat.GetColor("_Color");
-            dashedLinesColour.a = dashedLinesOpacity * linesOpacity * globalOpacity;
-            dashedLineMat.SetColor("_Color", dashedLinesColour);
-
-            Color detectionRangeColour = detectionRangeMat.GetColor("_Color");
-            detectionRangeColour.a = weaponRangeOpacity * linesOpacity * globalOpacity;
-            detectionRangeMat.SetColor("_Color", detectionRangeColour);
-
-            Color weaponRangeColour = weaponRangeMat.GetColor("_Color");
-            weaponRangeColour.a = weaponRangeOpacity * linesOpacity * globalOpacity;
-            weaponRangeMat.SetColor("_Color", weaponRangeColour);
-
-            Color elevationLinesColour = elevationLineMat.GetColor("_Color");
-            elevationLinesColour.a = elevationLinesOpacity * linesOpacity * globalOpacity;
-            elevationLineMat.SetColor("_Color", elevationLinesColour);
-
+            float elevationOpacity = elevationOpacityScalar * elevationBrightness;
+            UpdateMaterialOpacity(elevationLineMat, 0.3f * elevationOpacity);
             Color markerColour = markerMaterial.GetColor("_Color");
-            markerColour.a = markerOpacity * linesOpacity * globalOpacity;
+            markerColour.a = 1f * elevationOpacity * finalOpacity;
             markerMaterial.color = markerColour;
-
-            rangeNumberColour.a = rangeNumberOpacity * linesOpacity * globalOpacity;
         }
 
-        // Quickly switch to the camera range needed for the overlay to display.
-        internal static void DistanceToggle()
+        private static void UpdateMaterialOpacity(Material material, float elementOpacity)
         {
-            if (MainCamera.Distance > 650)
+            Color colour = material.GetColor("_Color");
+            colour.a = elementOpacity * finalOpacity;
+            material.SetColor("_Color", colour);
+        }
+
+        private static float transitionStartingPitch = 0;
+
+        internal void DistanceToggle()
+        {
+            if (transitionDuration <= 0)
             {
-                farCamDistance = Mathf.Max(MainCamera.Distance, 2000);
-                MainCamera.SetDistance(closeCamDistance);
+                MainCamera.SetDistanceImmediate(MainCamera.Distance < 650 ? farCamDistance : closeCamDistance);
+                return;
+            }
+
+            float start;
+
+            if (transitionCoroutine != null)
+            {
+                StopCoroutine(transitionCoroutine);
+                transitionDirection = !transitionDirection;
+                start = transitionDirection ? closeCamDistance : farCamDistance;
             }
             else
             {
-                closeCamDistance = Mathf.Min(MainCamera.Distance, 100);
-                MainCamera.SetDistance(farCamDistance);
+                transitionDirection = MainCamera.Distance < 650;
+
+                if (transitionDirection)
+                    closeCamDistance = Mathf.Min(MainCamera.Distance, 100);
+                else
+                    farCamDistance = Mathf.Max(MainCamera.Distance, 2000);
+
+                start = MainCamera.Distance;
             }
+
+            float targetPitch = transitionDirection ? Mathf.Max(MainCamera.maxPitch * 0.5f, MainCamera.camPitch) : 0f;
+            float target = transitionDirection ? farCamDistance : closeCamDistance;
+            transitionCoroutine = StartCoroutine(AnimateTransition(start, target, targetPitch));
+        }
+
+        private float transitionPitchVelocity;
+
+        private IEnumerator AnimateTransition(float start, float target, float targetPitch)
+        {
+            float startTime, distance, t, dt;
+
+            if (transitionTime > 0)
+                startTime = Time.unscaledTime - (transitionDuration - transitionTime);
+            else
+                startTime = Time.unscaledTime;
+
+            start = Mathf.Log(start, transitionBase);
+            target = Mathf.Log(target, transitionBase);
+
+            while (Time.unscaledTime < startTime + transitionDuration)
+            {
+                t = Time.unscaledTime - startTime;
+                transitionTime = t;
+
+                distance = Mathf.SmoothStep(start, target, t / transitionDuration);
+                distance = Mathf.Pow(transitionBase, distance);
+                MainCamera.SetDistanceImmediate(distance);
+
+                MainCamera.camPitch = Mathf.SmoothDamp(MainCamera.camPitch, targetPitch,
+                    ref transitionPitchVelocity, transitionDuration - t, 99, Time.unscaledDeltaTime);
+
+                yield return null;
+            }
+
+            transitionTime = -1f;
+            transitionCoroutine = null;
         }
 
         #endregion
@@ -717,9 +830,9 @@ namespace KerbalCombatSystems
 
         #region GUI
 
-        private void OnGUI()
+        protected void OnGUI()
         {
-            if (MapView.MapIsEnabled || PauseMenu.isOpen || hideOverlay || Camera.main == null)
+            if (MapView.MapIsEnabled || PauseMenu.isOpen || !Available || Camera.main == null)
                 return;
 
             if (Event.current.type.Equals(EventType.Repaint))
@@ -728,7 +841,7 @@ namespace KerbalCombatSystems
                 DrawWeaponIcons();
                 DrawShipText();
 
-                if (linesOpacity > 0)
+                if (currentOpacity > 0)
                     DrawRangeText();
             }
         }
@@ -900,7 +1013,7 @@ namespace KerbalCombatSystems
 
                 // Draw the ship name.
 
-                shipNameColour.a = shipnameOpacity * alpha * globalOpacity;
+                shipNameColour.a = shipnameOpacity * alpha * iconOpacityScalar * iconBrightness * finalOpacity;
                 GUI.color = shipNameColour;
                 GUI.Label(textRect, "  " + name, shipNameStyle);
             }
@@ -958,7 +1071,7 @@ namespace KerbalCombatSystems
             if (xPos > Screen.width || yPos > Screen.height || screenPos.z < 0)
                 return;
 
-            colour.a = 0.6f * alpha * globalOpacity;
+            colour.a = alpha * iconOpacityScalar * iconBrightness * finalOpacity;
             iconMat.SetColor("_TintColor", colour);
             drawIconRect.x = xPos;
             drawIconRect.y = yPos;
@@ -969,32 +1082,6 @@ namespace KerbalCombatSystems
         }
 
         #endregion
-
-        // When the UI is toggled with F2.
-        internal static void SetVisibility(bool visible)
-        {
-            hideOverlay = !visible;
-
-            if (rangeLinesMesh == null)
-                return;
-
-            var linemeshes = new List<LineMesh>() {
-                rangeLinesMesh,
-                secondaryRangeLinesMesh,
-                rangeRingsMesh,
-                elevationLinesMesh,
-                dashedLinesMesh,
-                detectionRangeMesh,
-                weaponRangeMesh
-            };
-
-            foreach (var linemesh in linemeshes)
-            {
-                linemesh.gameObject.GetComponent<MeshRenderer>().enabled = visible;
-            }
-
-            markers.FindAll(m => m != null).ForEach(m => m.gameObject.GetComponent<SpriteRenderer>().enabled = visible);
-        }
     }
 
     // 3D circle sprites that visually connect the elevation lines to the plane defined by the range rings.
@@ -1004,12 +1091,17 @@ namespace KerbalCombatSystems
         public ModuleShipController target;
 
         private Transform TargetTransform => target.vessel.transform;
+        private SpriteRenderer renderer;
         private bool deleted = false;
-        private bool visible = true;
         private Vector3 onPlane;
         private Vector3 centreToTarget;
 
-        void Update()
+        protected void Start()
+        {
+            renderer = GetComponent<SpriteRenderer>();
+        }
+
+        protected void Update()
         {
             if (centre == null || target == null)
             {
@@ -1019,11 +1111,8 @@ namespace KerbalCombatSystems
 
             // Hide the marker if it belongs to the active vessel.
             bool isActive = target.vessel == FlightGlobals.ActiveVessel;
-            if (visible == isActive && !Overlay.hideOverlay)
-            {
-                visible = !isActive;
-                GetComponent<SpriteRenderer>().enabled = visible;
-            }
+            if (renderer.enabled == isActive)
+                renderer.enabled = !isActive;
 
             if (Overlay.useElevationArcs)
             {
@@ -1045,7 +1134,7 @@ namespace KerbalCombatSystems
                 transform.localScale = Vector3.one * Overlay.markerScale * (Vector3.Distance(transform.position, Overlay.MainCamera.transform.position) / 1000);
         }
 
-        internal void DeleteMarker()
+        public void DeleteMarker()
         {
             if (deleted || gameObject == null) return;
             deleted = true;
