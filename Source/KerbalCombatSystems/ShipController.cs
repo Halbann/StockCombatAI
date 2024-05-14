@@ -91,8 +91,6 @@ namespace KerbalCombatSystems
 
         private Coroutine shipControllerCoroutine;
         private Coroutine behaviourCoroutine;
-        private Coroutine missileCoroutine;
-        private Coroutine interceptorCoroutine;
 
         // Movement.
         public static float approachingInterceptMargin = 1.5f;

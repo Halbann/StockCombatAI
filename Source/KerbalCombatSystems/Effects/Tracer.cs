@@ -92,8 +92,11 @@ namespace KerbalCombatSystems.Effects
         internal void Update() =>
             UpdateTracer();
 
-        internal void OnCollisionEnter() =>
-            startPosWorld = transform.position;
+        internal void OnCollisionEnter(Collision col)
+        {
+            if (col.relativeVelocity.magnitude > 5)
+                startPosWorld = transform.position;
+        }
 
         internal void UpdateTracer()
         {
@@ -105,7 +108,7 @@ namespace KerbalCombatSystems.Effects
             float distanceTravelled = Vector3.Distance(origin, startPosWorld);
             Vector3 tail = rb.velocity * exposureTime;
             tail = tail.normalized * Mathf.Min(tail.magnitude, distanceTravelled);
-
+             
             line.SetPosition(0, origin);
             line.SetPosition(1, origin - tail);
 

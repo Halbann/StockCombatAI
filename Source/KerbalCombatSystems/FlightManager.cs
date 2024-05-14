@@ -8,6 +8,7 @@ using KSP.UI;
 
 using static KerbalCombatSystems.Utils;
 using KerbalCombatSystems.Data;
+using KerbalCombatSystems.Fireworks;
 
 namespace KerbalCombatSystems
 {
@@ -680,6 +681,8 @@ namespace KerbalCombatSystems
             GUILayout.BeginVertical(boxStyle);
             settingsScrollPosition = GUILayout.BeginScrollView(settingsScrollPosition, false, false, GUILayout.Height(settingsScrollHeight));
 
+
+            // ----- Overlay -----
             GUILayout.Label("Overlay", titleStyle);
 
             Overlay.useElevationArcs = GUILayout.Toggle(Overlay.useElevationArcs, "Use Elevation Arcs");
@@ -687,6 +690,7 @@ namespace KerbalCombatSystems
             Overlay.hideWhenOffline = GUILayout.Toggle(Overlay.hideWhenOffline, "Hide When Offline");
 
             bool updateOpacity = false;
+
             SliderSetting(ref Overlay.globalBrightness, "Overall Brightness", 0, 2, ref updateOpacity);
             SliderSetting(ref Overlay.rangeBrightness, "Range Brightness", 0, 2, ref updateOpacity);
             SliderSetting(ref Overlay.targetBrightness, "Target Brightness", 0, 2, ref updateOpacity);
@@ -695,6 +699,19 @@ namespace KerbalCombatSystems
 
             if (updateOpacity)
                 Overlay.UpdateOpacity();
+
+
+            // ----- Fireworks -----
+            GUILayout.Space(20);
+            GUILayout.Label("Fireworks", titleStyle);
+            EnumSetting(ref LaunchShell.effectsOption, "Use Effects");
+
+
+            // ----- Misc. -----
+            GUILayout.Space(20);
+            GUILayout.Label("Misc.", titleStyle);
+            UI.TooltipController.showTooltips = GUILayout.Toggle(UI.TooltipController.showTooltips, "Show Tooltips");
+
 
             // Hidden until CC supports fireworks.
             //GUILayout.Label("Gameplay", titleStyle);
@@ -780,6 +797,22 @@ namespace KerbalCombatSystems
 
             if (setting != settingLast)
                 update = true;
+
+            GUILayout.EndHorizontal();
+        }
+
+        private void EnumSetting(ref EffectsOption effectsOption, string text)
+        {
+            GUILayout.BeginHorizontal();
+
+            GUILayout.Label(text, GUILayout.Width(windowWidth * 0.25f));
+            GUILayout.Space(10);
+
+            string[] options = Enum.GetNames(typeof(EffectsOption));
+            int index = (int)effectsOption;
+
+            index = GUILayout.SelectionGrid(index, options, options.Length);
+            effectsOption = (EffectsOption)index;
 
             GUILayout.EndHorizontal();
         }

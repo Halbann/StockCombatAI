@@ -2,8 +2,8 @@
 
 using UnityEngine;
 using HarmonyLib;
-using KSP.FX.Fireworks;
-using Object = UnityEngine.Object;
+
+using KerbalCombatSystems.Data;
 
 // https://harmony.pardeike.net/articles/annotations.html
 
@@ -12,7 +12,7 @@ namespace KerbalCombatSystems.Fireworks
     [KSPAddon(KSPAddon.Startup.Instantly, true)]
     class Patcher : MonoBehaviour
     {
-        protected void Start()
+        public void Start()
         {
             var harmony = new Harmony("KCS");
             harmony.PatchAll();
@@ -28,12 +28,16 @@ namespace KerbalCombatSystems.Fireworks
 
     [HarmonyPatch(typeof(ModulePartFirework))]
     [HarmonyPatch(nameof(ModulePartFirework.LaunchShell))]
-    class LaunchShellPatch
+    [Settings(category = "Fireworks", displayName = "Fireworks")]
+    class LaunchShell
     {
         // Insert harmony patches around LaunchShell to fix the physics, and optionally add effects.
 
-        public static bool replaceShell = true;
-        static EffectsOption effectsOption = EffectsOption.Always;
+        // Most belong in something that is part-specific. 
+        [Setting] public static EffectsOption effectsOption = EffectsOption.Always;
+        public static bool applyHeat = true;
+        public static bool replaceShell = false;
+        public static float shotHeat = 20f;
 
         internal static bool InAtmosphere =>
             FlightGlobals.ActiveVessel.orbit.referenceBody.atmosphere
@@ -42,35 +46,52 @@ namespace KerbalCombatSystems.Fireworks
         static bool UseEffects =>
             effectsOption == EffectsOption.Always || effectsOption == EffectsOption.Vacuum && !InAtmosphere;
 
+        private static int physicalsCount = 0;
+
         static bool Prefix(ModulePartFirework __instance)
         {
+            // Before LaunchShell.
+
+            physicalsCount = FlightGlobals.physicalObjects.Count;
+
             if (replaceShell)
             {
                 Replacement.ReplaceStockShell(__instance);
                 return false;
             }
-                
+
             __instance.variationOnShellDirection = false;
             return true;
         }
 
         static void Postfix(ModulePartFirework __instance)
         {
+            // After LaunchShell.
+
+            if (FlightGlobals.physicalObjects.Count == physicalsCount)
+                return;
+
+            ModulePartFirework launcher = __instance;
             GameObject shell = FlightGlobals.physicalObjects.Last().gameObject;
 
             if (!replaceShell)
             {
-                Fixer.CorrectStockShell(shell, __instance);
-                __instance.variationOnShellDirection = true;
+                Fixer.CorrectStockShell(shell, launcher);
+                launcher.variationOnShellDirection = true;
             }
+
+            Fixer.AddFixer(shell, launcher);
+
+            if (applyHeat)
+                launcher.part.temperature += shotHeat;
 
             if (UseEffects)
             {
-                // Remove old fx.
-                Object.Destroy(shell.GetComponent<FireworkFX>());
-                Object.Destroy(shell.GetComponent<AudioSource>());
+                Effects.RemoveStockEffects(shell);
+                Effects.AddEffects(shell, launcher);
 
-                // Add custom fx.
+                // trigger sound
+                // trigger muzzle flash and sound
             }
         }
     }

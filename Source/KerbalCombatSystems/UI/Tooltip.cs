@@ -4,8 +4,9 @@ using System.Linq;
 using System.Reflection;
 
 using UnityEngine.UI;
-
 using KSP.UI.TooltipTypes;
+
+using KerbalCombatSystems.Data;
 
 namespace KerbalCombatSystems.UI
 {
@@ -22,8 +23,11 @@ namespace KerbalCombatSystems.UI
     // This class is used inside each part module to manage the creation and destruction of tooltip objects.
 
     // todo: implement as monobehaviour for easier destruction.
+    [Settings(category = "Misc", displayName = "Misc.", visible = true)]
     public class TooltipController : IDisposable
     {
+        [Setting] public static bool showTooltips = true;
+
         public Part part;
         public PartModule module;
 
@@ -59,7 +63,7 @@ namespace KerbalCombatSystems.UI
             if (part == null || module == null)
                 return;
 
-            if (tooltipAdded || windowPart.persistentId != part.persistentId)
+            if (showTooltips || tooltipAdded || windowPart.persistentId != part.persistentId)
                 return;
 
             tooltipAdded = true;

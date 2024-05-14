@@ -60,7 +60,7 @@ namespace KerbalCombatSystems.Fireworks
             // Instantiate shell.
             GameObject shell = Object.Instantiate(l.shellPrefab, transform.position, transform.rotation);
 
-            bool inAtmosphere = LaunchShellPatch.InAtmosphere;
+            bool inAtmosphere = LaunchShell.InAtmosphere;
 
             // Convert to physical object.
             physicalObject obj = physicalObject.ConvertToPhysicalObject(l.part, shell);
