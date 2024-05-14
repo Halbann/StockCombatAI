@@ -35,7 +35,7 @@ namespace KerbalCombatSystems
             }
         }
 
-        private static HashSet<Vessel.Situations> situations = new HashSet<Vessel.Situations> { 
+        private static readonly HashSet<Vessel.Situations> situations = new HashSet<Vessel.Situations> { 
             Vessel.Situations.ORBITING, 
             Vessel.Situations.SUB_ORBITAL,
             Vessel.Situations.DOCKED,
@@ -140,13 +140,13 @@ namespace KerbalCombatSystems
         private static LineMesh detectionRangeMesh;
         private static LineMesh weaponRangeMesh;
 
-        private List<List<Vector3>> rangeRingLines = new List<List<Vector3>>();
-        private List<List<Vector3>> rangeLines = new List<List<Vector3>>();
-        private List<List<Vector3>> secondaryRangeLines = new List<List<Vector3>>();
-        private List<List<Vector3>> elevationLines = new List<List<Vector3>>();
-        private List<List<Vector3>> dashedLines = new List<List<Vector3>>();
-        private List<List<Vector3>> detectionRangeLines = new List<List<Vector3>>();
-        private List<List<Vector3>> weaponRangeLines = new List<List<Vector3>>();
+        private readonly List<List<Vector3>> rangeRingLines = new List<List<Vector3>>();
+        private readonly List<List<Vector3>> rangeLines = new List<List<Vector3>>();
+        private readonly List<List<Vector3>> secondaryRangeLines = new List<List<Vector3>>();
+        private readonly List<List<Vector3>> elevationLines = new List<List<Vector3>>();
+        private readonly List<List<Vector3>> dashedLines = new List<List<Vector3>>();
+        private readonly List<List<Vector3>> detectionRangeLines = new List<List<Vector3>>();
+        private readonly List<List<Vector3>> weaponRangeLines = new List<List<Vector3>>();
 
         private static Material transparentLineMat;
         private static Material rangeLineMat;
@@ -156,7 +156,7 @@ namespace KerbalCombatSystems
         private static Material weaponRangeMat;
         private static Material elevationLineMat;
 
-        private static List<Marker> markers = new List<Marker>();
+        private static readonly List<Marker> markers = new List<Marker>();
         private static Material markerMaterial;
 
         private Color currentIconColour;
@@ -397,7 +397,7 @@ namespace KerbalCombatSystems
                 // If the end point of a ship's elevation arc is within one of these circles, then the player
                 // can see that the ship is in range.
 
-                if (!ReferenceEquals(activeController, null))
+                if (activeController != null)
                 {
                     if (activeController.maxLockRange > 0 &&
                         detectionRange != activeController.maxLockRange)
@@ -564,8 +564,6 @@ namespace KerbalCombatSystems
             material.SetColor("_Color", colour);
         }
 
-        private static float transitionStartingPitch = 0;
-
         internal void DistanceToggle()
         {
             if (transitionDuration <= 0)
@@ -603,7 +601,7 @@ namespace KerbalCombatSystems
 
         private IEnumerator AnimateTransition(float start, float target, float targetPitch)
         {
-            float startTime, distance, t, dt;
+            float startTime, distance, t;
 
             if (transitionTime > 0)
                 startTime = Time.unscaledTime - (transitionDuration - transitionTime);
