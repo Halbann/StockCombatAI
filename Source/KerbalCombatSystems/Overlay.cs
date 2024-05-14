@@ -35,6 +35,13 @@ namespace KerbalCombatSystems
             }
         }
 
+        private static HashSet<Vessel.Situations> situations = new HashSet<Vessel.Situations> { 
+            Vessel.Situations.ORBITING, 
+            Vessel.Situations.SUB_ORBITAL,
+            Vessel.Situations.DOCKED,
+            Vessel.Situations.ESCAPING,
+        };
+
 
         // Global settings.
 
@@ -441,6 +448,7 @@ namespace KerbalCombatSystems
         private bool CheckAvailability()
         {
             bool hide = FlightGlobals.ActiveVessel == null
+                || !situations.Contains(FlightGlobals.ActiveVessel.situation)
                 || activeController == null
                 || MapView.MapIsEnabled
                 || PauseMenu.isOpen
