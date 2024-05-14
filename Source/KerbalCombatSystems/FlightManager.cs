@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 
@@ -703,6 +703,9 @@ namespace KerbalCombatSystems
             // Hidden until CC supports fireworks.
             //GUILayout.Label("Gameplay", titleStyle);
             //SliderSetting(ref ModuleFirework.fireworkSpeed, "Firework Speed", 100, 500);
+
+            if (GUILayout.Button("Reset All"))
+                GlobalSettings.ResetAll();
 
             GUILayout.EndScrollView();
             GUILayout.EndVertical();

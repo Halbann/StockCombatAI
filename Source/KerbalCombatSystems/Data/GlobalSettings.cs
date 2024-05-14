@@ -36,7 +36,14 @@ namespace KerbalCombatSystems.Data
         {
             public string name;
             public string displayName;
-            public List<FieldInfo> fields;
+            public Dictionary<string, SettingInfo> settings;
+        }
+
+        private struct SettingInfo
+        {
+            public Setting attribute;
+            public FieldInfo field;
+            public object defaultValue;
         }
 
         private static Dictionary<string, CategoryInfo> categories = new Dictionary<string, CategoryInfo>();
@@ -53,7 +60,9 @@ namespace KerbalCombatSystems.Data
             categories.Clear();
             var assembly = Assembly.GetExecutingAssembly();
             Settings attribute;
+            Setting setting;
             CategoryInfo categoryInfo;
+            SettingInfo settingInfo;
 
             foreach (Type type in assembly.GetTypes())
             {
@@ -66,7 +75,7 @@ namespace KerbalCombatSystems.Data
                         {
                             name = attribute.category,
                             displayName = attribute.displayName,
-                            fields = new List<FieldInfo>()
+                            settings = new Dictionary<string, SettingInfo>()
                         };
 
                         categories.Add(attribute.category, categoryInfo);
@@ -77,10 +86,18 @@ namespace KerbalCombatSystems.Data
 
                     foreach (FieldInfo field in type.GetFields())
                     {
-                        if (field.GetCustomAttribute(typeof(Setting), false) == null)
+                        setting = (Setting)field.GetCustomAttribute(typeof(Setting), false);
+                        if (setting == null)
                             continue;
 
-                        categoryInfo.fields.Add(field);
+                        settingInfo = new SettingInfo()
+                        {
+                            attribute = setting,
+                            field = field,
+                            defaultValue = field.GetValue(null)
+                        };
+
+                        categoryInfo.settings.Add(field.Name, settingInfo);
                     }
                 }
             }
@@ -97,17 +114,13 @@ namespace KerbalCombatSystems.Data
             ConfigNode settingsNode = new ConfigNode(nameof(GlobalSettings));
             settingsNode.AddValue("version", settingsVersion);
             ConfigNode categoryNode;
-            CategoryInfo category;
 
-            foreach (var entry in categories)
+            foreach (CategoryInfo category in categories.Values)
             {
-                category = entry.Value;
                 categoryNode = new ConfigNode(category.name);
 
-                foreach (FieldInfo field in category.fields)
-                {
-                    categoryNode.AddValue(field.Name, field.GetValue(null).ToString());
-                }
+                foreach (SettingInfo setting in category.settings.Values)
+                    categoryNode.AddValue(setting.field.Name, setting.field.GetValue(null).ToString());
 
                 settingsNode.AddNode(categoryNode);
             }
@@ -128,19 +141,17 @@ namespace KerbalCombatSystems.Data
             ConfigNode file = ConfigNode.Load(Config);
             ConfigNode settingsNode = file.GetNode(nameof(GlobalSettings));
             ConfigNode categoryNode;
-            CategoryInfo category;
 
-            foreach (var entry in categories)
+            foreach (CategoryInfo category in categories.Values)
             {
-                category = entry.Value;
                 categoryNode = settingsNode.GetNode(category.name);
                 if (categoryNode == null)
                     continue;
 
-                foreach (FieldInfo field in category.fields)
+                foreach (SettingInfo setting in category.settings.Values)
                 {
-                    if (GetValue(categoryNode, field, out object value))
-                        field.SetValue(null, value);
+                    if (GetValue(categoryNode, setting.field, out object value))
+                        setting.field.SetValue(null, value);
                 }
             }
         }
@@ -173,6 +184,27 @@ namespace KerbalCombatSystems.Data
             }
 
             return success;
+        }
+
+        public static void ResetSetting(string category, string setting)
+        {
+            if (!categories.TryGetValue(category, out CategoryInfo categoryInfo))
+                return;
+
+            if (!categoryInfo.settings.TryGetValue(setting, out SettingInfo settingInfo))
+                return;
+
+            if (settingInfo.defaultValue != null)
+                settingInfo.field.SetValue(null, settingInfo.defaultValue);
+        }
+
+        public static void ResetAll()
+        {
+            foreach (var category in categories)
+                foreach (var setting in category.Value.settings)
+                    ResetSetting(category.Key, setting.Key);
+
+            Save();
         }
     }
 }
