@@ -127,7 +127,6 @@
     <Compile Include="Fireworks\Patch.cs" />
     <Compile Include="Fireworks\Replacement.cs" />
     <Compile Include="MechJeb.cs" />
-    <Compile Include="Properties\GlobalSuppressions.cs" />
     <Compile Include="LineMesh.cs" />
     <Compile Include="Data\AssetBundles.cs" />
     <Compile Include="Raycasts.cs" />
