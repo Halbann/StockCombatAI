@@ -114,6 +114,10 @@ namespace KerbalCombatSystems
         private float transitionTime;
         private float transitionPitchVelocity;
 
+        private float camPitch;
+        private float camHeading;
+        private float camDistance;
+        private FlightCamera.Modes camMode;
 
         // Data. todo: refactor this using struct.
 
@@ -238,6 +242,22 @@ namespace KerbalCombatSystems
             // This is necessary to make the overlay invisible to additional cameras by default (multi-cam, hull-cam, docking-cam, etc).
             // Layer 8 is only used by the game in the editor I believe.
             FlightCamera.fetch.mainCamera.cullingMask |= (1 << 8);
+
+            GameEvents.onVesselChange.Add(OnVesselChange);
+        }
+
+        private void OnVesselChange(Vessel data)
+        {
+            if (!Available || currentOpacity == 0)
+                return;
+
+            if (camPitch == default)
+                return;
+
+            MainCamera.SetDistanceImmediate(camDistance);
+            FlightCamera.CamPitch = camPitch;
+            FlightCamera.CamHdg = camHeading;
+            FlightCamera.SetModeImmediate(camMode);
         }
 
         private void CreateFixedLines()
@@ -326,6 +346,11 @@ namespace KerbalCombatSystems
             UpdateOpacity();
         }
 
+        protected void OnDestroy()
+        {
+            GameEvents.onVesselChange.Remove(OnVesselChange);
+        }
+
         #endregion
 
 
@@ -355,6 +380,11 @@ namespace KerbalCombatSystems
             }
 
             if (currentOpacity <= 0) return;
+
+            camDistance = MainCamera.Distance;
+            camPitch = MainCamera.camPitch;
+            camHeading = MainCamera.camHdg;
+            camMode = MainCamera.mode;
 
             if (ships.Count > 0)
             {
