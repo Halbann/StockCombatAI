@@ -85,13 +85,14 @@ namespace KerbalCombatSystems.Fireworks
             if (applyHeat)
                 launcher.part.temperature += shotHeat;
 
+            launcher.GetComponent<ModuleStockLauncherAnimation>()?.Spin();
+
             if (UseEffects)
             {
-                Effects.RemoveStockEffects(shell);
-                Effects.AddEffects(shell, launcher);
+                ShellEffects.RemoveStockEffects(shell);
+                ShellEffects.AddEffects(shell, launcher);
 
-                // trigger sound
-                // trigger muzzle flash and sound
+                launcher.GetComponent<ModuleMuzzleFlash>()?.MuzzleEffect();
             }
         }
     }

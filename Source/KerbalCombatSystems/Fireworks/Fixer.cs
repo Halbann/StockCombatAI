@@ -36,8 +36,8 @@ namespace KerbalCombatSystems.Fireworks
                 Destroy(gameObject);
 
             // todo: this doesn't apply to firework fireworks.
-            if (Vector3.Magnitude(rb.velocity - firer.vessel.rb_velocity) < deleteSpeed)
-                Destroy(gameObject);
+            //if (Vector3.Magnitude(rb.velocity - firer.vessel.rb_velocity) < deleteSpeed)
+            //    Destroy(gameObject);
         }
 
         internal void OnCollisionEnter(Collision col)

@@ -121,6 +121,8 @@
     <Compile Include="Data\GlobalSettings.cs" />
     <Compile Include="Debug\Line.cs" />
     <Compile Include="Effects\Tracer.cs" />
+    <Compile Include="Fireworks\Animation.cs" />
+    <Compile Include="Fireworks\MuzzleFlash.cs" />
     <Compile Include="Fireworks\Fixer.cs" />
     <Compile Include="Fireworks\Patch.cs" />
     <Compile Include="Fireworks\Replacement.cs" />

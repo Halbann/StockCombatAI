@@ -412,6 +412,11 @@ namespace KerbalCombatSystems
             return Mathf.Lerp(min, max, position);
         }
 
+        public static float Range(Vector2 limits)
+        {
+            return Random.Range(limits.x, limits.y);
+        }
+
         #endregion
 
         #region Projectile Leading

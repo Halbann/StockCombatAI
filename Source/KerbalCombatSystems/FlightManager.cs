@@ -62,7 +62,7 @@ namespace KerbalCombatSystems
 
         // Weapon variables.
 
-        List<ModuleWeaponController> weaponList = new List<ModuleWeaponController>();
+        private readonly List<ModuleWeaponController> weaponList = new List<ModuleWeaponController>();
         ModuleWeaponController selectedWeapon;
         private Vessel currentVessel;
         private static float launchFailureTime = float.NegativeInfinity;
