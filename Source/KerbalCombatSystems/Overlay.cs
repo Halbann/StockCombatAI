@@ -72,6 +72,7 @@ namespace KerbalCombatSystems
         public static int circleSteps = 120;
         public static int numberOfRangeLines = 4;
         public static float size = 100.0f;
+        public static float thicknessCoef = 1f;
 
         public static float markerScale = 10;
 
@@ -111,6 +112,7 @@ namespace KerbalCombatSystems
         private Coroutine transitionCoroutine;
         private bool transitionDirection;
         private float transitionTime;
+        private float transitionPitchVelocity;
 
 
         // Data. todo: refactor this using struct.
@@ -290,31 +292,31 @@ namespace KerbalCombatSystems
 
             transparentLineMat = new Material(lineShader);
             transparentLineMat.SetColor("_Color", new Color(1, 1, 1, 1));
-            transparentLineMat.SetFloat("_Thickness", 1.3f);
+            transparentLineMat.SetFloat("_Thickness", 1.3f * thicknessCoef);
 
             rangeLineMat = new Material(lineShader);
             rangeLineMat.SetColor("_Color", new Color(1, 1, 1, 1));
-            rangeLineMat.SetFloat("_Thickness", 1.3f);
+            rangeLineMat.SetFloat("_Thickness", 1.3f * thicknessCoef);
 
             secondaryRangeLineMat = new Material(lineShader);
             secondaryRangeLineMat.SetColor("_Color", new Color(1, 1, 1, 1));
-            secondaryRangeLineMat.SetFloat("_Thickness", 1.3f);
+            secondaryRangeLineMat.SetFloat("_Thickness", 1.3f * thicknessCoef);
 
             dashedLineMat = new Material(lineShader);
             dashedLineMat.SetColor("_Color", new Color(1, 1, 1, 1));
-            dashedLineMat.SetFloat("_Thickness", 1.7f);
+            dashedLineMat.SetFloat("_Thickness", 1.7f * thicknessCoef);
 
             detectionRangeMat = new Material(lineShader);
             detectionRangeMat.SetColor("_Color", new Color(1f, 0.6f, 0.3f, 1));
-            detectionRangeMat.SetFloat("_Thickness", 1.7f);
+            detectionRangeMat.SetFloat("_Thickness", 1.7f * thicknessCoef);
 
             weaponRangeMat = new Material(lineShader);
             weaponRangeMat.SetColor("_Color", new Color(1f, 0.3f, 0.3f, 1));
-            weaponRangeMat.SetFloat("_Thickness", 1.7f);
+            weaponRangeMat.SetFloat("_Thickness", 1.7f * thicknessCoef);
 
             elevationLineMat = new Material(lineShader);
             elevationLineMat.SetColor("_Color", new Color(1f, 1f, 1f, 1));
-            elevationLineMat.SetFloat("_Thickness", 1.3f);
+            elevationLineMat.SetFloat("_Thickness", 1.3f * thicknessCoef);
 
             markerMaterial = new Material(Shader.Find("Sprites/Default"));
             markerMaterial.color = Color.white;
@@ -597,8 +599,6 @@ namespace KerbalCombatSystems
             transitionCoroutine = StartCoroutine(AnimateTransition(start, target, targetPitch));
         }
 
-        private float transitionPitchVelocity;
-
         private IEnumerator AnimateTransition(float start, float target, float targetPitch)
         {
             float startTime, distance, t;
@@ -610,6 +610,7 @@ namespace KerbalCombatSystems
 
             start = Mathf.Log(start, transitionBase);
             target = Mathf.Log(target, transitionBase);
+            transitionPitchVelocity = 0;
 
             while (Time.unscaledTime < startTime + transitionDuration)
             {
@@ -704,10 +705,29 @@ namespace KerbalCombatSystems
             return line;
         }
 
-        // Generate points for a segmented line extending in the given direction from the the first range to the last range.
         private List<Vector3> RangeLine(Vector3 direction)
         {
-            return SegmentedLine(direction * ranges.First() * size, direction * ranges.Last() * size, 25);
+            return SegmentedLineExp(direction * ranges.First() * size, direction * ranges.Last() * size, 50);
+        }
+
+        private List<Vector3> SegmentedLineExp(Vector3 start, Vector3 end, int segments)
+        {
+            var line = new List<Vector3>();
+
+            // Exponential interpolation. The line is divided into segments, each segment is longer than the last.
+            float x, y;
+
+            line.Add(start);
+
+            for (int i = 1; i <= segments; i++)
+            {
+                x = (float)i / segments;
+                y = Mathf.Pow(2, 10 * x - 10);
+
+                line.Add(Vector3.Lerp(start, end, y));
+            }
+
+            return line;
         }
 
         // Generate points for an upwards-facing circle made of STEPS number of straight lines with the given radius.
