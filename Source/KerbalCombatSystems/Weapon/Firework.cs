@@ -7,7 +7,6 @@ using UnityEngine;
 
 using static KerbalCombatSystems.Utils;
 using KerbalCombatSystems.Debug2;
-using KerbalCombatSystems.Fireworks;
 
 namespace KerbalCombatSystems.Weapon
 {
@@ -40,11 +39,15 @@ namespace KerbalCombatSystems.Weapon
 
         private Vessel Target => controller.target;
         private Vessel targetLast;
-        private Vector3 targetPerturbationLast;
+        private Vector3d targetPerturbationLast;
         private Vector3 muzzleDirection;
         private Vector3 sasDirection;
         private Lead lead;
 
+        private readonly Queue<Vector3d> jerkQueue = new Queue<Vector3d>(); // lol
+        public float lastMeasuredJerkTime;
+        public static float jerkSmoothTime = 2f;
+        public static float jerkMultiplier = 0f;
 
         // SAS integral term.
         // todo: very scuffed, needs redoing in Unity.
@@ -77,21 +80,10 @@ namespace KerbalCombatSystems.Weapon
             muzzleTransform = launcher.gameObject.GetChild(launcher.cannonName).transform;
             muzzleDirection = muzzleTransform.up;
 
-            // Reset perturbation if target changes.
-            if (targetPerturbationLast == Vector3.zero || Target != targetLast)
-                targetPerturbationLast = Target.perturbation;
-
-            targetLast = Target;
 
             // Calculate lead.
-            lead = TargetLead(Target, vessel, launcher.shellVelocity, muzzleTransform, targetPerturbationLast);
-
-            // Debug jerk.
-            if (Debug.Visible)
-                DebugPerturbation(Target.perturbation, targetPerturbationLast);
-
-            // Update perturbation.
-            targetPerturbationLast = Target.perturbation;
+            Vector3 jerk = jerkMultiplier * MeasureJerk();
+            lead = TargetLead(Target, vessel, launcher.shellVelocity, muzzleTransform, jerk);
 
             // Lead SAS using integral term.
             sasDirection = LeadSAS(lead.direction);
@@ -109,6 +101,41 @@ namespace KerbalCombatSystems.Weapon
                 DebugAim();
 
             return sasDirection;
+        }
+
+        private Vector3 MeasureJerk()
+        {
+            // Measure the average jerk over the last jerkSmoothTime seconds.
+
+            if (targetPerturbationLast == Vector3d.zero || Target != targetLast || Time.fixedTime - lastMeasuredJerkTime > Time.fixedTime)
+            {
+                // Reset.
+
+                targetPerturbationLast = Target.perturbation;
+                jerkQueue.Clear();
+            }
+
+            targetLast = Target;
+
+            Vector3d jerkFrame = (Target.perturbation - targetPerturbationLast) / Time.fixedDeltaTime;
+            jerkQueue.Enqueue(jerkFrame);
+            if (jerkQueue.Count > jerkSmoothTime / Time.fixedUnscaledDeltaTime)
+                jerkQueue.Dequeue();
+
+            // skull emoji.
+            Vector3d meanJerk = jerkQueue.Aggregate(Vector3d.zero, (acc, j) => acc + j) / jerkQueue.Count;
+
+            if (Debug.Visible)
+            {
+                Vector3 jerkOffset = 1f / 6f * meanJerk * Mathf.Pow(lead.time, 3);
+                Line.Draw(Target.CoM, jerkOffset, Color.cyan, 0.5f, 0.5f);
+            }
+
+            // Update perturbation.
+            targetPerturbationLast = Target.perturbation;
+            lastMeasuredJerkTime = Time.fixedTime;
+
+            return meanJerk;
         }
 
         private Vector3 LeadSAS(Vector3 leadDirection)
@@ -228,15 +255,6 @@ namespace KerbalCombatSystems.Weapon
         public static float debugLineSize = 0.2f;
         public static float debugLineAlpha = 0.3f;
         public static bool debugShell = true;
-
-        private void DebugPerturbation(Vector3 perturbation, Vector3 perturbationLast)
-        {
-            // Debug
-
-            Vector3 pertRate = (perturbation - perturbationLast) / Time.fixedDeltaTime;
-            Vector3 jerkOffset = 1f / 6f * pertRate * Mathf.Pow(lead.time, 3);
-            Line.Draw(Target.CoM, jerkOffset, Color.cyan, 0.5f, 0.5f);
-        }
 
         private void DebugAim()
         {

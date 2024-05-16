@@ -82,6 +82,9 @@ namespace KerbalCombatSystems.Fireworks
             Reload();
 
         [KSPEvent(guiName = "Reload", guiActive = true)]
+        public void ReloadEvent() =>
+            Reload();
+
         public bool Reload()
         {
             // Pull a magazine from the nearest inventory and move it into the launcher inventory.
@@ -405,7 +408,7 @@ namespace KerbalCombatSystems.Fireworks
 
         private void OnPartActionUIShown(UIPartActionWindow data0, Part data1)
         {
-            if (data1.persistentId != part.persistentId)
+            if (data1 != part)
                 return;
 
             UpdateUI();
@@ -413,7 +416,7 @@ namespace KerbalCombatSystems.Fireworks
 
         private void OnPartActionUICreate(Part data)
         {
-            if (data.persistentId != part.persistentId)
+            if (data != part)
                 return;
 
             UpdateUI();
@@ -433,7 +436,7 @@ namespace KerbalCombatSystems.Fireworks
 
         private void OnModuleInventoryChanged(ModuleInventoryPart data)
         {
-            if (data.PersistentId != inventory.PersistentId)
+            if (data != inventory)
                 return;
 
             UpdateShotsFromInventory();

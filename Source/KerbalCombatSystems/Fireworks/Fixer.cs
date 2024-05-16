@@ -17,6 +17,7 @@ namespace KerbalCombatSystems.Fireworks
         public static float deleteSpeed = 20f;
         public static float breakingImpulse = 20f;
         public static float shellLifetime = 30f;
+        public static float recoilMultiplier = 1f;
 
         protected void Awake()
         {
@@ -82,22 +83,27 @@ namespace KerbalCombatSystems.Fireworks
             Rigidbody rb = shell.GetComponent<Rigidbody>();
             physicalObject phys = shell.GetComponent<physicalObject>();
 
-            Vector3 forceDirection = launcher.gameObject.GetChild(launcher.cannonName).transform.up;
-            Vector3 counterForce = -1 * forceDirection * launcher.shellMass * (launcher.shellVelocity / Time.fixedDeltaTime) * launcher.shellRBMassScaleValue;
+            Destroy(shell.GetComponent<CollisionEnhancer>());
+            phys.origDrag = 0f;
 
+            // Change rigidbody properties.
             rb.drag = 0f;
             rb.angularVelocity = Vector3.zero;
             rb.collisionDetectionMode = CollisionDetectionMode.ContinuousDynamic;
             rb.detectCollisions = false;
             rb.angularDrag = 0;
-            rb.AddForce(counterForce);
+
+            // Correct velocity.
+            Vector3 forceDirection = launcher.gameObject.GetChild(launcher.cannonName).transform.up;
+            Vector3 counterForce = -1 * forceDirection * launcher.shellMass * (launcher.shellVelocity / Time.fixedDeltaTime) * launcher.shellRBMassScaleValue;
+            
             rb.velocity = launcher.vessel.rb_velocity;
-
-            launcher.part.RigidBodyPart.force.Zero();
-            phys.origDrag = 0f;
-            Destroy(shell.GetComponent<CollisionEnhancer>());
-
+            rb.AddForce(counterForce);
             rb.velocity += forceDirection * launcher.shellVelocity; // How to make this shell specific eventually?
+
+            // Change recoil (1/50th of realistic value as per stock).
+            launcher.part.RigidBodyPart.force.Zero();
+            launcher.part.AddForce(recoilMultiplier * counterForce.normalized * launcher.shellMass * launcher.shellVelocity * launcher.shellRBMassScaleValue); // Recoil (fudged).
         }
     }
 }

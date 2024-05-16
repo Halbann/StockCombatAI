@@ -427,7 +427,7 @@ namespace KerbalCombatSystems
             public float time;
         }
 
-        public static Lead TargetLead(Vessel target, Vessel firer, float muzzleSpeed, Transform muzzle, Vector3 perturbationLast)
+        public static Lead TargetLead(Vessel target, Vessel firer, float muzzleSpeed, Transform muzzle, Vector3 jerk)
         {
             // Direction, absolute positions and velocities.
             Vector3 firingDirection = muzzle.up;
@@ -445,7 +445,6 @@ namespace KerbalCombatSystems
             timeToCPA = Mathf.Min(timeToCPA, maxTime);
 
             Vector3d avgTargetAcc = (GetOrbitalAcceleration(target) + GetOrbitalAcceleration(target, timeToCPA)) / 2;
-            Vector3 jerk = (target.perturbation - perturbationLast) / Time.fixedDeltaTime;
             Vector3 targetAcceleration = avgTargetAcc + target.perturbation;
 
             Vessel active = FlightGlobals.ActiveVessel;
@@ -465,8 +464,11 @@ namespace KerbalCombatSystems
                 velProjectileAbs = firerVelocity + muzzleSpeed * firingDirection;
                 velProjectile = targetVelocity - velProjectileAbs;
 
-                // Calculate the flight time with a quartic.
-                timeToCPA = ClosestTimeToCPAJerk(pos, velProjectile, acc, jerk, maxTime);
+                // Calculate the flight time.
+                if (jerk == Vector3.zero || float.IsNaN(jerk.x))
+                    timeToCPA = ClosestTimeToCPA(pos, velProjectile, acc, maxTime);
+                else
+                    timeToCPA = ClosestTimeToCPAJerk(pos, velProjectile, acc, jerk, maxTime);
 
                 // Use time to predict the target's position at the time of closest approach.
                 prediction = pos + Displacement(velVessel, acc, jerk, timeToCPA);
