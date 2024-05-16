@@ -1,4 +1,4 @@
-using System.Linq;
+﻿using System.Linq;
 
 using UnityEngine;
 using HarmonyLib;
@@ -86,6 +86,7 @@ namespace KerbalCombatSystems.Fireworks
                 launcher.part.temperature += shotHeat;
 
             launcher.GetComponent<ModuleStockLauncherAnimation>()?.Spin();
+            launcher.GetComponent<ModuleLauncherReload>()?.OnLauncherFired();
 
             if (UseEffects)
             {
