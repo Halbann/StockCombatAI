@@ -89,8 +89,11 @@ namespace KerbalCombatSystems.Effects
             UpdateTracer();
         }
 
-        internal void Update() =>
-            UpdateTracer();
+        internal void Update()
+        {
+            if (Time.deltaTime != 0f)
+                UpdateTracer();
+        }
 
         internal void OnCollisionEnter(Collision col)
         {

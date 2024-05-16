@@ -1,4 +1,4 @@
-﻿using System.Linq;
+using System.Linq;
 
 using UnityEngine;
 using HarmonyLib;
@@ -80,7 +80,7 @@ namespace KerbalCombatSystems.Fireworks
                 launcher.variationOnShellDirection = true;
             }
 
-            Fixer.AddFixer(shell, launcher);
+            shell.AddComponent<Fixer>();
 
             if (applyHeat)
                 launcher.part.temperature += shotHeat;

@@ -20,6 +20,8 @@ namespace KerbalCombatSystems.Fireworks
         public static float tracerToFlareTransition = 0.005f;
         public static float tracerWidth = 0.3f;
         public static float tracerOffset = 0f;
+        public static float shutterAngle = 180;
+        public static float framerate = 24;
 
         // Flare settings.
         public static float flareLightRange = 20f;
@@ -191,8 +193,6 @@ namespace KerbalCombatSystems.Fireworks
             tracer.Width = tracerWidth;
             tracer.offset = tracerOffset; // 0.05f
 
-            int framerate = 24;
-            int shutterAngle = 180;
             tracer.exposureTime = 1f / (framerate / (shutterAngle / 360f));
 
             tracer.rb = GetComponent<Rigidbody>();

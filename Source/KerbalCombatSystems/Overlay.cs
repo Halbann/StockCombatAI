@@ -904,10 +904,12 @@ namespace KerbalCombatSystems
 
         private void DrawShipIcons()
         {
-            var shipsTargeting = ships.FindAll(ship => ship.controllerRunning
-                                                        && ship.state != "Withdrawing"
-                                                        && ship.alive
-                                                        && ship.Target != null);
+            var shipsTargeting = ships.FindAll(ship => 
+                ship != null    
+                && ship.controllerRunning
+                && ship.state != "Withdrawing"
+                && ship.alive
+                && ship.Target != null);
 
             var shipTargets = shipsTargeting.Select(ship => ship.Target).ToList();
 

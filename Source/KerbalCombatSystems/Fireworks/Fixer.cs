@@ -1,4 +1,5 @@
-﻿using UnityEngine;
+﻿using System.Collections.Generic;
+using UnityEngine;
 
 namespace KerbalCombatSystems.Fireworks
 {
@@ -9,20 +10,13 @@ namespace KerbalCombatSystems.Fireworks
 
         private float launchTime;
         private Rigidbody rb;
-        private ModulePartFirework firer;
+        private readonly Dictionary<uint, Vessel> speedChecks = new Dictionary<uint, Vessel>();
         private bool destroyed = false;
+        private bool collided = false;
 
         public static float deleteSpeed = 20f;
-        public static float breakingForce = 20f;
+        public static float breakingImpulse = 20f;
         public static float shellLifetime = 30f;
-
-        public static Fixer AddFixer(GameObject shell, ModulePartFirework firer)
-        {
-            var fixer = shell.AddComponent<Fixer>();
-            fixer.firer = firer;
-
-            return fixer;
-        }
 
         protected void Awake()
         {
@@ -35,9 +29,27 @@ namespace KerbalCombatSystems.Fireworks
             if (Time.fixedTime - launchTime > shellLifetime)
                 Destroy(gameObject);
 
-            // todo: this doesn't apply to firework fireworks.
-            //if (Vector3.Magnitude(rb.velocity - firer.vessel.rb_velocity) < deleteSpeed)
-            //    Destroy(gameObject);
+            if (collided)
+                CheckSpeed();
+        }
+
+        private void CheckSpeed()
+        {
+            // It's visually unappealing when a shell, for whatever reason,
+            // is left trapped inside a vessel or just floating beside it, and
+            // bad for performance.
+
+            // After at least one collision, delete the shell if it's slowed down a lot
+            // relative to any of the vessels it's collided with.
+
+            foreach (var vessel in speedChecks.Values)
+            {
+                if (Vector3.Magnitude(rb.velocity - vessel.rb_velocity) < deleteSpeed)
+                {
+                    Destroy(gameObject);
+                    break;
+                }
+            }
         }
 
         internal void OnCollisionEnter(Collision col)
@@ -45,12 +57,24 @@ namespace KerbalCombatSystems.Fireworks
             if (destroyed)
                 return;
 
-            if (col.impulse.magnitude > breakingForce)
+            collided = true;
+
+            if (col.impulse.magnitude > breakingImpulse)
             {
                 destroyed = true;
                 Destroy(gameObject);
                 // trigger effects.
+                // apply decal
             }
+            // Add the vessel to the speed check list.
+            var part = FlightGlobals.GetPartUpwardsCached(col.gameObject);
+            if (part == null)
+                return;
+
+            if (speedChecks.ContainsKey(part.vessel.persistentId))
+                return;
+
+            speedChecks.Add(part.vessel.persistentId, part.vessel);
         }
 
         internal static void CorrectStockShell(GameObject shell, ModulePartFirework launcher)
