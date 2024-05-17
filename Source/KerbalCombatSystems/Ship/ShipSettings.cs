@@ -84,6 +84,32 @@ namespace KerbalCombatSystems
 
 
         [UI.Tooltip(
+            title = "Integral Gain",
+            text = "Gradually builds up a correction for SAS sluggishness while aiming fireworks by moving the set point of the SAS ahead of the target lead direction. This controls the scale of the correction."
+        )]
+        [UI_FloatRange(
+            minValue = 0,
+            maxValue = 5f,
+            stepIncrement = 0.01f
+        )]
+        [ControllerField("Integral Gain", shipControllerGroupName, "x")]
+        public float sasIntegralGain = 0.5f;
+
+
+        [UI.Tooltip(
+            title = "Integral Saturation",
+            text = "The maximum amount of correction in degrees that can be built up."
+        )]
+        [UI_FloatRange(
+            minValue = 0,
+            maxValue = 45f,
+            stepIncrement = 0.1f
+        )]
+        [ControllerField("Integral Saturation", shipControllerGroupName, " °")]
+        public float sasIntegralSaturation = 20;
+
+
+        [UI.Tooltip(
             title = "Max. Salvo Size",
             text = "The number of missiles launched per salvo is the <i>mass of the target</i> divided " +
             "by the <i>mass of the selected missile multiplied by its mass ratio</i>, <b>limited by the max salvo size.</b>"
@@ -200,6 +226,7 @@ namespace KerbalCombatSystems
         // Legacy field.
         [KSPField(isPersistant = true)]
         public float forwardLaunchThrottle = 0f;
+
 
         private void UpgradeSettings()
         {

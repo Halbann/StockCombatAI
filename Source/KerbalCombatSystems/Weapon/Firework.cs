@@ -1,4 +1,3 @@
-using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
@@ -53,8 +52,17 @@ namespace KerbalCombatSystems.Weapon
         // todo: very scuffed, needs redoing in Unity.
         // it's better than nothing.
 
-        public static float sasIntegralGain = 1.5f;
-        public static float sasIntegralSaturation = 22.5f;
+        public ModuleShipController shipController;
+
+        public ModuleShipController ShipController =>
+            shipController ?? FindController(vessel);
+
+        public float SASIntegralGain =>
+                ShipController?.sasIntegralGain ?? 0;
+
+        public float SASIntegralSaturation =>
+            ShipController?.sasIntegralSaturation ?? 0;
+
         private readonly IntegrationLayer xIntegral = new IntegrationLayer();
         private readonly IntegrationLayer yIntegral = new IntegrationLayer();
 
@@ -140,10 +148,10 @@ namespace KerbalCombatSystems.Weapon
 
         private Vector3 LeadSAS(Vector3 leadDirection)
         {
-            xIntegral.saturation = sasIntegralSaturation;
-            yIntegral.saturation = sasIntegralSaturation;
-            xIntegral.gain = sasIntegralGain;
-            yIntegral.gain = sasIntegralGain;
+            xIntegral.saturation = SASIntegralSaturation;
+            yIntegral.saturation = SASIntegralSaturation;
+            xIntegral.gain = SASIntegralGain;
+            yIntegral.gain = SASIntegralGain;
 
             Transform control = vessel.ReferenceTransform;
             Vector3 sasLead = leadDirection;

@@ -28,7 +28,7 @@ namespace KerbalCombatSystems
             text = "The range to the target within which the AI should use this weapon.",
             title = "Range"
         )]
-        [WeaponField("Range", weaponGroupName, distance)]
+        [ControllerField("Range", weaponGroupName, distance)]
         [UI_MinMaxPow(
             minValueX = 50f,
             maxValueX = 15000f,
@@ -49,7 +49,7 @@ namespace KerbalCombatSystems
                 "\n\n<i>It's how many tonnes of 'target' can be destroyed for every tonne of 'weapon'</i>.",
             title = "Mass Ratio"
         )]
-        [WeaponField("Mass Ratio", weaponGroupName, ratio)]
+        [ControllerField("Mass Ratio", weaponGroupName, ratio)]
         [UI_FloatRange(
             minValue = 1f,
             maxValue = 10f,
@@ -68,7 +68,7 @@ namespace KerbalCombatSystems
             "salvoSpacing", "pulseDuration" 
         };
 
-        [WeaponField("Speed Limit", missileGroup, speed)]
+        [ControllerField("Speed Limit", missileGroup, speed)]
         [UI_FloatRange(
             minValue = 50f,
             maxValue = 2000f,
@@ -82,7 +82,7 @@ namespace KerbalCombatSystems
                 " itself away from the firer?",
             title = "Kick Delay"
         )]
-        [WeaponField("Kick Delay", missileGroup, time)]
+        [ControllerField("Kick Delay", missileGroup, time)]
         [UI_FloatRange(
             minValue = 0f,
             maxValue = 2f,
@@ -90,7 +90,7 @@ namespace KerbalCombatSystems
         )]
         public float igniteDelay = 0.2f;
 
-        [WeaponField("Kick Duration", missileGroup, time)]
+        [ControllerField("Kick Duration", missileGroup, time)]
         [UI_FloatRange(
             minValue = 0f,
             maxValue = 5f,
@@ -98,7 +98,7 @@ namespace KerbalCombatSystems
         )]
         public float pulseDuration = 0.5f;
 
-        [WeaponField("Kick Throttle", missileGroup, percent)]
+        [ControllerField("Kick Throttle", missileGroup, percent)]
         [UI_FloatRange(
             minValue = 0f,
             maxValue = 100f,
@@ -112,7 +112,7 @@ namespace KerbalCombatSystems
                 " this missile before launching the next missile in a salvo?",
             title = "Salvo Spacing"
         )]
-        [WeaponField("Salvo Spacing", missileGroup, time)]
+        [ControllerField("Salvo Spacing", missileGroup, time)]
         [UI_FloatRange(
             minValue = 0.2f,
             maxValue = 5f,
@@ -137,7 +137,7 @@ namespace KerbalCombatSystems
               )]
         public float terminalTime = 5f;*/
 
-        [WeaponField("Use for Interception", missileGroup)]
+        [ControllerField("Use for Interception", missileGroup)]
         [UI_Toggle(
             enabledText = "Enabled",
             disabledText = "Disabled"
@@ -159,7 +159,7 @@ namespace KerbalCombatSystems
         };
 
         // Max should be part specific.
-        [WeaponField("Fire Rate", fireworkGroup, rpm)]
+        [ControllerField("Fire Rate", fireworkGroup, rpm)]
         [UI_FloatRange(
             minValue = 60f,
             maxValue = 1200,
@@ -167,7 +167,7 @@ namespace KerbalCombatSystems
         )]
         public float FWBurstSpacing = 300;
 
-        [WeaponField("Burst Size", fireworkGroup, " rounds")]
+        [ControllerField("Burst Size", fireworkGroup, " rounds")]
         [UI_FloatRange(
             minValue = 1f,
             maxValue = 8f,
@@ -175,7 +175,7 @@ namespace KerbalCombatSystems
         )]
         public float FWRoundBurst = 3f;
 
-        [WeaponField("Time Between Bursts", fireworkGroup, time)]
+        [ControllerField("Time Between Bursts", fireworkGroup, time)]
         [UI_FloatRange(
             minValue = 0f,
             maxValue = 3f,
@@ -183,7 +183,7 @@ namespace KerbalCombatSystems
         )]
         public float FWBurstInterval = 0.5f;
 
-        [WeaponField("Aim Tolerance", fireworkGroup, radius)]
+        [ControllerField("Aim Tolerance", fireworkGroup, radius)]
         [UI_FloatRange(
             minValue = 0.1f,
             maxValue = 2f,
@@ -196,7 +196,7 @@ namespace KerbalCombatSystems
             "than firing one until it runs out of shells.",
             title = "Volley Fire"
         )]
-        [WeaponField("Volley Fire", fireworkGroup)]
+        [ControllerField("Volley Fire", fireworkGroup)]
         [UI_Toggle(
             enabledText = "Enabled",
             disabledText = "Disabled"
@@ -214,7 +214,7 @@ namespace KerbalCombatSystems
             "fireSymmetry"
         };
 
-        [WeaponField("Firing Interval", rocketGroupName, time)]
+        [ControllerField("Firing Interval", rocketGroupName, time)]
         [UI_FloatRange(
             minValue = 0f,
             maxValue = 10f,
@@ -222,7 +222,7 @@ namespace KerbalCombatSystems
         )]
         public float firingInterval = 1f;
 
-        [WeaponField("Firing Countdown", rocketGroupName, time)]
+        [ControllerField("Firing Countdown", rocketGroupName, time)]
         [UI_FloatRange(
             minValue = 0f,
             maxValue = 10f,
@@ -230,7 +230,7 @@ namespace KerbalCombatSystems
         )]
         public float fireCountdown = 0.5f;
 
-        [WeaponField("Aim Tolerance", rocketGroupName, radius)]
+        [ControllerField("Aim Tolerance", rocketGroupName, radius)]
         [UI_FloatRange(
             minValue = 0.1f,
             maxValue = 2f,
@@ -238,7 +238,7 @@ namespace KerbalCombatSystems
         )]
         public float accuracyTolerance = 0.5f;
 
-        [WeaponField("Fire Symmetrical Rockets", rocketGroupName)]
+        [ControllerField("Fire Symmetrical Rockets", rocketGroupName)]
         [UI_Toggle(
             enabledText = "Enabled",
             disabledText = "Disabled"
@@ -256,9 +256,9 @@ namespace KerbalCombatSystems
         }
     }
 
-    class WeaponField : KSPField
+    class ControllerField : KSPField
     {
-        public WeaponField(string name, string group, string unit = "") : base()
+        public ControllerField(string name, string group, string unit = "") : base()
         {
             groupDisplayName = name;
             groupName = group;

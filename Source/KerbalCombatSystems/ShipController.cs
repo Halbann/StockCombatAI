@@ -97,7 +97,7 @@ namespace KerbalCombatSystems
 
         // Target.
         public Vessel Target =>
-            targeting.target;
+            targeting?.target ?? null;
 
         internal ModuleShipController TargetController =>
             targeting.targetController;

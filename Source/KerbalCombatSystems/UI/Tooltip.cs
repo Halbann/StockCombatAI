@@ -55,7 +55,9 @@ namespace KerbalCombatSystems.UI
         public void RefreshTooltips()
         {
             RemoveTooltips();
-            AddTooltips();
+
+            if (showTooltips)
+                AddTooltips();
         }
 
         private void OnPartActionUIShown(UIPartActionWindow _, Part windowPart)
@@ -63,17 +65,21 @@ namespace KerbalCombatSystems.UI
             if (part == null || module == null)
                 return;
 
-            if (showTooltips || tooltipAdded || windowPart.persistentId != part.persistentId)
+            if (windowPart != part)
                 return;
 
-            tooltipAdded = true;
-            AddTooltips();
+            if (tooltipAdded == showTooltips)
+                return;
+
+            RefreshTooltips();
         }
 
         // todo: add support for events (buttons).
 
         private void AddTooltips()
         {
+            tooltipAdded = true;
+
             int fieldCount = module.Fields.Count;
             BaseField field;
 
@@ -136,6 +142,8 @@ namespace KerbalCombatSystems.UI
 
         private void RemoveTooltips()
         {
+            tooltipAdded = false;
+
             foreach (var tooltip in tooltips)
             {
                 if (tooltip == null)
