@@ -6,6 +6,7 @@ using UnityEngine;
 
 using static KerbalCombatSystems.Utils;
 using KerbalCombatSystems.Debug2;
+using KerbalCombatSystems.Fireworks;
 
 namespace KerbalCombatSystems.Weapon
 {
@@ -22,6 +23,7 @@ namespace KerbalCombatSystems.Weapon
         private bool firing = false;
         private Transform muzzleTransform;
         private ModulePartFirework launcher;
+        private bool canReload = true;
 
         public override Part AimPart
         {
@@ -72,6 +74,9 @@ namespace KerbalCombatSystems.Weapon
             controller = part.FindModuleImplementing<ModuleWeaponController>();
             UpdateLaunchers();
             launcher = FindLauncher(launchers);
+
+            if (HighLogic.LoadedSceneIsFlight)
+                StartCoroutine(OverheatMonitor());
         }
 
         #region Weapon Generic
@@ -189,13 +194,24 @@ namespace KerbalCombatSystems.Weapon
                 if (launcher == null)
                     break;
 
+                // todo: very silly code. smh my head.
                 if (controller.volleyFire)
                 {
-                    launchers.ForEach(l => l.LaunchShell());
+                    foreach (ModulePartFirework launcher in launchers)
+                    {
+                        if (TooHot(launcher))
+                            continue;
+
+                        if (launcher.fireworkShots < 1)
+                            TryReload(launcher);
+
+                        launcher.LaunchShell();
+                    }
                 }
                 else
                 {
-                    launcher.LaunchShell();
+                    if (!TooHot(launcher))
+                        launcher.LaunchShell();
                 }
 
                 yield return wait;
@@ -222,6 +238,14 @@ namespace KerbalCombatSystems.Weapon
                     continue;
 
                 launchers.Add(firework);
+
+                // Register for ammo changes.
+                var reloader = firework.GetComponent<ModuleLauncherReload>();
+                if (reloader)
+                {
+                    reloader.onShotCountChanged -= OnAmmoChanged;
+                    reloader.onShotCountChanged += OnAmmoChanged;
+                }
             }
 
             if (launchers.Count < 1)
@@ -231,6 +255,7 @@ namespace KerbalCombatSystems.Weapon
         private ModulePartFirework FindLauncher(List<ModulePartFirework> launchers)
         {
             ModulePartFirework launcher = null;
+            ModulePartFirework overheatLauncher = null;
             bool found = false;
 
             for (int i = launchers.Count - 1; i >= 0; i--)
@@ -244,14 +269,82 @@ namespace KerbalCombatSystems.Weapon
                 }
 
                 if (launcher.fireworkShots < 1)
+                {
+                    if (!TryReload(launcher))
+                        continue;
+                }
+
+                if (TooHot(launcher))
+                {
+                    overheatLauncher = launcher;
                     continue;
+                }
 
                 found = true;
                 break;
             }
 
+            if (!found && overheatLauncher != null)
+            {
+                launcher = overheatLauncher;
+                found = true;
+            }
+
             controller.canFire = found;
             return found ? launcher : null;
+        }
+
+        public void OnAmmoChanged(ModulePartFirework launcher)
+        {
+            if (launcher == null || launcher.vessel != vessel)
+                return;
+
+            if (!HighLogic.LoadedSceneIsFlight)
+                Debug.LogError("Tried to reload a firework launcher in the editor?");
+
+            if (firing)
+                return;
+
+            controller.canFire = launcher.fireworkShots > 0 || AmmoCount > 0;
+        }
+
+        public bool TryReload(ModulePartFirework launcher)
+        {
+            if (!canReload)
+                return false;
+
+            var reloader = launcher.GetComponent<ModuleLauncherReload>();
+            if (reloader == null)
+                return false;
+
+            bool reloaded = reloader.Reload();
+            canReload = reloaded;
+
+            return reloaded;
+        }
+
+        private bool TooHot(ModulePartFirework launcher)
+        {
+            return launcher.part.maxTemp - launcher.part.temperature < LaunchShell.shotHeat * controller.FWRoundBurst + 1;
+        }
+
+        private IEnumerator OverheatMonitor()
+        {
+            // This covers the scenario where all launchers are unavailable,
+            // but some may become available when they cool down.
+
+            // This design hints that it might be better if can fire was a property invoked by the ship controller?
+            // But how to make it performant?
+
+            var wait = new WaitForSeconds(ModuleShipController.combatUpdateInterval);
+
+            while (true)
+            {
+                yield return wait;
+
+                if (!controller.canFire && launchers.Count > 0)
+                    FindLauncher(launchers);
+            }
         }
 
         #endregion

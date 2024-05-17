@@ -31,6 +31,9 @@ namespace KerbalCombatSystems.Fireworks
         private ModuleInventoryPart inventory;
         private bool uiOpened = false;
 
+        public delegate void OnShotCountChangedHandler(ModulePartFirework launcher);
+        public event OnShotCountChangedHandler onShotCountChanged;
+
         // debug
         public static List<Part> searchedParts = new List<Part>();
         private static PartSet crossfeedParts;
@@ -113,6 +116,7 @@ namespace KerbalCombatSystems.Fireworks
                 return false;
 
             TakeShells(cargoInventory, magazine);
+
             return true;
         }
 
@@ -292,7 +296,7 @@ namespace KerbalCombatSystems.Fireworks
             if (shells != null)
                 amount = (int)shells.amount;
 
-            if (launcher == null)
+            if (launcher == null || launcher.fireworkShots == amount)
                 return;
 
             launcher.fireworkShots = amount;
@@ -441,6 +445,8 @@ namespace KerbalCombatSystems.Fireworks
 
             UpdateShotsFromInventory();
             StartCoroutine(Delay(new WaitForEndOfFrame(), UpdateUI));
+
+            onShotCountChanged?.Invoke(launcher);
         }
 
         private IEnumerator Delay(YieldInstruction delay, Action action)
