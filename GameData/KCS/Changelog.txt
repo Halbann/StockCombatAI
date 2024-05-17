@@ -5,7 +5,8 @@
 - Firework launchers now use ammunition via the stock cargo system.
 	- Shells come in magazines of 8, 16 and 32.
 	- Shells obey normal crossfeed rules.
-- Each firework shot generates heat and the launcher glows when hot.
+	- The AI will reload automatically. There is no time to reload.
+- Each firework shot generates heat and the launcher glows when hot. The AI stops firing when the launcher gets too hot.
 - Launcher barrels are now hollow.
 - The launcher drum now spins after firing.
 - Added optional muzzle flash, tracer and flare effects.
@@ -14,17 +15,18 @@
 - Added optional tooltips to ship settings.
 - Toggle/Activate/Deactivate AI can now be assigned to action groups.
 - Active ship controllers are resumed when loading a save.
-- Improved ship movement (WIP).
-	- Ships now prioritise evading over withdrawing.
-	- Ships now distinguish between unsafe and dangerous orbits based on remaining delta-v. Dangerous orbits are corrected in combat and unsafe orbits are corrected when idle.
-	- MechJebLib is now used for orbit correction, allowing for elliptical orbits to be corrected.
-	- Ships no longer make endless minute adjustments to their course when intercepting a target. Trajectories are chosen so that ships maintain a mostly constant attitude and throttle.
-	- Ships now time their flip and burn properly when intercepting a target so as to arrive with zero velocity.
-	- Ships now use thrust to offset recoil/drift while firing projectiles.
-	- Added an Angular Speed Limit setting. The ship will slow down before aiming projectiles if the angular speed of the target exceeds this limit. The right value depends on your available torque and the accuracy of your weapons.
+- Ships now prioritise evading over withdrawing.
+- Ships now distinguish between unsafe and dangerous orbits based on remaining delta-v. Dangerous orbits are corrected in combat and unsafe orbits are corrected when idle.
+- MechJebLib is now used for orbit correction, allowing for elliptical orbits to be corrected.
 - Removed forwards launch throttle setting. The ship will always kill throttle when launching a missile forwards or from inside an enclosed space, unless it is evading.
 - Added tentative weapon robotics support. Ships deploy KAL-250 controllers when firing missiles if the sequence name matches the weapon code of the missile.
-- Improved firework target leading.
+
+- Experimental changes to combat movement:
+	- Ships no longer make endless minute adjustments to their course when intercepting a target. Trajectories are chosen so that ships maintain a mostly constant attitude and throttle.
+	- Ships now time their flip and burn when intercepting a target so as to arrive with zero velocity.
+	- Ships now use thrust to offset recoil/drift while firing projectiles.
+	- Added an Angular Speed Limit setting. The ship will slow down before aiming projectiles if the angular speed of the target exceeds this limit. The right value depends on your available torque and the accuracy of your weapons.
+	- Added two settings for integral gain and integral saturation. While aiming fireworks, the system gradually builds up a correction for SAS sluggishness by moving the set point of the SAS ahead of the target lead direction.
 
 - Added optional tooltips to weapon settings.
 - Added a 'Sync Settings' button to the weapon controller that copies all settings to all other weapon controllers on the vessel with the same code.

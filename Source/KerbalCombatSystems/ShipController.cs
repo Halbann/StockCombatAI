@@ -1315,10 +1315,8 @@ namespace KerbalCombatSystems
             double UT = Planetarium.GetUniversalTime();
             Vector3d deltaV = DeltaVToChangePeriapsis(orbit, UT, body.Radius + minSafeAltitude);
 
-            // TotalDeltaV could be 10 seconds out of date, so subtract 10 seconds worth.
-            // Also include a 5% margin.
-
-            return deltaV.magnitude > (TotalDeltaV - maxAcceleration * 10) * 0.95f;
+            // Check with a 10% percent margin, ensuring that it's at least a 1 second burn.
+            return deltaV.magnitude > Math.Max(TotalDeltaV * 0.9f, maxAcceleration * 1f);
         }
 
         #endregion
