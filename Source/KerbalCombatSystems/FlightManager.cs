@@ -20,7 +20,7 @@ namespace KerbalCombatSystems
 
         // GUI variables.
 
-        private const string title = "KCS Beta v0.3.0";
+        private const string title = "KCS Beta v0.3.0 Preview 2";
         private ApplicationLauncherButton appLauncherButton;
         private bool guiEnabled = false;
         private bool guiHidden;
