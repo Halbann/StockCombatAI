@@ -71,21 +71,13 @@ namespace KerbalCombatSystems
 
                 foreach (var renderer in part.GetPartColliders().ToList())
                 {
-                    switch (renderer)
+                    meshBounds = renderer switch
                     {
-                        case MeshCollider meshCollider:
-                            meshBounds = meshCollider.sharedMesh.bounds;
-                            break;
-                        case BoxCollider boxCollider:
-                            meshBounds = new Bounds(boxCollider.center, boxCollider.size);
-                            break;
-                        case SphereCollider sphereCollider:
-                            meshBounds = new Bounds(sphereCollider.center, Vector3.one * sphereCollider.radius * 2);
-                            break;
-                        default:
-                            meshBounds = new Bounds(Vector3.zero, Vector3.zero);
-                            break;
-                    }
+                        MeshCollider meshCollider =>      meshCollider.sharedMesh.bounds,
+                        BoxCollider boxCollider =>        new Bounds(boxCollider.center, boxCollider.size),
+                        SphereCollider sphereCollider =>  new Bounds(sphereCollider.center, Vector3.one * sphereCollider.radius * 2),
+                        _ =>                              new Bounds(Vector3.zero, Vector3.zero),
+                    };
 
                     meshCentreWorldSpace = renderer.transform.TransformPoint(meshBounds.center);
                     meshBounds.center = local.InverseTransformPoint(meshCentreWorldSpace);

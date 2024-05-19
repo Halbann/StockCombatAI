@@ -177,12 +177,6 @@ namespace KerbalCombatSystems
 
         #region Labels
 
-        // todo: draw construction lines and timetointecept text for nearintercept variables
-        private void ActiveVesselDebug()
-        {
-
-        }
-
         public static void DrawDebugLabel(string text, Vector3 position) =>
             debugLabels.Add(new DebugLabelData(text, position));
 

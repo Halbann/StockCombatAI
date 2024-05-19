@@ -277,8 +277,8 @@ namespace KerbalCombatSystems.Weapon
                 var reloader = firework.GetComponent<ModuleLauncherReload>();
                 if (reloader)
                 {
-                    reloader.onShotCountChanged -= OnAmmoChanged;
-                    reloader.onShotCountChanged += OnAmmoChanged;
+                    reloader.OnShotCountChanged -= OnAmmoChanged;
+                    reloader.OnShotCountChanged += OnAmmoChanged;
                 }
             }
 

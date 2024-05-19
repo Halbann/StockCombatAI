@@ -46,7 +46,7 @@ namespace KerbalCombatSystems.Data
             public object defaultValue;
         }
 
-        private static Dictionary<string, CategoryInfo> categories = new Dictionary<string, CategoryInfo>();
+        private static readonly Dictionary<string, CategoryInfo> categories = new Dictionary<string, CategoryInfo>();
         private static bool locatedFields = false;
 
         protected void Start()
@@ -61,7 +61,6 @@ namespace KerbalCombatSystems.Data
             var assembly = Assembly.GetExecutingAssembly();
             Settings attribute;
             Setting setting;
-            CategoryInfo categoryInfo;
             SettingInfo settingInfo;
 
             foreach (Type type in assembly.GetTypes())
@@ -69,7 +68,7 @@ namespace KerbalCombatSystems.Data
                 attribute = (Settings)type.GetCustomAttribute(typeof(Settings), false);
                 if (attribute != null)
                 {
-                    if (!categories.TryGetValue(attribute.category, out categoryInfo))
+                    if (!categories.TryGetValue(attribute.category, out CategoryInfo categoryInfo))
                     {
                         categoryInfo = new CategoryInfo()
                         {

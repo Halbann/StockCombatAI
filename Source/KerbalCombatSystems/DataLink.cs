@@ -7,31 +7,6 @@ namespace KerbalCombatSystems
     {
         public ModuleWeapon typeModule;
         public int scalingFactor = 5;
-
-        public void Setup()
-        {
-            /*if (setup) return;
-
-            string moduleName;
-            switch (weaponType)
-            {
-                case "transmitter":
-                    moduleName = "ModuleDataLinkRelay";
-                    break;
-                case "receiver":
-                    moduleName = "ModuleDataLinkAntenna";
-                    break;
-                default:
-                    Debug.Log($"[KCS]: Couldn't find a module for {linkType}.");
-                    return;
-            }
-            
-            if (part.GetComponent(moduleName) == null)
-                typeModule = (ModuleWeapon)part.AddModule(moduleName);
-
-            typeModule.Setup();
-            setup = true;*/
-        }
     }
 
     public class ModuleDataLinkRelay : ModuleDataLink

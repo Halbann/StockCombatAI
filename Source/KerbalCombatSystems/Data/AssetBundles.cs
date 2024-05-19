@@ -18,7 +18,7 @@ namespace KerbalCombatSystems.Data
             "effects"
         };
 
-        private static Dictionary<string, Object> assets = new Dictionary<string, Object>();
+        private static readonly Dictionary<string, Object> assets = new Dictionary<string, Object>();
 
         internal void Awake()
         {

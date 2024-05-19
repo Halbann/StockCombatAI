@@ -26,7 +26,6 @@ namespace KerbalCombatSystems
         LineRenderer leadLine;
         private List<ModuleDecouplerDesignate> decouplers;
         internal ModuleDecouplerDesignate decoupler;
-        Vector3 aimVector;
 
         public bool firing = false;
         Vector3 targetVector;
@@ -38,9 +37,9 @@ namespace KerbalCombatSystems
         float lastCalculated;
         float previousCalculation = 0;
         float latestCalculation = 0;
-        static float calculateInterval = 0.5f;
-        static float simTimestep = 0.02f;
-        static float maxSimTime = 20f;
+        public static float calculateInterval = 0.5f;
+        public static float simTimestep = 0.02f;
+        public static float maxSimTime = 20f;
 
         float fireCountdown;
         float firingInterval;
@@ -175,7 +174,6 @@ namespace KerbalCombatSystems
 
             float consumptionRate = GetConsumptionRate(engines);
             Vector3 thrustVector = GetFireVector(engines) * -1;
-            aimVector = thrustVector.normalized;
 
             float thrust = Vector3.Dot(thrustVector, decoupler.transform.up);
             if (thrust < 1)

@@ -353,20 +353,13 @@ namespace KerbalCombatSystems
 
         private Vector3 GetEscapeDirection(double UT)
         {
-            switch (Direction)
+            return Direction switch
             {
-                case EscapeDirection.Normal:
-                    //return vessel.orbit.Normal(UT).normalized;
-                    return (Vector3)vessel.orbit.h.xzy.normalized;
-                case EscapeDirection.AntiNormal:
-                    return (Vector3)vessel.orbit.h.xzy.normalized * -1;
-                case EscapeDirection.Prograde:
-                    return (Vector3)vessel.orbit.Prograde(UT).normalized;
-                case EscapeDirection.Retrograde:
-                    return (Vector3)vessel.orbit.Prograde(UT).normalized * -1;
-                default:
-                    return (Vector3)vessel.orbit.h.xzy.normalized;
-            }
+                EscapeDirection.Prograde => vessel.orbit.Prograde(UT).normalized,
+                EscapeDirection.Retrograde => vessel.orbit.Prograde(UT).normalized * -1,
+                EscapeDirection.AntiNormal => vessel.orbit.h.xzy.normalized * -1,
+                _ => vessel.orbit.h.xzy.normalized,
+            };
         }
 
         private bool CheckOrbitUnsafe()

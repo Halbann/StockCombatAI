@@ -17,7 +17,7 @@ public class LineMeshData {
 
     private int[] triangles;
 
-    private Mesh mesh;
+    private readonly Mesh mesh;
 
     public LineMeshData(Mesh mesh) {
         this.mesh = mesh;
@@ -171,7 +171,7 @@ public class LineMesh : MonoBehaviour
         }
     }
     // Start is called before the first frame update
-    void Start()
+    protected void Start()
     {
         if (Positions.Count < 1) {
             Positions.Add(new List<Vector3>());
@@ -182,13 +182,7 @@ public class LineMesh : MonoBehaviour
         MeshData.SetLinesFromPoints(Positions);
     }
 
-    // Update is called once per frame
-    void Update()
-    {
-        
-    }
-
-    void OnValidate() {
+    protected void OnValidate() {
         if (_meshData != null) {
             if (Positions.Count < 1) {
                 Positions.Add(new List<Vector3>());

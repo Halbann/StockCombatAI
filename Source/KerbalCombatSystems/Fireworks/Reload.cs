@@ -32,7 +32,7 @@ namespace KerbalCombatSystems.Fireworks
         private bool uiOpened = false;
 
         public delegate void OnShotCountChangedHandler(ModulePartFirework launcher);
-        public event OnShotCountChangedHandler onShotCountChanged;
+        public event OnShotCountChangedHandler OnShotCountChanged;
 
         // debug
         public static List<Part> searchedParts = new List<Part>();
@@ -446,7 +446,7 @@ namespace KerbalCombatSystems.Fireworks
             UpdateShotsFromInventory();
             StartCoroutine(Delay(new WaitForEndOfFrame(), UpdateUI));
 
-            onShotCountChanged?.Invoke(launcher);
+            OnShotCountChanged?.Invoke(launcher);
         }
 
         private IEnumerator Delay(YieldInstruction delay, Action action)
