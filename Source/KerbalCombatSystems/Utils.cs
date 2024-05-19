@@ -427,7 +427,7 @@ namespace KerbalCombatSystems
             public float time;
         }
 
-        public static Lead TargetLead(Vessel target, Vessel firer, float muzzleSpeed, Transform muzzle, Vector3 jerk)
+        public static Lead TargetLead(Vessel target, Vessel firer, float muzzleSpeed, Transform muzzle, Vector3 targetAcc, Vector3 jerk = default)
         {
             // Direction, absolute positions and velocities.
             Vector3 firingDirection = muzzle.up;
@@ -445,7 +445,7 @@ namespace KerbalCombatSystems
             timeToCPA = Mathf.Min(timeToCPA, maxTime);
 
             Vector3d avgTargetAcc = (GetOrbitalAcceleration(target) + GetOrbitalAcceleration(target, timeToCPA)) / 2;
-            Vector3 targetAcceleration = avgTargetAcc + target.perturbation;
+            Vector3 targetAcceleration = avgTargetAcc + targetAcc;
 
             Vessel active = FlightGlobals.ActiveVessel;
             Vector3 bulletAcceleration = (GetOrbitalAcceleration(active) + GetOrbitalAcceleration(active, timeToCPA)) / 2;

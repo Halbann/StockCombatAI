@@ -42,15 +42,20 @@ namespace KerbalCombatSystems.Weapon
 
         private Vessel Target => controller.target;
         private Vessel targetLast;
-        private Vector3d targetPerturbationLast;
         private Vector3 muzzleDirection;
         private Vector3 sasDirection;
         private Lead lead;
 
-        private readonly Queue<Vector3d> jerkQueue = new Queue<Vector3d>(); // lol
-        public float lastMeasuredJerkTime;
-        public static float jerkSmoothTime = 2f;
-        public static float jerkMultiplier = 0f;
+        //private Vector3d targetPerturbationLast;
+        //private readonly Queue<Vector3d> jerkQueue = new Queue<Vector3d>(); // lol
+        //public float lastMeasuredJerkTime;
+        //public static float jerkSmoothTime = 2f;
+        //public static float jerkMultiplier = 0f;
+
+        public static float accSmoothTime = 0.2f;
+        private Vector3 accSmoothSpeed;
+        private Vector3 accSmoothed;
+        private float lastAimTime;
 
         // SAS integral term.
         // todo: very scuffed, needs redoing in Unity.
@@ -95,10 +100,12 @@ namespace KerbalCombatSystems.Weapon
             muzzleTransform = launcher.gameObject.GetChild(launcher.cannonName).transform;
             muzzleDirection = muzzleTransform.up;
 
-
             // Calculate lead.
-            Vector3 jerk = jerkMultiplier * MeasureJerk();
-            lead = TargetLead(Target, vessel, launcher.shellVelocity, muzzleTransform, jerk);
+
+            //Vector3 jerk = jerkMultiplier * MeasureJerk();
+            Vector3 targetAcc = MeasureAcceleration();
+            lead = TargetLead(Target, vessel, launcher.shellVelocity, muzzleTransform, targetAcc);
+            targetLast = Target;
 
             // Lead SAS using integral term.
             sasDirection = LeadSAS(lead.direction);
@@ -118,7 +125,32 @@ namespace KerbalCombatSystems.Weapon
             return sasDirection;
         }
 
-        private Vector3 MeasureJerk()
+        private Vector3 MeasureAcceleration()
+        {
+            // lamba function with no return to reset smoothed acceleration.
+
+            if (accSmoothed == Vector3.zero)
+                ResetTargetAcceleration();
+
+            if (Time.fixedTime - lastAimTime > Time.fixedTime)
+                ResetTargetAcceleration();
+
+            if (Target != targetLast)
+                ResetTargetAcceleration();
+
+            accSmoothed = Vector3.SmoothDamp(accSmoothed, Target.perturbation, ref accSmoothSpeed, accSmoothTime);
+            lastAimTime = Time.fixedTime;
+
+            return accSmoothed;
+        }
+
+        private void ResetTargetAcceleration()
+        {
+            accSmoothed = Target.perturbation;
+            accSmoothSpeed = Vector3.zero;
+        }
+
+        /*private Vector3 MeasureJerk()
         {
             // Measure the average jerk over the last jerkSmoothTime seconds.
 
@@ -151,7 +183,7 @@ namespace KerbalCombatSystems.Weapon
             lastMeasuredJerkTime = Time.fixedTime;
 
             return meanJerk;
-        }
+        }*/
 
         private Vector3 LeadSAS(Vector3 leadDirection)
         {
