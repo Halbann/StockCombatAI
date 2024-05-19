@@ -23,7 +23,9 @@ namespace KerbalCombatSystems.Weapon
         private bool firing = false;
         private Transform muzzleTransform;
         private ModulePartFirework launcher;
-        private bool canReload = true;
+
+        // todo: we will need to reset when the state of on-board cargo containers changes.
+        private readonly Dictionary<uint, bool> canReload = new Dictionary<uint, bool>();
 
         public override Part AimPart
         {
@@ -310,7 +312,7 @@ namespace KerbalCombatSystems.Weapon
 
         public bool TryReload(ModulePartFirework launcher)
         {
-            if (!canReload)
+            if (canReload.TryGetValue(launcher.part.persistentId, out bool reloadable) && !reloadable)
                 return false;
 
             var reloader = launcher.GetComponent<ModuleLauncherReload>();
@@ -318,7 +320,7 @@ namespace KerbalCombatSystems.Weapon
                 return false;
 
             bool reloaded = reloader.Reload();
-            canReload = reloaded;
+            canReload[launcher.part.persistentId] = reloaded;
 
             return reloaded;
         }
