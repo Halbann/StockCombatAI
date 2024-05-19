@@ -128,7 +128,6 @@ namespace KerbalCombatSystems
         // Projectiles.
         private Part originalReferenceTransform;
         private ModuleWeaponController currentProjectile;
-        public static float firingOffsetStrength = 2f;
 
         // Debugging
         internal float interceptStoppingDistance;
@@ -516,18 +515,25 @@ namespace KerbalCombatSystems
                         // todo: box raycast.
 
                         currentProjectile.targetSize = TargetController.averagedSize;
-                      
+                        float backwardVelocity;
+                        float lerpRate = fc.throttleLerpRate;
+                        Vector3 aim, vel;
+
                         while (UnderTimeLimit() && Target != null && currentProjectile.canFire)
                         {
-                            Vector3 aim = currentProjectile.Aim();
+                            vel = vessel.Vel(Target);
+                            aim = currentProjectile.Aim();
                             fc.attitude = aim == Vector3.zero ? vessel.ReferenceTransform.up : aim;
-                            fc.RCSVector = Vector3.ProjectOnPlane(RelVel(vessel, Target), FromTo(vessel, Target)) * -1;
+                            fc.RCSVector = Vector3.ProjectOnPlane(vel, FromTo(vessel, Target));
 
-                            relVel = Target.GetObtVelocity() - vessel.GetObtVelocity();
-                            fc.throttle = Mathf.Clamp01(Mathf.Max(Vector3.Dot(relVel, vessel.ReferenceTransform.up), 0) / (maxAcceleration / firingOffsetStrength));
+                            backwardVelocity = Mathf.Max(Vector3.Dot(vel, vessel.ReferenceTransform.up), 0);
+                            fc.throttleLerpRate = Map(backwardVelocity, 0, maxAcceleration, 0.5f, lerpRate);
+                            fc.throttle = backwardVelocity > 0 ? 1 : 0;
 
                             yield return waitForFixedUpdate;
                         }
+
+                        fc.throttleLerpRate = lerpRate;
 
                         if (!currentProjectile.canFire)
                             statusChecker.CheckStatus();
@@ -1400,7 +1406,7 @@ namespace KerbalCombatSystems
             if (toTarget.magnitude < maxWeaponRange) // It is already in range.
                 return true;
 
-            if (maxAcceleration > target.maxAcceleration) // We are faster.
+            if (maxAcceleration > target.maxAcceleration * 1.2f) // We are faster.
                 return true;
 
             if (Vector3.Dot(vessel.Vel(target.vessel), toTarget) < 0) // It is getting closer
