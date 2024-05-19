@@ -553,19 +553,17 @@ namespace KerbalCombatSystems
 
             Vector3 start = firer.ReferenceTransform.forward;
             Ray ray = new Ray(vessel.ReferenceTransform.position, Vector3.zero);
-            PrepareRaycast(firer);
             bool hit = false;
 
             // First check directions at 90 degrees to the firer's roll direction.
             for (int i = 0; i < 4; i++)
             {
                 ray.direction = Quaternion.AngleAxis(360f * (i / 4f), vessel.ReferenceTransform.up) * start;
-                hit = Raycast(ray, 50);
+                hit = RayIntersectsVessel(firer, ray);
 
                 if (hit) break;
             }
 
-            FinishRaycast();
             return !hit;
         }
 

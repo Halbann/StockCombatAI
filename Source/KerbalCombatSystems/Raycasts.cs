@@ -7,7 +7,7 @@ namespace KerbalCombatSystems
         public static Vessel raycastTarget;
         public static int raycastLayer = 17;
 
-        public static void PrepareRaycast(Vessel vessel)
+        public static void PrepareForRaycast(Vessel vessel)
         {
             if (vessel == null)
                 return;
@@ -16,7 +16,7 @@ namespace KerbalCombatSystems
             SetVesselLayer(vessel, raycastLayer);
         }
 
-        public static bool Raycast(Ray r, float maxDistance = 50f)
+        public static bool RaycastMulti(Ray r, float maxDistance = 50f)
         {
             int layerMask = 1 << raycastLayer;
             return Physics.Raycast(r, maxDistance, layerMask);
@@ -30,27 +30,32 @@ namespace KerbalCombatSystems
         private static void SetVesselLayer(Vessel vessel, int layer)
         {
             // Set all parts on the vessel to the layer. 
+
             foreach (Part p in vessel.parts)
-            {
                 foreach (Collider c in p.GetPartColliders())
-                {
                     c.gameObject.layer = layer;
-                }
-            }
         }
 
-        public static bool RayIntersectsVessel(Vessel v, Ray r)
-        {
-            foreach (Part p in v.parts)
-            {
-                foreach (Collider c in p.GetPartColliders())
-                {
-                    if (c.Raycast(r, out _, 50f))
-                        return true;
-                }
-            }
+        //public static bool RayIntersectsVessel(Vessel v, Ray r)
+        //{
+        //    foreach (Part p in v.parts)
+        //    {
+        //        foreach (Collider c in p.GetPartColliders())
+        //        {
+        //            if (c.Raycast(r, out _, 50f))
+        //                return true;
+        //        }
+        //    }
 
-            return false;
+        //    return false;
+        //}
+
+        public static bool RayIntersectsVessel(Vessel _, Ray r, float maxDistance = 50)
+        {
+            // Surprisingly, this is always faster than RaycastMulti and the above method, even with >2000 parts across three vessels.
+            // I shouldn't try to optimise a black box.
+
+            return Physics.Raycast(r, maxDistance);
         }
 
         // todo: make prepare/finish compatible and use capsule.
@@ -62,15 +67,8 @@ namespace KerbalCombatSystems
             for (int i = 0; i < sides; i++)
             {
                 edgeRay.origin = r.origin + (Quaternion.AngleAxis(360f * (i / (float)sides), r.direction) * cylinderEdge);
-
-                foreach (Part p in v.parts)
-                {
-                    foreach (Collider c in p.GetPartColliders())
-                    {
-                        if (c.Raycast(edgeRay, out _, 50f))
-                            return true;
-                    }
-                }
+                if (RayIntersectsVessel(v, edgeRay))
+                    return true;
             }
 
             return false;
