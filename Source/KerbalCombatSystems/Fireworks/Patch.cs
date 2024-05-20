@@ -1,4 +1,4 @@
-﻿using System.Linq;
+using System.Linq;
 
 using UnityEngine;
 using HarmonyLib;
@@ -94,6 +94,28 @@ namespace KerbalCombatSystems.Fireworks
                 ShellEffects.AddEffects(shell, launcher);
 
                 launcher.GetComponent<ModuleMuzzleFlash>()?.MuzzleEffect();
+            }
+        }
+    }
+
+    // todo: move to a separate file, along with patcher addon.
+    [HarmonyPatch(typeof(ModuleDecouple))]
+    [HarmonyPatch(nameof(ModuleDecouple.OnDecouple))]
+    class DecouplerFXFix
+    {
+        public static bool enableFix = true;
+
+        static void Prefix(ModuleDecouple __instance)
+        {
+            var gameObject = __instance.part.gameObject;
+            foreach (var ps in gameObject.GetComponentsInChildren<ParticleSystem>())
+            {
+                if (!ps.name.ToLower().Contains("gasburst"))
+                    continue;
+
+                var main = ps.main;
+                var space = enableFix ? ParticleSystemSimulationSpace.Local : ParticleSystemSimulationSpace.World;
+                main.simulationSpace = space;
             }
         }
     }
