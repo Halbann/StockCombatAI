@@ -874,10 +874,15 @@ namespace KerbalCombatSystems
 
                     state = "Launching Missile";
                     yield return StartCoroutine(WaitForLaunch(weapon, weapon.salvoSpacing * 2));
-                    yield return new WaitForSeconds(Mathf.Max(weapon.salvoSpacing - (Time.time - launchTime), 0));
+
+                    if (weapon.salvoSpacing > 0)
+                        yield return new WaitForSeconds(Mathf.Max(weapon.salvoSpacing - (Time.time - launchTime), 0));
                 }
                 else if (weapon != last)
-                    yield return new WaitForSeconds(weapon.salvoSpacing);
+                {
+                    if (weapon.salvoSpacing > 0)
+                        yield return new WaitForSeconds(weapon.salvoSpacing);
+                }
             }
 
             // Retract robotics.
@@ -938,7 +943,10 @@ namespace KerbalCombatSystems
                     yield return StartCoroutine(WaitForLaunch(interceptor, interceptor.salvoSpacing * 2));
                 }
                 else if (interceptTarget != lastTarget)
-                    yield return new WaitForSeconds(interceptor.salvoSpacing);
+                {
+                    if (interceptor.salvoSpacing > 0)
+                        yield return new WaitForSeconds(interceptor.salvoSpacing);
+                }
             }
 
             if (checkWeapons)

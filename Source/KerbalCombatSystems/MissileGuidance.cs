@@ -221,8 +221,10 @@ namespace KerbalCombatSystems
                 // Normal away procedure.
                 // We are able to leave the ship by simply moving forwards.
 
+                float totalKickTime = controller.pulseDuration + igniteDelay;
+
                 // Skip the kick phase in poor conditions and go straight to clearing.
-                if (!(controller.launchType != LaunchType.Radial && firer.perturbation.magnitude > 1))
+                if (totalKickTime > 0 && !(controller.launchType != LaunchType.Radial && firer.perturbation.magnitude > 1))
                 {
                     phase = "Kick";
                     yield return StartCoroutine(Kick());
@@ -529,12 +531,14 @@ namespace KerbalCombatSystems
                 if (controller.pulseThrottle < 1)
                     controller.pulseThrottle *= 100;
 
-                yield return new WaitForSeconds(igniteDelay);
+                if (igniteDelay > 0)
+                    yield return new WaitForSeconds(igniteDelay);
 
                 fc.throttle = controller.pulseThrottle / 100f;
                 fc.Drive();
 
-                yield return new WaitForSeconds(controller.pulseDuration);
+                if (controller.pulseDuration > 0)
+                    yield return new WaitForSeconds(controller.pulseDuration);
 
                 fc.throttle = 0;
             }
