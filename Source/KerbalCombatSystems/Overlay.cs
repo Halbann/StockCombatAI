@@ -21,8 +21,8 @@ namespace KerbalCombatSystems
 
         public static Overlay Instance { get; private set; }
         private static bool runOnce = true;
-        private static bool available = false;
-        public static bool Available
+        private bool available = true;
+        public bool Available
         {
             get => available;
             set
@@ -226,13 +226,13 @@ namespace KerbalCombatSystems
             centre.position = new Vector3(0, 0, 0);
 
             // Create a game object and set up a GoodLines LineMesh for each type of line.
-            rangeRingsMesh = CreateLine(transparentLineMat, true);
-            rangeLinesMesh = CreateLine(rangeLineMat, true);
-            secondaryRangeLinesMesh = CreateLine(secondaryRangeLineMat, true);
-            detectionRangeMesh = CreateLine(detectionRangeMat, true);
-            weaponRangeMesh = CreateLine(weaponRangeMat, true);
-            elevationLinesMesh = CreateLine(elevationLineMat);
-            dashedLinesMesh = CreateLine(dashedLineMat);
+            rangeRingsMesh = CreateLine(transparentLineMat, true, "Overlay Range Rings");
+            rangeLinesMesh = CreateLine(rangeLineMat, true, "Overlay Range Lines");
+            secondaryRangeLinesMesh = CreateLine(secondaryRangeLineMat, true, "Overlay Secondary Range Lines");
+            detectionRangeMesh = CreateLine(detectionRangeMat, true, "Overlay Lock Range");
+            weaponRangeMesh = CreateLine(weaponRangeMat, true, "Overlay Weapon Range");
+            elevationLinesMesh = CreateLine(elevationLineMat, false, "Overlay Elevation Arcs");
+            dashedLinesMesh = CreateLine(dashedLineMat, false, "Overlay Target Lines");
 
             // Generate the points for the range rings and range lines and send them to their respective LineMesh components.
             // We only need to do this once because the lines are parented to the centre and they don't need to change shape.
@@ -507,9 +507,7 @@ namespace KerbalCombatSystems
             };
 
             foreach (var linemesh in linemeshes)
-            {
                 linemesh.gameObject.GetComponent<MeshRenderer>().enabled = visible;
-            }
 
             markers.FindAll(m => m != null).ForEach(m => m.gameObject.SetActive(visible));
         }
@@ -670,9 +668,9 @@ namespace KerbalCombatSystems
         // Use world positions by keeping the transform at the origin with the default scale and rotation.
 
         // Create a gameobject with a properly set up GoodLines LineMesh.
-        private LineMesh CreateLine(Material mat, bool makeChild = false)
+        private LineMesh CreateLine(Material mat, bool makeChild = false, string name = "Line Container")
         {
-            GameObject obj = new GameObject("Line Container");
+            GameObject obj = new GameObject(name);
             obj.layer = 8;
             obj.AddComponent<MeshFilter>();
             LineMesh line = obj.AddComponent<LineMesh>();
