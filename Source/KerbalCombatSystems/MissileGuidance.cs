@@ -208,7 +208,7 @@ namespace KerbalCombatSystems
 
             Ray launchRay = new Ray(vessel.ReferenceTransform.position, vessel.ReferenceTransform.up);
 
-            if (RayIntersectsVessel(firer, launchRay))
+            if (RayIntersectsAny(vessel, launchRay))
             {
                 // A horizontal launch is when the missile is blocked from moving forwards.
                 // Therefore we need to move the missile horizontally until we can move forwards.
@@ -463,7 +463,7 @@ namespace KerbalCombatSystems
                 horizontal = Quaternion.AngleAxis(360f * (i / 4f), vessel.ReferenceTransform.up) * start;
                 ray.direction = horizontal;
 
-                if (foundExit = !RayIntersectsVessel(firer, ray))
+                if (foundExit = !RayIntersectsAny(vessel, ray))
                     break;
             }
 
@@ -476,7 +476,7 @@ namespace KerbalCombatSystems
                     horizontal = Quaternion.AngleAxis(360 * i / 4 + 45, vessel.ReferenceTransform.up) * firer.ReferenceTransform.forward;
                     ray.direction = horizontal;
 
-                    if (!RayIntersectsVessel(firer, ray))
+                    if (!RayIntersectsAny(vessel, ray))
                         break;
                 }
             }
@@ -501,7 +501,7 @@ namespace KerbalCombatSystems
 
                     ray.origin = vessel.ReferenceTransform.position;
                     ray.direction = vessel.ReferenceTransform.up;
-                    clear = !CylinderIntersectsVessel(firer, ray, 1.25f / 2);
+                    clear = !CylinderIntersectsAny(vessel, ray, 1.25f / 2);
                 }
             }
 
@@ -563,7 +563,7 @@ namespace KerbalCombatSystems
             for (int i = 0; i < 4; i++)
             {
                 ray.direction = Quaternion.AngleAxis(360f * (i / 4f), vessel.ReferenceTransform.up) * start;
-                hit = RayIntersectsVessel(firer, ray);
+                hit = RayIntersectsAny(vessel, ray);
 
                 if (hit) break;
             }
@@ -708,7 +708,7 @@ namespace KerbalCombatSystems
                     enclosedRay.direction = horizontal;
 
                     // If the raycast doesn't hit the firer then we are not in an enclosed space.
-                    if (!RayIntersectsVessel(firer, enclosedRay))
+                    if (!RayIntersectsAny(vessel, enclosedRay))
                     {
                         launchType = LaunchType.Radial;
                         break;

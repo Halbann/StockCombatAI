@@ -231,7 +231,7 @@ namespace KerbalCombatSystems
                     ray.origin = vessel.CoM;
                     ray.direction = escapeDirection;
 
-                    blocked = RayIntersectsVessel(parent, ray);
+                    blocked = RayIntersectsAny(vessel, ray);
                 }
             }
 
