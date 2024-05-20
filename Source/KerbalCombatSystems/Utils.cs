@@ -48,6 +48,15 @@ namespace KerbalCombatSystems
             return thrust;
         }
 
+        public static bool IsSolidMotor(ModuleEngines engine)
+        {
+            foreach (var res in engine.GetConsumedResources())
+                if (res.name == "SolidFuel")
+                    return true;
+
+            return false;
+        }
+
         public static Vector3 GetFireVector(List<ModuleEngines> engines, List<ModuleRCSFX> RCS = null, Vector3 thrustVector = default)
         {
             // Place linears first to establish a direction, not currently needed
@@ -55,29 +64,46 @@ namespace KerbalCombatSystems
 
             if (engines?.Any() == true)
             {
-                // If there are engines we can override any potential provided vector
-                thrustVector = GetMeanVector(engines.First());
-                foreach (ModuleEngines engine in engines.Skip(1))
+                // Separate engines into solids and liquids.
+
+                var solids = engines.Where(IsSolidMotor).ToList();
+                var liquids = engines.Except(solids).ToList();
+
+                if (liquids.Count < 1 && solids.Count > 0)
                 {
-                    thrustVector += GetMeanVector(engine);
+                    liquids = solids;
                 }
-                if (RCS?.Any() == true)
+                else
                 {
-                    // If there are engines we can add RCS on top
-                    foreach (ModuleRCSFX thruster in RCS)
+                    PartResource solidFuel;
+                    foreach (var solid in solids)
                     {
-                        thrustVector += GetRCSVector(thruster, thrustVector);
+                        solidFuel = solid.part.Resources.First();
+
+                        // If we also have liquid engines, then only consider solid engines
+                        // with full fuel, otherwise we should assume they used as sepratrons.
+                        if (solidFuel.amount == solidFuel.maxAmount)
+                            liquids.Add(solid);
                     }
                 }
+
+                // If there are engines we can override any potential provided vector
+                thrustVector = GetMeanVector(liquids.First());
+                foreach (ModuleEngines engine in liquids.Skip(1))
+                    thrustVector += GetMeanVector(engine);
+
+                // Add RCS on top
+                if (RCS?.Any() == true)
+                    foreach (ModuleRCSFX thruster in RCS)
+                        thrustVector += GetRCSVector(thruster, thrustVector);
             }
             else if (RCS?.Any() == true)
             {
                 // If there are no engines we have to plot the RCS along the provided vector
                 Vector3 rcsVector = GetRCSVector(RCS.First(), thrustVector);
                 foreach (ModuleRCSFX thruster in RCS.Skip(1))
-                {
                     rcsVector += GetRCSVector(thruster, thrustVector);
-                }
+
                 //replace thrustVector with RCS Vector
                 thrustVector = rcsVector;
             }
