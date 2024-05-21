@@ -16,7 +16,7 @@ namespace KerbalCombatSystems.Fireworks
     {
         // Settings.
         public static int searchLimit = 50;
-        public static bool useCrossfeed = true;
+        public static bool useCrossfeed = false;
 
         [KSPField]
         public string defaultMagazine = "KCSfireworkShells8";

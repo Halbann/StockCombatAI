@@ -37,7 +37,7 @@ namespace KerbalCombatSystems.Fireworks
         [Setting] public static EffectsOption effectsOption = EffectsOption.Always;
         public static bool applyHeat = true;
         public static bool replaceShell = false;
-        public static float shotHeat = 20f;
+        public static float shotHeat = 30f;
 
         internal static bool InAtmosphere =>
             FlightGlobals.ActiveVessel.orbit.referenceBody.atmosphere
