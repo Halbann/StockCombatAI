@@ -80,6 +80,7 @@ namespace KerbalCombatSystems
                 return;
 
             bool hasControl = CheckControl();
+            ship.hasControl = hasControl;
 
             // Optimised check for parts.
             bool hasPropulsion = false;
@@ -89,7 +90,6 @@ namespace KerbalCombatSystems
             bool dead = (!hasPropulsion && !hasWeapons) || !hasControl;
 
             ship.alive = !dead;
-            ship.hasControl = hasControl;
             ship.hasPropulsion = hasPropulsion;
             ship.hasWeapons = hasWeapons;
         }
@@ -123,8 +123,14 @@ namespace KerbalCombatSystems
         private static bool Healthy(ModuleRCS rcs) =>
             rcs.rcsEnabled && !rcs.flameout && rcs.useThrottle;
 
-        private static bool Healthy(ModuleWeaponController weapon) =>
-            weapon.canFire;
+        private bool Healthy(ModuleWeaponController weapon)
+        {
+            return weapon.weaponType switch
+            {
+                "Firework" => weapon.canFire && ship.hasControl,
+                _          => weapon.canFire,
+            };
+        }
 
         private void CheckParts(ref bool hasPropulsion, ref bool hasWeapons)
         {

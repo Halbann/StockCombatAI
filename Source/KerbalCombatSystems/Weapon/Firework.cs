@@ -127,7 +127,7 @@ namespace KerbalCombatSystems.Weapon
 
         private Vector3 MeasureAcceleration()
         {
-            // lamba function with no return to reset smoothed acceleration.
+            // lambda function with no return to reset smoothed acceleration.
 
             if (accSmoothed == Vector3.zero)
                 ResetTargetAcceleration();
@@ -280,10 +280,20 @@ namespace KerbalCombatSystems.Weapon
                     reloader.OnShotCountChanged -= OnAmmoChanged;
                     reloader.OnShotCountChanged += OnAmmoChanged;
                 }
+
+                part.OnJustAboutToDie -= OnLauncherDie;
+                part.OnJustAboutToDie += OnLauncherDie;
             }
 
             if (launchers.Count < 1)
                 controller.canFire = false;
+        }
+
+        private void OnLauncherDie()
+        {
+            // canFire needs to update in the event that a launcher is destroyed,
+            // even if the controller is not being polled for aim.
+            launcher = FindLauncher(launchers);
         }
 
         private ModulePartFirework FindLauncher(List<ModulePartFirework> launchers)
@@ -296,7 +306,7 @@ namespace KerbalCombatSystems.Weapon
             {
                 launcher = launchers[i];
 
-                if (launcher == null || launcher.vessel != vessel)
+                if (launcher == null || launcher.vessel != vessel || launcher.part.State == PartStates.DEACTIVATED)
                 {
                     launchers.Remove(launcher);
                     continue;

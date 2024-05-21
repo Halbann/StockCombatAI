@@ -221,6 +221,9 @@ namespace KerbalCombatSystems
                     UpdateMass();
                     CountChildDecouplers();
                 }
+
+                if (weaponType == "Firework")
+                    Setup();
             }
 
             tooltips = new TooltipController(this);
@@ -276,17 +279,11 @@ namespace KerbalCombatSystems
             List<ModuleWeaponController> modules;
 
             if (HighLogic.LoadedSceneIsEditor)
-            {
                 modules = EditorLogic.SortedShipList.SelectMany(p => p.FindModulesImplementing<ModuleWeaponController>()).ToList();
-            }
             else if (HighLogic.LoadedSceneIsFlight)
-            {
                 modules = vessel.FindPartModulesImplementing<ModuleWeaponController>();
-            }
             else
-            {
                 return;
-            }
 
             int count = 0;
             foreach (ModuleWeaponController module in modules)
@@ -294,12 +291,8 @@ namespace KerbalCombatSystems
                 if (module.weaponCode.ToLower() == weaponCode.ToLower() && module != this)
                 {
                     foreach (BaseField field in module.Fields)
-                    {
-                        //if (field.isPersistant && (field.guiActiveEditor || field.guiActive))
-                        //    field.SetValue(module, field.GetValue(this));
                         if (field.isPersistant && (field.guiActiveEditor || field.guiActive))
                             field.SetValue(field.GetValue(this), module);
-                    }
 
                     if (HighLogic.LoadedSceneIsFlight && module.setup)
                         module.UpdateSettings();
