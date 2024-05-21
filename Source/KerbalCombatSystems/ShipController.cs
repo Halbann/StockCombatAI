@@ -116,6 +116,9 @@ namespace KerbalCombatSystems
         private float lastFired = 0;
         public List<ModuleWeaponController> weapons;
         public ModuleWeaponController currentWeapon;
+        public float minRange;
+        public float maxRange;
+        public float currentRange;
 
         // Interceptors.
         private List<ModuleWeaponController> interceptors = new List<ModuleWeaponController>();
@@ -356,17 +359,24 @@ namespace KerbalCombatSystems
         {
             // Movement.
 
+            UpdatePropulsionInfo();
+
+            var waitForFixedUpdate = new WaitForFixedUpdate();
+            bool hasTarget = Target != null;
+
+            if (Target != null)
+                currentWeapon = GetPreferredWeapon(Target, weapons);
+
             if (hasPropulsion)
             {
-                UpdatePropulsionInfo();
+                if (hasTarget)
+                {
+                    minRange = currentWeapon.MinMaxRange.x;
+                    maxRange = Mathf.Min(currentWeapon.MinMaxRange.y, TargetLockRange());
+                    currentRange = VesselDistance(vessel, Target);
+                }
 
-                var waitForFixedUpdate = new WaitForFixedUpdate();
-                bool hasTarget = Target != null;
-
-                if (Target != null)
-                    currentWeapon = GetPreferredWeapon(Target, weapons);
-
-                if (useEvasion && CheckEvasion()) 
+                if (useEvasion && CheckEvasion())
                 {
                     // Evade an incoming missile.
                     state = "Evading";
@@ -452,99 +462,10 @@ namespace KerbalCombatSystems
                     fc.alignmentToleranceforBurn = previousTolerance;
                     fc.throttle = 0;
                 }
-                else if (firingEnabled && hasTarget && HasLock() && CanFireProjectile(Target, out currentProjectile) && currentWeapon == currentProjectile)
+                else if (firingEnabled && hasTarget && HasLock() && CanFireProjectile(Target, out currentProjectile)
+                    && (currentWeapon == currentProjectile || IsPinnedDown()))
                 {
-                    // Fire a statically mounted projectile.
-
-                    Vector3 relVel = RelVel(vessel, Target);
-
-                    if (relVel.magnitude > firingSpeed)
-                    {
-                        yield return StartCoroutine(KillVelocity());
-                    }
-                    else if (AngularVelocity(vessel, Target, 5f) > firingAngularVelocityLimit)
-                    {
-                        // Ideally we don't want to use an angular velocity limit, write better targeting.
-
-                        state = "Manoeuvring (Kill Angular Velocity)";
-                        bool complete = false;
-                        float attitudeTolerance = fc.alignmentToleranceforBurn;
-                        fc.alignmentToleranceforBurn = 45;
-                        Vector3 vel, pos;
-
-                        while (UnderTimeLimit() && Target != null && !complete)
-                        {
-                            complete = AngularVelocity(vessel, Target, 5f) < firingAngularVelocityLimit / 2;
-
-                            vel = vessel.Vel(Target);
-                            pos = vessel.Pos(Target);
-
-                            fc.attitude = Vector3.ProjectOnPlane(vel, ClosestApproach(pos, vel));
-                            fc.throttle = !complete ? 1 : 0;
-
-                            yield return waitForFixedUpdate;
-                        }
-
-                        fc.alignmentToleranceforBurn = attitudeTolerance;
-                    }
-                    else
-                    {
-                        // Aim at target using current projectile weapon.
-                        // The weapon handles firing.
-
-                        state = "Firing Projectile";
-                        fc.throttle = 0;
-                        currentProjectile.target = Target;
-                        currentProjectile.side = side;
-                        fc.lerpAttitude = false;
-
-                        if (!currentProjectile.setup)
-                            currentProjectile.Setup();
-
-                        // I was doing a turret check here before because the way it works is that
-                        // the weapon takes control of the turret. But is that a good idea?
-                        // Turret weapons should work in parallel with ship movement, not as part of it.
-
-                        float alignment = Vector3.Dot(currentProjectile.AimPart.transform.up, vessel.ReferenceTransform.up);
-                        if (alignment < 0.99f && !currentProjectile.fireSymmetry /*&& !currentProjectile.isTurret*/)
-                        {
-                            originalReferenceTransform = vessel.GetReferenceTransformPart();
-                            vessel.SetReferenceTransform(currentProjectile.AimPart);
-                        }
-
-                        // todo: box raycast.
-
-                        currentProjectile.targetSize = TargetController.averagedSize;
-                        float backwardVelocity;
-                        float lerpRate = fc.throttleLerpRate;
-                        Vector3 aim, vel;
-
-                        while (UnderTimeLimit() && Target != null && currentProjectile.canFire)
-                        {
-                            vel = vessel.Vel(Target);
-                            aim = currentProjectile.Aim();
-                            fc.attitude = aim == Vector3.zero ? vessel.ReferenceTransform.up : aim;
-                            fc.RCSVector = Vector3.ProjectOnPlane(vel, FromTo(vessel, Target));
-
-                            backwardVelocity = Mathf.Max(Vector3.Dot(vel, vessel.ReferenceTransform.up), 0);
-                            fc.throttleLerpRate = Map(backwardVelocity, 0, maxAcceleration, 0.5f, lerpRate);
-                            fc.throttle = backwardVelocity > 0 ? 1 : 0;
-
-                            yield return waitForFixedUpdate;
-                        }
-
-                        fc.throttleLerpRate = lerpRate;
-
-                        if (!currentProjectile.canFire)
-                            statusChecker.CheckStatus();
-
-                        //if (!currentProjectile.isTurret)
-                        if (originalReferenceTransform != null)
-                            RestoreReferenceTransform();
-
-                        fc.lerpAttitude = true;
-                        fc.RCSVector = Vector3.zero;
-                    }
+                    yield return StartCoroutine(UseProjectile());
                 }
                 else if (manoeuvringEnabled && hasTarget && weapons.Count > 0 && hasWeapons)
                 {
@@ -552,10 +473,6 @@ namespace KerbalCombatSystems
 
                     // Deploy combat robotics.
                     SetShipRobotics(true);
-
-                    float minRange = currentWeapon.MinMaxRange.x;
-                    float maxRange = Mathf.Min(currentWeapon.MinMaxRange.y, TargetLockRange());
-                    float currentRange = VesselDistance(vessel, Target);
                     bool complete = false;
 
                     if (currentRange < minRange)
@@ -652,14 +569,117 @@ namespace KerbalCombatSystems
             }
             else
             {
-                // We can't do anything because we don't have any engines.
-                // todo: technically we could fire projectiles.
+                if (firingEnabled && hasTarget && HasLock() && CanFireProjectile(Target, out currentProjectile) && currentWeapon == currentProjectile)
+                {
+                    yield return StartCoroutine(UseProjectile());
+                }
+                else
+                {
+                    // We can't do anything because we don't have any engines.
+                    // todo: technically we could fire projectiles.
 
-                state = "Stranded";
+                    state = "Stranded";
+                    fc.throttle = 0;
+                    fc.attitude = Vector3.zero;
+
+                    yield return new WaitForSeconds(updateInterval);
+                }
+            }
+        }
+
+        private IEnumerator UseProjectile()
+        {
+            // Fire a statically mounted projectile.
+            
+            var wait = new WaitForFixedUpdate();
+            Vector3 relVel = RelVel(vessel, Target);
+
+            if (hasPropulsion && relVel.magnitude > firingSpeed)
+            {
+                yield return StartCoroutine(KillVelocity());
+            }
+            else if (hasPropulsion && AngularVelocity(vessel, Target, 5f) > firingAngularVelocityLimit)
+            {
+                // Ideally we don't want to use an angular velocity limit, write better targeting.
+
+                state = "Manoeuvring (Kill Angular Velocity)";
+                bool complete = false;
+                float attitudeTolerance = fc.alignmentToleranceforBurn;
+                fc.alignmentToleranceforBurn = 45;
+                Vector3 vel, pos;
+
+                while (UnderTimeLimit() && Target != null && !complete)
+                {
+                    complete = AngularVelocity(vessel, Target, 5f) < firingAngularVelocityLimit / 2;
+
+                    vel = vessel.Vel(Target);
+                    pos = vessel.Pos(Target);
+
+                    fc.attitude = Vector3.ProjectOnPlane(vel, ClosestApproach(pos, vel));
+                    fc.throttle = !complete ? 1 : 0;
+
+                    yield return wait;
+                }
+
+                fc.alignmentToleranceforBurn = attitudeTolerance;
+            }
+            else
+            {
+                // Aim at target using current projectile weapon.
+                // The weapon handles firing.
+
+                state = "Firing Projectile";
                 fc.throttle = 0;
-                fc.attitude = Vector3.zero;
+                currentProjectile.target = Target;
+                currentProjectile.side = side;
+                fc.lerpAttitude = false;
 
-                yield return new WaitForSeconds(updateInterval);
+                if (!currentProjectile.setup)
+                    currentProjectile.Setup();
+
+                // I was doing a turret check here before because the way it works is that
+                // the weapon takes control of the turret. But is that a good idea?
+                // Turret weapons should work in parallel with ship movement, not as part of it.
+
+                float alignment = Vector3.Dot(currentProjectile.AimPart.transform.up, vessel.ReferenceTransform.up);
+                if (alignment < 0.99f && !currentProjectile.fireSymmetry /*&& !currentProjectile.isTurret*/)
+                {
+                    originalReferenceTransform = vessel.GetReferenceTransformPart();
+                    vessel.SetReferenceTransform(currentProjectile.AimPart);
+                }
+
+                // todo: box raycast.
+
+                currentProjectile.targetSize = TargetController.averagedSize;
+                float backwardVelocity;
+                float lerpRate = fc.throttleLerpRate;
+                Vector3 aim, vel;
+
+                while (UnderTimeLimit() && Target != null && currentProjectile.canFire)
+                {
+                    vel = vessel.Vel(Target);
+                    aim = currentProjectile.Aim();
+                    fc.attitude = aim == Vector3.zero ? vessel.ReferenceTransform.up : aim;
+                    fc.RCSVector = Vector3.ProjectOnPlane(vel, FromTo(vessel, Target));
+
+                    backwardVelocity = Mathf.Max(Vector3.Dot(vel, vessel.ReferenceTransform.up), 0);
+                    fc.throttleLerpRate = Map(backwardVelocity, 0, maxAcceleration, 0.5f, lerpRate);
+                    fc.throttle = backwardVelocity > 0 ? 1 : 0;
+
+                    yield return wait;
+                }
+
+                fc.throttleLerpRate = lerpRate;
+
+                if (!currentProjectile.canFire)
+                    statusChecker.CheckStatus();
+
+                //if (!currentProjectile.isTurret)
+                if (originalReferenceTransform != null)
+                    RestoreReferenceTransform();
+
+                fc.lerpAttitude = true;
+                fc.RCSVector = Vector3.zero;
             }
         }
 
@@ -1112,6 +1132,12 @@ namespace KerbalCombatSystems
 
             weapon = available.FirstOrDefault();
             return weapon != null;
+        }
+
+        private bool IsPinnedDown(float margin = 0.2f)
+        {
+            return currentRange * (1f - margin) < minRange
+                && maxAcceleration * (1f + margin) < TargetController.maxAcceleration;
         }
 
         #endregion

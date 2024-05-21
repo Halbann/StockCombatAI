@@ -30,9 +30,9 @@ namespace KerbalCombatSystems
         )]
         [ControllerField("Range", weaponGroupName, distance)]
         [UI_MinMaxPow(
-            minValueX = 50f,
+            minValueX = 0f,
             maxValueX = 15000f,
-            minValueY = 50f,
+            minValueY = 0f,
             maxValueY = 15000f,
             stepIncrement = 50f
         )]
