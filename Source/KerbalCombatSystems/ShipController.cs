@@ -64,7 +64,7 @@ namespace KerbalCombatSystems
         }
 
         public double TotalDeltaV =>
-            vessel.VesselDeltaV.TotalDeltaVActual;
+            vessel.VesselDeltaV?.TotalDeltaVActual ?? 0;
 
 
         // AI variables.
@@ -364,16 +364,18 @@ namespace KerbalCombatSystems
             var waitForFixedUpdate = new WaitForFixedUpdate();
             bool hasTarget = Target != null;
 
-            if (Target != null)
-                currentWeapon = GetPreferredWeapon(Target, weapons);
-
             if (hasPropulsion)
             {
                 if (hasTarget)
                 {
-                    minRange = currentWeapon.MinMaxRange.x;
-                    maxRange = Mathf.Min(currentWeapon.MinMaxRange.y, TargetLockRange());
-                    currentRange = VesselDistance(vessel, Target);
+                    currentWeapon = GetPreferredWeapon(Target, weapons);
+
+                    if (hasWeapons && currentWeapon != null)
+                    {
+                        minRange = currentWeapon.MinMaxRange.x;
+                        maxRange = Mathf.Min(currentWeapon.MinMaxRange.y, TargetLockRange());
+                        currentRange = VesselDistance(vessel, Target);
+                    }
                 }
 
                 if (useEvasion && CheckEvasion())
@@ -462,7 +464,7 @@ namespace KerbalCombatSystems
                     fc.alignmentToleranceforBurn = previousTolerance;
                     fc.throttle = 0;
                 }
-                else if (firingEnabled && hasTarget && HasLock() && CanFireProjectile(Target, out currentProjectile)
+                else if (hasWeapons && firingEnabled && hasTarget && HasLock() && CanFireProjectile(Target, out currentProjectile)
                     && (currentWeapon == currentProjectile || IsPinnedDown()))
                 {
                     yield return StartCoroutine(UseProjectile());
@@ -569,7 +571,7 @@ namespace KerbalCombatSystems
             }
             else
             {
-                if (firingEnabled && hasTarget && HasLock() && CanFireProjectile(Target, out currentProjectile) && currentWeapon == currentProjectile)
+                if (hasWeapons && firingEnabled && hasTarget && HasLock() && CanFireProjectile(Target, out currentProjectile))
                 {
                     yield return StartCoroutine(UseProjectile());
                 }

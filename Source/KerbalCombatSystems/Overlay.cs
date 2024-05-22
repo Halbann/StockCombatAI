@@ -1069,7 +1069,7 @@ namespace KerbalCombatSystems
 
                 // Draw the ship name.
 
-                shipNameColour.a = shipnameOpacity * alpha * iconOpacityScalar * iconBrightness * finalOpacity;
+                shipNameColour.a = shipnameOpacity * alpha * iconOpacityScalar * iconBrightness * globalBrightness * globalOpacityScalar;
                 GUI.color = shipNameColour;
                 GUI.Label(textRect, "  " + name, shipNameStyle);
             }
@@ -1127,7 +1127,7 @@ namespace KerbalCombatSystems
             if (xPos > Screen.width || yPos > Screen.height || screenPos.z < 0)
                 return;
 
-            colour.a = alpha * iconOpacityScalar * iconBrightness * finalOpacity;
+            colour.a = alpha * iconOpacityScalar * iconBrightness * globalBrightness * globalOpacityScalar;
             iconMat.SetColor("_TintColor", colour);
             drawIconRect.x = xPos;
             drawIconRect.y = yPos;
