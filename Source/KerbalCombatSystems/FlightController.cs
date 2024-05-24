@@ -1,4 +1,5 @@
 ﻿using UnityEngine;
+using static alglib;
 
 namespace KerbalCombatSystems
 {
@@ -32,7 +33,7 @@ namespace KerbalCombatSystems
         LineRenderer rcsLine;
         //LineRenderer rup, rright, rforward;
 
-        public void Awake()
+        protected void Awake()
         {
             controllingVessel = gameObject.GetComponent<Part>().vessel;
 
@@ -46,7 +47,7 @@ namespace KerbalCombatSystems
             //rforward = KCSDebug.CreateLine(Color.blue);
         }
 
-        internal void OnDestroy()
+        protected void OnDestroy()
         {
             Debug.DestroyLine(currentVectorLine);
             Debug.DestroyLine(targetVectorLine);
@@ -56,16 +57,7 @@ namespace KerbalCombatSystems
             //KCSDebug.DestroyLine(rright);
             //KCSDebug.DestroyLine(rforward);
 
-            if (controllingVessel?.Autopilot != null)
-            {
-                controllingVessel.Autopilot.SetMode(VesselAutopilot.AutopilotMode.StabilityAssist);
-                controllingVessel.ActionGroups.SetGroup(KSPActionGroup.SAS, true);
-            }
-
-            if (controllingVessel?.ctrlState != null)
-            {
-                controllingVessel.ctrlState.mainThrottle = 0;
-            }
+            Reset();
         }
 
         public void Drive()
@@ -179,6 +171,22 @@ namespace KerbalCombatSystems
 
             controllingVessel.ActionGroups.SetGroup(KSPActionGroup.SAS, enable);
             ap.SetMode(enable ? VesselAutopilot.AutopilotMode.StabilityAssist : VesselAutopilot.AutopilotMode.Normal);
+        }
+
+        public void Reset()
+        {
+            if (controllingVessel?.Autopilot != null)
+            {
+                controllingVessel.Autopilot.SetMode(VesselAutopilot.AutopilotMode.StabilityAssist);
+                controllingVessel.ActionGroups.SetGroup(KSPActionGroup.SAS, true);
+            }
+
+            if (controllingVessel?.ctrlState != null)
+            {
+                controllingVessel.ctrlState.mainThrottle = 0;
+                if (controllingVessel == FlightGlobals.ActiveVessel)
+                    FlightInputHandler.state.mainThrottle = 0;
+            }
         }
     }
 }

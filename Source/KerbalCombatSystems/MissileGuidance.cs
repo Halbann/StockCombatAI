@@ -12,6 +12,14 @@ namespace KerbalCombatSystems
     {
         // Settings
 
+        [ControllerField("Guidance", ModuleWeaponController.weaponGroupName, guiActiveEditor = false)]
+        [UI_Toggle(
+            enabledText = "Enabled",
+            disabledText = "Disabled"
+        )]
+        public bool toggleGuidance = true;
+        private bool toggleGuidanceLast = true;
+
         public bool engageAutopilot = false;
         private float maxThrust;
         private Vessel target;
@@ -56,57 +64,23 @@ namespace KerbalCombatSystems
         public float Throttle => fc?.throttleActual ?? 0;
         LineRenderer targetLine, rvLine, interceptLine, thrustLine;
 
-
         private IEnumerator Launch()
         {
             // 0. Failsafes for manual fire.
             // todo: some of this should probably transferred to the weapon controller.
 
-            if (controller.target == null && vessel.targetObject == null)
-                yield break;
-
             if (controller.target == null)
             {
-                // The missile was fired manually.
-
-                target = vessel.targetObject.GetVessel();
-
-                // We don't require a ship controller and only consider ship-side limitations
-                // if a ship controller exists. It is probably more fun this way.
-
-                ModuleShipController firerController = FindController(firer);
-                if (firerController != null)
+                if (vessel.targetObject != null)
                 {
-                    controller.side = firerController.side;
-
-                    if (firerController.maxLockRange == 0)
-                        firerController.UpdateLockRange();
-
-                    if (VesselDistance(vessel, firer) > firerController.maxLockRange)
-                    {
-                        FlightManager.OnWeaponFailed($"{ShortenName(target.GetName())} is out of lock range.");
-
+                    if (!TryStockTarget())
                         yield break;
-                    }
                 }
-
-                controller.target = target;
-
-
-                // Meta/flight manager.
-
-                ModuleShipController targetController = FindController(target);
-                if (targetController != null && !targetController.incomingWeapons.Contains(controller))
-                    targetController.AddIncoming(controller);
-
-                if (!FlightManager.weaponsInFlight.Contains(controller) && !isInterceptor)
-                    FlightManager.weaponsInFlight.Add(controller);
+                else
+                {
+                    target = controller.target;
+                }
             }
-            else
-            {
-                target = controller.target;
-            }
-
 
             // 1. Separate from firer.
 
@@ -180,7 +154,19 @@ namespace KerbalCombatSystems
             string oldName = vessel.vesselName;
             string missileName = controller.weaponCode == "" ? "Missile" : controller.weaponCode;
             string firerName = ShortenName(firer.vesselName);
-            vessel.vesselName = !isInterceptor ? $"{missileName} ({firerName} >> {ShortenName(target.vesselName)})" : $"Interceptor ({firerName})";
+
+            if (target != null)
+            {
+                if (isInterceptor)
+                    vessel.vesselName = $"Interceptor ({firerName} >> {ShortenName(target.vesselName)})";
+                else
+                    vessel.vesselName = $"{missileName} ({firerName} >> {ShortenName(target.vesselName)})";
+            }
+            else
+            {
+                vessel.vesselName = $"{missileName} ({firerName})";
+            }
+            
             GameEvents.onVesselRename.Fire(new GameEvents.HostedFromToAction<Vessel, string>(vessel, oldName, vessel.vesselName));
 
             // Enable continuous collision detection.
@@ -239,8 +225,11 @@ namespace KerbalCombatSystems
 
             // 4. Get line of sight to the target.
 
-            phase = "Acquiring LOS";
-            yield return StartCoroutine(AcquireLOS());
+            if (target != null)
+            {
+                phase = "Acquiring LOS";
+                yield return StartCoroutine(AcquireLOS());
+            }
 
 
             // 5. Finish setting up the missile.
@@ -258,6 +247,44 @@ namespace KerbalCombatSystems
             engageAutopilot = true;
 
             SetupDebugVisuals();
+        }
+
+        private bool TryStockTarget()
+        {
+            // The missile was fired manually.
+
+            target = vessel.targetObject.GetVessel();
+
+            // We don't require a ship controller and only consider ship-side limitations
+            // if a ship controller exists. It is probably more fun this way.
+
+            ModuleShipController firerController = FindController(firer);
+            if (firerController != null)
+            {
+                controller.side = firerController.side;
+
+                if (firerController.maxLockRange == 0)
+                    firerController.UpdateLockRange();
+
+                if (VesselDistance(vessel, firer) > firerController.maxLockRange)
+                {
+                    FlightManager.OnWeaponFailed($"{ShortenName(target.GetName())} is out of lock range.");
+                    return false;
+                }
+            }
+
+            controller.target = target;
+
+            // Meta/flight manager.
+
+            ModuleShipController targetController = FindController(target);
+            if (targetController != null && !targetController.incomingWeapons.Contains(controller))
+                targetController.AddIncoming(controller);
+
+            if (!FlightManager.weaponsInFlight.Contains(controller) && !isInterceptor)
+                FlightManager.weaponsInFlight.Add(controller);
+
+            return true;
         }
 
         private void SetupDebugVisuals()
@@ -290,7 +317,7 @@ namespace KerbalCombatSystems
         {
             if (target == null || (isInterceptor && (targetWeapon == null || targetWeapon.missed)))
             {
-                StopGuidance();
+                Shutdown();
                 return;
             }
 
@@ -356,7 +383,7 @@ namespace KerbalCombatSystems
             accuracy = Vector3.Dot(targetVectorNormal, relVelNrm);
             if (targetVector.magnitude < shutoffDistance || (!engines.Any() && !rcsThrusters.Any()) && accuracy < 0.99)
             {
-                StopGuidance();
+                Shutdown();
                 return;
             }
 
@@ -403,10 +430,18 @@ namespace KerbalCombatSystems
 
         internal void FixedUpdate()
         {
-            if (engageAutopilot)
+            if (toggleGuidance != toggleGuidanceLast)
+            {
+                toggleGuidanceLast = toggleGuidance;
+
+                if (!toggleGuidance)
+                    fc?.Reset();
+            }
+
+            if (engageAutopilot && toggleGuidance)
                 UpdateGuidance();
 
-            if (separated)
+            if (separated && toggleGuidance)
                 fc?.Drive();
         }
 
@@ -419,9 +454,10 @@ namespace KerbalCombatSystems
             Destroy(fc);
             fc = null;
         }
-
-        public void StopGuidance()
+                
+        public void Shutdown()
         {
+            phase = "Shutdown";
             engageAutopilot = false;
             controller.missed = true;
             OnDestroy();

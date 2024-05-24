@@ -22,7 +22,7 @@ namespace KerbalCombatSystems
 
 
         #region Generic weapon fields
-        const string weaponGroupName = "Weapon Settings";
+        public const string weaponGroupName = "Weapon Settings";
 
         [UI.Tooltip(
             text = "The range to the target within which the AI should use this weapon.",

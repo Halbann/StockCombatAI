@@ -37,6 +37,8 @@
 - Spent missiles are automatically marked as debris.
 - Missiles now enable all on-board resources upon launch.
 - Missiles now activate only the engines in the lowest stage upon launch. Any missiles that relied on sepratrons to launch need to check their staging (@Kerosene).
+- Added a button to toggle missile guidance during flight.
+- Missiles can now be launched without a target, sparing newcomers a great deal of confusion.
 
 - Other parts can no longer be attached to controller parts, this is intended to reduce craft dependency on modded parts.
 - Deprecated the standalone M294 Focused-Band Scanner.
