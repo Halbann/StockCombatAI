@@ -31,7 +31,7 @@ namespace KerbalCombatSystems
 
         // Specific to rockets and fireworks.
         public Part AimPart =>
-            typeModule.AimPart;
+            typeModule?.AimPart ?? null;
 
         public float targetSize;
 
@@ -389,13 +389,15 @@ namespace KerbalCombatSystems
 
             foreach (Part part in parts)
             {
-                // todo: not compatible with compound missiles.
-                if (part.partInfo.category == PartCategories.Coupling)
+                if (CheckDecoupler(part, out _, "Default"))
                     break;
 
                 mass += part.mass + part.GetResourceMass();
                 dryMass += part.mass;
             }
+
+            if (mass <= 0)
+                throw new Exception($"[KCS]: Trying to calculate mass on {vessel.vesselName} {weaponCode} but mass is {mass}.");
         }
 
         private void CountChildDecouplers()

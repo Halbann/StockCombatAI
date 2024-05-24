@@ -229,22 +229,15 @@ namespace KerbalCombatSystems
         public static ModuleDecouplerDesignate FindDecoupler(Part origin, string type = "Default")
         {
             // Search up the part tree to find a separator.
-
-            Part currentPart;
             Part nextPart = origin.parent;
-            ModuleDecouplerDesignate module;
 
             while (nextPart != null)
             {
-                currentPart = nextPart;
+                Part currentPart = nextPart;
                 nextPart = currentPart.parent;
 
-                // make sure the decoupler designator exists and is the specified type
-                module = currentPart.GetComponent<ModuleDecouplerDesignate>();
-                if (module == null) continue;
-
-                //"" is shorthand for ignoring the type requirement and firing any decoupler
-                if (type != "" && module.decouplerDesignation != type) continue;
+                if (!CheckDecoupler(currentPart, out ModuleDecouplerDesignate module, type))
+                    continue;
 
                 //strike any decouplers without any child parts
                 if (!currentPart.FindChildParts<Part>(false).Any()) continue;
@@ -262,17 +255,11 @@ namespace KerbalCombatSystems
             childParts.Insert(0, root); //check the parent itself
 
             List<ModuleDecouplerDesignate> seperatorList = new List<ModuleDecouplerDesignate>();
-            ModuleDecouplerDesignate module;
 
             foreach (Part currentPart in childParts)
             {
-                module = currentPart.GetComponent<ModuleDecouplerDesignate>();
-
-                // make sure the decoupler designator exists and is the specified type
-                if (module == null) continue;
-
-                //"" is shorthand for ignoring the type requirement and firing any decoupler
-                if (type != "" && module.decouplerDesignation != type) continue;
+                if (!CheckDecoupler(currentPart, out ModuleDecouplerDesignate module, type))
+                    continue;
 
                 //strike any decouplers without any child parts
                 if (!currentPart.FindChildParts<Part>(false).ToList().Any()) continue;
@@ -281,6 +268,19 @@ namespace KerbalCombatSystems
             }
 
             return seperatorList;
+        }
+
+        public static bool CheckDecoupler(Part part, out ModuleDecouplerDesignate designator, string type = "Default")
+        {
+            designator = part.GetComponent<ModuleDecouplerDesignate>();
+            if (designator == null)
+                return false;
+
+            // "" is shorthand for ignoring the type requirement and firing any decoupler.
+            if (type != "" && designator.decouplerDesignation != type)
+                return false;
+
+            return true;
         }
 
         #endregion
