@@ -30,6 +30,8 @@ namespace KerbalCombatSystems.Fireworks
         private ModulePartFirework launcher;
         private ModuleInventoryPart inventory;
         private bool uiOpened = false;
+        private readonly List<ModuleInventoryPart> cargoContainers = new List<ModuleInventoryPart>();
+        private bool cargoCacheValid = false;
 
         public delegate void OnShotCountChangedHandler(ModulePartFirework launcher);
         public event OnShotCountChangedHandler OnShotCountChanged;
@@ -37,6 +39,7 @@ namespace KerbalCombatSystems.Fireworks
         // debug
         public static List<Part> searchedParts = new List<Part>();
         private static PartSet crossfeedParts;
+        public int searchCount = 0;
 
         #region Main
 
@@ -58,6 +61,7 @@ namespace KerbalCombatSystems.Fireworks
             GameEvents.onPartActionUIShown.Add(OnPartActionUIShown);
             GameEvents.onPartActionUICreate.Add(OnPartActionUICreate);
             GameEvents.onModuleInventoryChanged.Add(OnModuleInventoryChanged);
+            GameEvents.onVesselWasModified.Add(OnVesselModified);
 
             // Get field for updating shot count in inventory UI.
             gridField = typeof(ModuleInventoryPart).GetField("grid", BindingFlags.Instance | BindingFlags.NonPublic);
@@ -74,6 +78,7 @@ namespace KerbalCombatSystems.Fireworks
             GameEvents.onPartActionUIShown.Remove(OnPartActionUIShown);
             GameEvents.onPartActionUICreate.Remove(OnPartActionUICreate);
             GameEvents.onModuleInventoryChanged.Remove(OnModuleInventoryChanged);
+            GameEvents.onVesselWasModified.Remove(OnVesselModified);
         }
 
         #endregion
@@ -109,7 +114,7 @@ namespace KerbalCombatSystems.Fireworks
 
             // Search the part tree for a usable magazine.
             ModuleInventoryPart cargoInventory;
-            (cargoInventory, magazine) = LocateMagazine();
+            (cargoInventory, magazine) = LocateMagazineStatic();
 
             // No magazine was found.
             if (magazine == null)
@@ -158,6 +163,36 @@ namespace KerbalCombatSystems.Fireworks
             return (cargoInventory, magazine);
         }
 
+        private (ModuleInventoryPart, StoredPart) LocateMagazineStatic()
+        {
+            if (!cargoCacheValid)
+            {
+                cargoContainers.Clear();
+                cargoContainers.AddRange(vessel.FindPartModulesImplementing<ModuleInventoryPart>());
+                cargoCacheValid = true;
+                searchCount++;
+            }
+
+            for (int i = cargoContainers.Count - 1; i >= 0; i--)
+            {
+                ModuleInventoryPart cargoInventory = cargoContainers[i];
+                if (cargoInventory == null || cargoInventory.vessel != vessel)
+                    continue;
+
+                StoredPart magazine = GetMagazine(cargoInventory);
+
+                if (magazine != null)
+                    return (cargoInventory, magazine);
+            }
+
+            return (null, null);
+        }
+
+        private void OnVesselModified(Vessel vessel)
+        {
+            if (vessel == this.vessel)
+                cargoCacheValid = false;
+        }
 
         // Search a part and all its children (recursively) for a magazine. This is the downwards part of the search.
         private bool LocateMagazineInBranch(Part part, ref ModuleInventoryPart cargoInventory, ref StoredPart magazine, ref int iterations, Part previousPart = null)

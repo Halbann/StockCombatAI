@@ -81,9 +81,6 @@ namespace KerbalCombatSystems.Weapon
             controller = part.FindModuleImplementing<ModuleWeaponController>();
             UpdateLaunchers();
             launcher = FindLauncher(launchers);
-
-            if (HighLogic.LoadedSceneIsFlight)
-                StartCoroutine(OverheatMonitor());
         }
 
         #region Weapon Generic
@@ -372,23 +369,10 @@ namespace KerbalCombatSystems.Weapon
             return launcher.part.maxTemp - launcher.part.temperature < LaunchShell.shotHeat * controller.FWRoundBurst + 1;
         }
 
-        private IEnumerator OverheatMonitor()
+        public void CheckCooldown()
         {
-            // This covers the scenario where all launchers are unavailable,
-            // but some may become available when they cool down.
-
-            // This design hints that it might be better if can fire was a property invoked by the ship controller?
-            // But how to make it performant?
-
-            var wait = new WaitForSeconds(ModuleShipController.combatUpdateInterval);
-
-            while (true)
-            {
-                yield return wait;
-
-                if (!controller.canFire && launchers.Count > 0)
-                    FindLauncher(launchers);
-            }
+            if (!controller.canFire && launchers.Count > 0)
+                FindLauncher(launchers);
         }
 
         #endregion
