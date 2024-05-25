@@ -1,8 +1,11 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections;
+using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 
 using UnityEngine;
+using Random = UnityEngine.Random;
 
 namespace KerbalCombatSystems
 {
@@ -203,6 +206,14 @@ namespace KerbalCombatSystems
             // Orient the control point towards direction (finger) with perpendicular as the up vector (thumb).
             Vector3 perpendicular = Vector3.ProjectOnPlane(roll, direction.normalized);
             dynamic.transform.rotation = Quaternion.LookRotation(perpendicular, direction.normalized); // VAB orientation.
+        }
+
+        public static IEnumerator Delay(float delay, Action action)
+        {
+            if (delay > 0f)
+                yield return new WaitForSeconds(delay);
+
+            action();
         }
 
         #endregion

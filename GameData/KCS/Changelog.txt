@@ -4,7 +4,7 @@
 
 - Firework launchers now use ammunition via the stock cargo system.
 	- Shells come in magazines of 8, 16 and 32.
-	- Shells obey normal crossfeed rules.
+	- Shells do not obey any crossfeed rules.
 	- The AI will reload automatically. There is no time to reload.
 - Each firework shot generates heat and the launcher glows when hot. The AI stops firing when the launcher gets too hot.
 - Launcher barrels are now hollow.
@@ -20,6 +20,8 @@
 - MechJebLib is now used for orbit correction, allowing for elliptical orbits to be corrected.
 - Removed forwards launch throttle setting. The ship will always kill throttle when launching a missile forwards or from inside an enclosed space, unless it is evading.
 - Added tentative weapon robotics support. Ships deploy KAL-250 controllers when firing missiles if the sequence name matches the weapon code of the missile.
+- Allowed ships to use fireworks when they're pinned by a faster enemy, even if they'd prefer to use missiles.
+- Made ships react more quickly to incoming missiles.
 
 - Experimental changes to combat movement:
 	- Ships no longer make endless minute adjustments to their course when intercepting a target. Trajectories are chosen so that ships maintain a mostly constant attitude and throttle.
@@ -30,6 +32,7 @@
 
 - Added optional tooltips to weapon settings.
 - Added a 'Sync Settings' button to the weapon controller that copies all settings to all other weapon controllers on the vessel with the same code.
+- Reduced the minimum weapon range to 0.
 - Raised the maximum weapon range to 15 km.
 - WEAPON CODES ARE NO LONGER LIMITED TO ALL CAPS. cAsE is NoW iGNorED bY aLL CODe chECKs.
 
@@ -65,6 +68,8 @@
 - Fixed some visual glitches in the overlay.
 - Rewrote status system, fixing various bugs to do with ships being counted as alive.
 - Rewrote firework weapon logic, fixing various bugs to do with the burst, aiming and not firing.
+- Fixed that tiny particle that zips off into space whenever you decouple in orbit.
+- Fixed a bug where missiles would fly diagonally if they used perpendicular sepratrons to assist launch.
 
 - Renamed KCS difficulty settings internally. If you previously had 'Allow Withdrawal' disabled you will need to disable it again.
 - Removed unused difficulty settings.

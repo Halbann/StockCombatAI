@@ -11,6 +11,7 @@ using KerbalCombatSystems.Data;
 
 namespace KerbalCombatSystems
 {
+    [Settings(category = "ship", displayName = "Ship", visible = false)]
     public partial class ModuleShipController : PartModule
     {
         #region Fields
@@ -94,6 +95,7 @@ namespace KerbalCombatSystems
 
         // Movement.
         public static float approachingInterceptMargin = 1.5f;
+        [Setting] public static bool missileProvokesUpdate = false;
 
         // Target.
         public Vessel Target =>
@@ -993,6 +995,21 @@ namespace KerbalCombatSystems
             return Time.time - lastUpdate < timeLimit;
         }
 
+        public void Provoke(float delay)
+        {
+            if (!missileProvokesUpdate || timeRemaining - delay <= delay)
+                return;
+
+            StartCoroutine(Delay(delay, Provoke));
+        }
+
+        public void Provoke()
+        {
+            if (!controllerRunning) return;
+            lastUpdate = Time.time - updateInterval;
+            timeRemaining = 0;
+        }
+
         private void UpdatePropulsionInfo()
         {
             engines = vessel.FindPartModulesImplementing<ModuleEngines>();
@@ -1036,7 +1053,10 @@ namespace KerbalCombatSystems
             // I want to hide the complexity of the weapons but at the same time
             // I don't want them to drive themselves.
             foreach (var weapon in weapons)
-                weapon.Firework?.CheckCooldown();
+            {
+                if (weapon.weaponType == "Firework" && weapon.setup)
+                    weapon.Firework?.CheckCooldown();
+            }
         }
 
         private static bool WeaponIsChild(ModuleWeaponController weapon, ModuleWeaponController otherWeapon)

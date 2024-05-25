@@ -29,6 +29,7 @@ namespace KerbalCombatSystems
         private bool isInterceptor;
         private int shutoffDistance;
         private ModuleWeaponController targetWeapon;
+        private ModuleShipController targetShip;
         private bool separated = false;
 
 
@@ -70,17 +71,10 @@ namespace KerbalCombatSystems
             // todo: some of this should probably transferred to the weapon controller.
 
             if (controller.target == null)
-            {
-                if (vessel.targetObject != null)
-                {
-                    if (!TryStockTarget())
-                        yield break;
-                }
-                else
-                {
-                    target = controller.target;
-                }
-            }
+                if (!TryStockTarget())
+                    yield break;
+            else
+                target = controller.target;
 
             // 1. Separate from firer.
 
@@ -247,13 +241,19 @@ namespace KerbalCombatSystems
             engageAutopilot = true;
 
             SetupDebugVisuals();
+
+            // Surprise!
+            if (target != null && (targetShip != null || (targetShip = FindController(target)) != null))
+                targetShip.Provoke(0.2f);
         }
 
         private bool TryStockTarget()
         {
             // The missile was fired manually.
 
-            target = vessel.targetObject.GetVessel();
+            target = vessel.targetObject?.GetVessel() ?? null;
+            if (target == null)
+                return true;
 
             // We don't require a ship controller and only consider ship-side limitations
             // if a ship controller exists. It is probably more fun this way.
@@ -277,9 +277,9 @@ namespace KerbalCombatSystems
 
             // Meta/flight manager.
 
-            ModuleShipController targetController = FindController(target);
-            if (targetController != null && !targetController.incomingWeapons.Contains(controller))
-                targetController.AddIncoming(controller);
+            targetShip = FindController(target);
+            if (targetShip != null && !targetShip.incomingWeapons.Contains(controller))
+                targetShip.AddIncoming(controller);
 
             if (!FlightManager.weaponsInFlight.Contains(controller) && !isInterceptor)
                 FlightManager.weaponsInFlight.Add(controller);
