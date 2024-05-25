@@ -52,6 +52,7 @@
 - Improved escape pod logic and reliability.
 - Escape pods now transfer crew before launching.
 - Escape pods now deploy parachutes.
+- Escape pods are automatically recovered if they become unloaded in an unsafe orbit.
 
 - Made various small improvements to the GUI.
 - Made settings persistent. Settings are saved in a config file in PluginData.

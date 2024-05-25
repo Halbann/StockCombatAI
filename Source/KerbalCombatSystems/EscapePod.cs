@@ -236,8 +236,8 @@ namespace KerbalCombatSystems
             }
 
             fc.Stability(false);
-
             StartCoroutine(FlightRoutine());
+            GameEvents.onVesselUnloaded.Add(OnVesselUnloaded);
         }
 
         IEnumerator FlightRoutine()
@@ -332,11 +332,26 @@ namespace KerbalCombatSystems
             }
         }
 
+        private void OnVesselUnloaded(Vessel vessel)
+        {
+            if (vessel == null || vessel != this.vessel)
+                return;
+
+            GameEvents.onVesselUnloaded.Remove(OnVesselUnloaded);
+            if (ModuleShipController.OrbitUnsafe(vessel.orbit))
+                ShipConstruction.RecoverVesselFromFlight(vessel.protoVessel, HighLogic.CurrentGame.flightState);
+        }
+
         bool InControl()
         {
             engines.RemoveAll(e => !e.EngineIgnited || !e.isOperational);
 
             return vessel.IsControllable && engines.Count > 0;
+        }
+
+        protected void OnDestroy()
+        {
+            GameEvents.onVesselUnloaded.Remove(OnVesselUnloaded);
         }
 
         #endregion
