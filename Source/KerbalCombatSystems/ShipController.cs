@@ -1030,6 +1030,13 @@ namespace KerbalCombatSystems
                 var firstInterceptor = interceptors.OrderBy(i => i.childDecouplers).First();
                 interceptorAcceleration = firstInterceptor.CalculateAcceleration();
             }
+
+            // Chech launcher status.
+            // todo: this is bad design.
+            // I want to hide the complexity of the weapons but at the same time
+            // I don't want them to drive themselves.
+            foreach (var weapon in weapons)
+                weapon.Firework?.CheckCooldown();
         }
 
         private static bool WeaponIsChild(ModuleWeaponController weapon, ModuleWeaponController otherWeapon)
