@@ -2,6 +2,7 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
+using System.Data;
 
 using UnityEngine;
 
@@ -121,6 +122,7 @@ namespace KerbalCombatSystems
         public float minRange;
         public float maxRange;
         public float currentRange;
+        private bool weaponsDirty;
 
         // Interceptors.
         private List<ModuleWeaponController> interceptors = new List<ModuleWeaponController>();
@@ -817,103 +819,150 @@ namespace KerbalCombatSystems
             fc.throttle = 0;
         }
 
-        public IEnumerator MissileFireControl()
+        public struct FireOrder
         {
-            bool canFire =
-                Target != null
-                && weapons.Count > 0
-                && Time.time - lastFired > firingInterval
-                && HasLock();
+            public ModuleWeaponController missile;
+            public Vessel targetVessel;
+            public PartModule targetController;
+            public bool interceptor;
+        }
 
-            if (!canFire)
+        public IEnumerator FireSalvo(FireOrder[] orders)
+        {
+            if (orders.Length < 1)
                 yield break;
-
-            List<ModuleWeaponController> missiles = GetAvailableMissiles(Target);
-            var preferred = GetPreferredWeapon(Target, missiles);
-            if (preferred == null)
-                yield break;
-
-            lastFired = Time.time;
-            bool checkWeapons = false;
-            float targetMass = (float)Target.totalMass;
-
-            // Decide how many missiles to use based on the mass of the missile we want to use, the mass of the target,
-            // and the mass of the weapons already on their way to the target.
-
-            if (TargetController.incomingWeapons.Count > 0)
-            {
-                targetMass = (float)Target.totalMass - TargetController.incomingWeapons.Sum(w => w.mass * w.targetMassRatio);
-                if (targetMass < ((preferred.mass * 1.2f) * preferred.targetMassRatio))
-                    yield break;
-            }
-
-            int salvoCount = (int)Mathf.Max(Mathf.Floor(targetMass / (preferred.mass * preferred.targetMassRatio)), 1);
-            salvoCount = Mathf.Min(salvoCount, missiles.Count);
-            salvoCount = Mathf.Min(salvoCount, (int)maxSalvoSize);
-
-            List<ModuleWeaponController> salvo = GetPreferredWeapon(Target, missiles, salvoCount);
-            ModuleWeaponController last = salvo.Last();
-
-            // Make a log entry.
-
-            bool single = salvo.Count == 1;
-            string missileName = preferred.weaponCode == "" ? "missile" : preferred.weaponCode;
-            string pluraliser = missileName.ToLower().Last() == 's' ? "'" : "s";
-
-            if (!single)
-                FlightManager.Log($"%1 fired a salvo of {salvo.Count} {missileName}{pluraliser} at %2", vessel, Target);
-            else
-                FlightManager.Log($"%1 fired a {missileName} at %2", vessel, Target);
 
             // Trigger robotics.
 
-            var roboticsCodes = salvo.Select(w => w.weaponCode).Distinct();
+            var roboticsCodes = orders.Select(o => o.missile.weaponCode).Distinct();
             float roboticsDuration = HandleWeaponRobotics(roboticsCodes, true);
             if (roboticsDuration > 0)
                 yield return new WaitForSeconds(roboticsDuration);
 
             // Fire each missile.
 
-            foreach (ModuleWeaponController weapon in salvo)
+            ModuleWeaponController last = orders.Last().missile;
+            weaponsDirty = false;
+
+            foreach (FireOrder order in orders)
             {
-                if (weapon == null || weapon.vessel != vessel)
+                ModuleWeaponController missile = order.missile;
+                if (missile == null || missile.vessel != vessel)
                     continue;
 
-                checkWeapons = true;
+                if (order.interceptor)
+                {
+                    missile.targetWeapon = (ModuleWeaponController)order.targetController;
+                    missile.targetWeapon.interceptedBy.Add(missile);
+                    FlightManager.interceptorsInFlight.Add(missile);
+                }
+                else
+                {
+                    FlightManager.weaponsInFlight.Add(missile);
+                    TargetController.AddIncoming(missile);
+                }
 
-                weapon.target = Target;
-                weapon.side = side;
-                weapon.Fire();
-
-                FlightManager.weaponsInFlight.Add(weapon);
-                TargetController.AddIncoming(weapon);
+                missile.target = order.targetVessel;
+                missile.side = side;
+                missile.isInterceptor = order.interceptor;
+                missile.Fire();
+                weaponsDirty = true;
 
                 // If the missile is not radial (it's inside a bay or in front of the ship),
                 // we need to keep the ship still until the missile is actually launched,
                 // unless we're evading in which case we're better off moving.
 
-                if (weapon.launchType != LaunchType.Radial && state != "Evading")
+                if (missile.launchType != LaunchType.Radial && state != "Evading")
                 {
                     float launchTime = Time.time;
 
-                    state = "Launching Missile";
-                    yield return StartCoroutine(WaitForLaunch(weapon, weapon.salvoSpacing * 2));
+                    state = "Launching";
+                    yield return StartCoroutine(WaitForLaunch(missile, missile.salvoSpacing * 2));
 
-                    if (weapon.salvoSpacing > 0)
-                        yield return new WaitForSeconds(Mathf.Max(weapon.salvoSpacing - (Time.time - launchTime), 0));
+                    if (!order.interceptor && missile.salvoSpacing > 0)
+                        yield return new WaitForSeconds(Mathf.Max(missile.salvoSpacing - (Time.time - launchTime), 0));
                 }
-                else if (weapon != last)
+                else if (missile != last)
                 {
-                    if (weapon.salvoSpacing > 0)
-                        yield return new WaitForSeconds(weapon.salvoSpacing);
+                    if (missile.salvoSpacing > 0)
+                        yield return new WaitForSeconds(missile.salvoSpacing);
                 }
             }
 
+            if (weaponsDirty)
+                CheckWeapons();
+
             // Retract robotics.
             HandleWeaponRobotics(roboticsCodes, false);
+        }
 
-            if (checkWeapons)
-                CheckWeapons();
+        private bool CanFireMissiles()
+        {
+            return Target != null
+                && weapons.Count > 0
+                && Time.time - lastFired > firingInterval
+                && HasLock();
+        }
+
+        public IEnumerator MissileFireControl()
+        {
+            // Are we able to fire?
+
+            if (!CanFireMissiles())
+                yield break;
+
+            // What type of missile do we want to fire?
+
+            List<ModuleWeaponController> availableMissiles = GetAvailableMissiles(Target);
+            var preferredType = GetPreferredWeapon(Target, availableMissiles);
+            
+            if (preferredType == null)
+                yield break;
+
+            float targetMass = (float)Target.totalMass;
+
+            // We don't need to fire if there are already enough missiles on the way.
+
+            if (TargetController.incomingWeapons.Count > 0)
+            {
+                targetMass = (float)Target.totalMass - TargetController.incomingWeapons.Sum(w => w.mass * w.targetMassRatio);
+                
+                if (targetMass < ((preferredType.mass * 1.2f) * preferredType.targetMassRatio))
+                    yield break;
+            }
+
+            // Decide how many missiles to use based on the mass of the missile we want to use, the mass of the target,
+            // and the mass of the weapons already on their way to the target.
+
+            int salvoCount = (int)Mathf.Max(Mathf.Floor(targetMass / (preferredType.mass * preferredType.targetMassRatio)), 1);
+            salvoCount = Mathf.Min(salvoCount, availableMissiles.Count);
+            salvoCount = Mathf.Min(salvoCount, (int)maxSalvoSize);
+
+            // Get the actual missiles to fire, now that we know the number required.
+
+            List<ModuleWeaponController> salvo = GetPreferredWeapon(Target, availableMissiles, salvoCount);
+
+            // Make a log entry.
+
+            string missileName = preferredType.weaponCode == "" ? "missile" : preferredType.weaponCode;
+            string pluraliser = missileName.ToLower().Last() == 's' ? "'" : "s";
+            string wording = salvo.Count == 1 ? missileName : $"salvo of {salvo.Count} {missileName}{pluraliser}";
+            FlightManager.Log($"%1 fired a {wording} at %2", vessel, Target);
+
+            // Submit the salvo for firing.
+
+            var orders = new FireOrder[salvo.Count];
+            for (int i = 0; i < salvo.Count; i++)
+                orders[i] = new FireOrder
+                {
+                    missile = salvo[i],
+                    targetVessel = Target,
+                    targetController = TargetController,
+                    interceptor = false,
+                };
+
+            lastFired = Time.time;
+            yield return StartCoroutine(FireSalvo(orders));
         }
 
         private IEnumerator InterceptorFireControl()
@@ -921,63 +970,28 @@ namespace KerbalCombatSystems
             if (weaponsToIntercept.Count < 1 || interceptors.Count < 1)
                 yield break;
 
-            bool checkWeapons = false;
-            ModuleWeaponController interceptor;
-
-            // Make a log entry.
-
+             // Make a log entry.
             int count = Mathf.Min(weaponsToIntercept.Count, interceptors.Count);
             string interceptorString = count > 1 ? $"{count} interceptors" : "an interceptor";
             FlightManager.Log($"%1 launched {interceptorString}", vessel);
 
-            // Trigger robotics.
-
-            var roboticsCodes = interceptors.Select(w => w.weaponCode).Distinct();
-            float roboticsDuration = HandleWeaponRobotics(roboticsCodes, true);
-            if (roboticsDuration > 0)
-                yield return new WaitForSeconds(roboticsDuration);
-
-            // Fire each interceptor.
-            var lastTarget = weaponsToIntercept.Last();
-
-            foreach (var interceptTarget in weaponsToIntercept)
+            var orders = new FireOrder[count];
+            for (int i = 0; i < count; i++)
             {
-                if (interceptors.Count < 1)
-                    break;
-
-                interceptor = GetPreferredWeapon(interceptTarget.vessel, interceptors, 1).First();
-                if (interceptor == null)
-                    continue;
-
-                checkWeapons = true;
-
+                var weapon = weaponsToIntercept[i];
+                var interceptor = GetPreferredWeapon(weapon.vessel, interceptors, 1).First();
                 interceptors.Remove(interceptor);
-                interceptor.isInterceptor = true;
-                interceptor.targetWeapon = interceptTarget;
-                interceptor.target = interceptTarget.vessel;
-                interceptor.side = side;
-                interceptor.Fire();
 
-                interceptTarget.interceptedBy.Add(interceptor);
-                FlightManager.interceptorsInFlight.Add(interceptor);
-
-                if (interceptor.launchType != LaunchType.Radial && state != "Evading")
+                orders[i] = new FireOrder
                 {
-                    state = "Launching Interceptor";
-                    yield return StartCoroutine(WaitForLaunch(interceptor, interceptor.salvoSpacing * 2));
-                }
-                else if (interceptTarget != lastTarget)
-                {
-                    if (interceptor.salvoSpacing > 0)
-                        yield return new WaitForSeconds(interceptor.salvoSpacing);
-                }
+                    missile = interceptor,
+                    targetVessel = weapon.vessel,
+                    targetController = weapon,
+                    interceptor = true,
+                };
             }
 
-            if (checkWeapons)
-                CheckWeapons();
-
-            // Retract robotics.
-            HandleWeaponRobotics(roboticsCodes, false);
+            yield return StartCoroutine(FireSalvo(orders));
         }
 
         #endregion
@@ -1021,6 +1035,8 @@ namespace KerbalCombatSystems
 
         public void CheckWeapons()
         {
+            weaponsDirty = false;
+
             // Find all on-board weapons.
             if (FlightManager.weaponControllers.Count < vessel.parts.Count)
                 weapons = FlightManager.weaponControllers.FindAll(w => w.vessel == vessel);

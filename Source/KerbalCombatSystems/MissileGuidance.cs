@@ -70,11 +70,11 @@ namespace KerbalCombatSystems
             // 0. Failsafes for manual fire.
             // todo: some of this should probably transferred to the weapon controller.
 
-            if (controller.target == null)
+            if (controller.target != null)
+                target = controller.target;
+            else
                 if (!TryStockTarget())
                     yield break;
-            else
-                target = controller.target;
 
             // 1. Separate from firer.
 
