@@ -113,6 +113,7 @@ namespace KerbalCombatSystems
         // Robotics.
         private bool roboticsDeployed;
         private List<ModuleCombatRobotics> combatRobotics = new List<ModuleCombatRobotics>();
+        private bool roboticsDirty = true;
 
         // Weapons.
         internal float maxWeaponRange;
@@ -268,6 +269,9 @@ namespace KerbalCombatSystems
             averagedSize = (size.x + size.y + size.z) / 3;
             initialMass = vessel.GetTotalMass();
 
+            // todo: I would like to get rid of this and replace with a caching VesselModule.
+            GameEvents.onVesselWasModified.Add(OnVesselModified);
+
             if (controllerActive)
                 StartAI();
         }
@@ -310,6 +314,8 @@ namespace KerbalCombatSystems
             }
 
             FlightManager.Unregister(this);
+
+            GameEvents.onVesselWasModified.Remove(OnVesselModified);
         }
 
         #endregion
@@ -1553,15 +1559,25 @@ namespace KerbalCombatSystems
 
         #region Robotics
 
+        public List<ModuleCombatRobotics> GetCombatRobotics()
+        {
+            if (roboticsDirty)
+            {
+                combatRobotics = vessel.FindPartModulesImplementing<ModuleCombatRobotics>();
+                roboticsDirty = false;
+            }
+
+            return combatRobotics;
+        }
+
         public void SetShipRobotics(bool deploy)
         {
             if (deploy == roboticsDeployed)
                 return;
 
             roboticsDeployed = deploy;
-            var controllers = vessel.FindPartModulesImplementing<ModuleCombatRobotics>();
 
-            foreach (var combatRobotic in controllers)
+            foreach (var combatRobotic in GetCombatRobotics())
                 if (combatRobotic.roboticsType == "Ship")
                     combatRobotic.Set(deploy);
         }
@@ -1571,7 +1587,7 @@ namespace KerbalCombatSystems
             string code = weaponCode.ToLower();
             duration = 0f;
 
-            foreach (ModuleCombatRobotics combatRobotic in combatRobotics)
+            foreach (ModuleCombatRobotics combatRobotic in GetCombatRobotics())
             {
                 if (combatRobotic.roboticsType != "Weapon")
                     continue;
@@ -1587,7 +1603,6 @@ namespace KerbalCombatSystems
         private float HandleWeaponRobotics(IEnumerable<string> codes, bool deploy)
         {
             float roboticsDuration = 0;
-            combatRobotics = vessel.FindPartModulesImplementing<ModuleCombatRobotics>(); // cringe.
 
             foreach (var code in codes)
             {
@@ -1599,6 +1614,12 @@ namespace KerbalCombatSystems
             }
 
             return roboticsDuration;
+        }
+
+        private void OnVesselModified(Vessel vessel)
+        {
+            if (vessel == this.vessel)
+                roboticsDirty = true;
         }
 
         #endregion

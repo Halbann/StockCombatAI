@@ -1,9 +1,10 @@
 ﻿using Expansions.Serenity;
+using UnityEngine;
 using static Expansions.Serenity.ModuleRoboticController;
 
 namespace KerbalCombatSystems
 {
-    class ModuleCombatRobotics : PartModule
+    public class ModuleCombatRobotics : PartModule
     {
         public enum Variant
         {
@@ -16,6 +17,7 @@ namespace KerbalCombatSystems
         public string roboticsType; // Basic, Ship, Weapon
 
         private ModuleRoboticController module;
+        private int users = 0;
 
         public float Duration => module.SequenceLength;
         public string Tag => module.displayName;
@@ -30,6 +32,9 @@ namespace KerbalCombatSystems
 
         public void Set(bool extend)
         {
+            users = extend ? users + 1 : Mathf.Max(users - 1);
+            if (users > 1 || !extend && users == 1) return;
+
             module.SetLoopMode(SequenceLoopOptions.Once);
             module.SetDirection(SequenceDirectionOptions.Forward);
             module.ToggleControllerEnabled(true);

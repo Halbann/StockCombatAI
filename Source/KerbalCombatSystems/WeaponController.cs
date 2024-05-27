@@ -448,7 +448,7 @@ namespace KerbalCombatSystems
             if (otherWeapon == null)
                 return false;
 
-            if (weaponCode != "")
+            if (weaponCode != "" || otherWeapon.weaponCode != "")
                 return weaponCode.ToLower() == otherWeapon.weaponCode.ToLower();
             else
                 return Approximately(dryMass, otherWeapon.dryMass, 0.05f);

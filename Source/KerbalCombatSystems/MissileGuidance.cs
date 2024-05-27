@@ -31,7 +31,8 @@ namespace KerbalCombatSystems
         private ModuleWeaponController targetWeapon;
         private ModuleShipController targetShip;
         private bool separated = false;
-
+        private bool useManualRobotics = false;
+        private ModuleShipController ship;
 
         // Missile guidance variables.
 
@@ -71,10 +72,21 @@ namespace KerbalCombatSystems
             // todo: some of this should probably transferred to the weapon controller.
 
             if (controller.target != null)
+            {
                 target = controller.target;
+            }
             else
+            {
                 if (!TryStockTarget())
+                {
                     yield break;
+                }
+                else
+                {
+                    if (useManualRobotics = ManualRobotics(out float waitTime))
+                        yield return new WaitForSeconds(waitTime);
+                }
+            }
 
             // 1. Separate from firer.
 
@@ -242,9 +254,29 @@ namespace KerbalCombatSystems
 
             SetupDebugVisuals();
 
-            // Surprise!
+            // Surprise! todo: maybe this should be in a callback
             if (target != null && (targetShip != null || (targetShip = FindController(target)) != null))
                 targetShip.Provoke(0.2f);
+
+            if (useManualRobotics)
+                ship.SetWeaponRobotics(false, controller.weaponCode, out float _);
+        }
+
+        private bool ManualRobotics(out float waitTime)
+        {
+            // todo: this is poor structure and would optimally be handled by the ship.
+            // but the work to do that is more than doing this.
+
+            waitTime = 0;
+            if (controller.weaponCode == "")
+                return false;
+
+            ship = FindController(firer);
+            if (ship == null)
+                return false;
+
+            ship.SetWeaponRobotics(true, controller.weaponCode, out waitTime);
+            return waitTime > 0;
         }
 
         private bool TryStockTarget()
@@ -512,13 +544,16 @@ namespace KerbalCombatSystems
                     horizontal = Quaternion.AngleAxis(360 * i / 4 + 45, vessel.ReferenceTransform.up) * firer.ReferenceTransform.forward;
                     ray.direction = horizontal;
 
-                    if (!RayIntersectsAny(vessel, ray))
+                    if (foundExit = !RayIntersectsAny(vessel, ray))
                         break;
                 }
             }
 
+            // todo: perhaps I should loop raycasts until an exit is found. 
             // Translate in the exit direction until forwards path is clear.
-            fc.RCSVector = horizontal.normalized * 200000f; // idk
+            if (foundExit)
+                fc.RCSVector = horizontal.normalized * 200000f; // idk
+
             fc.attitude = vessel.ReferenceTransform.up;
             fc.Drive();
 
@@ -526,6 +561,8 @@ namespace KerbalCombatSystems
             float lastChecked = 0;
             bool clear = false;
             var wait = new WaitForFixedUpdate();
+            Bounds bounds = VesselBounds.GetBoundsLocal(vessel);
+            float radius = 0.75f * Mathf.Min(Mathf.Min(bounds.size.x, bounds.size.y), bounds.size.z) / 2;
 
             while (!clear)
             {
@@ -534,10 +571,9 @@ namespace KerbalCombatSystems
                 if (Time.time - lastChecked > checkInterval)
                 {
                     lastChecked = Time.time;
-
                     ray.origin = vessel.ReferenceTransform.position;
                     ray.direction = vessel.ReferenceTransform.up;
-                    clear = !CylinderIntersectsAny(vessel, ray, 1.25f / 2);
+                    clear = !CylinderIntersectsAny(vessel, ray, radius);
                 }
             }
 
