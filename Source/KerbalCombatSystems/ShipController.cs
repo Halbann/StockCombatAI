@@ -1036,6 +1036,7 @@ namespace KerbalCombatSystems
             if (!enginesDirty)
                 return;
 
+            enginesDirty = false;
             engines = vessel.FindPartModulesImplementing<ModuleEngines>();
             List<ModuleEngines> candidates = new List<ModuleEngines>();
             int highestStage = 0;
