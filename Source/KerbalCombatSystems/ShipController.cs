@@ -42,6 +42,7 @@ namespace KerbalCombatSystems
         public float initialMass;
 
         private List<ModuleEngines> engines;
+        private bool enginesDirty = true;
         private double maxThrust;
 
         public float averagedSize;
@@ -1032,7 +1033,34 @@ namespace KerbalCombatSystems
 
         private void UpdatePropulsionInfo()
         {
+            if (!enginesDirty)
+                return;
+
             engines = vessel.FindPartModulesImplementing<ModuleEngines>();
+            List<ModuleEngines> candidates = new List<ModuleEngines>();
+            int highestStage = 0;
+
+            // Try to ignite unlit engines under certain conditions.
+            foreach (var engine in engines)
+            {
+                highestStage = Math.Max(highestStage, engine.part.inverseStage);
+
+                if (engine.EngineIgnited)
+                    continue;
+
+                if (engine.part.children.Where(p => p.physicalSignificance == Part.PhysicalSignificance.FULL).Any())
+                    continue;
+
+                if (Vector3.Dot(engine.transform.up, vessel.ReferenceTransform.up) < 0.5f)
+                    continue;
+
+                candidates.Add(engine);
+            }
+
+            foreach (var engine in candidates)
+                if (engine.part.inverseStage == highestStage)
+                    engine.Activate();
+
             maxThrust = GetMaxThrust(engines);
             maxAcceleration = (float)(maxThrust / vessel.totalMass);
         }
@@ -1618,9 +1646,12 @@ namespace KerbalCombatSystems
 
         private void OnVesselModified(Vessel vessel)
         {
-            if (vessel == this.vessel)
-                roboticsDirty = true;
-        }
+            if (vessel != this.vessel)
+                return;
+
+            roboticsDirty = true;
+            enginesDirty = true;
+    }
 
         #endregion
 
@@ -1650,7 +1681,7 @@ namespace KerbalCombatSystems
                 pos = vessel.Pos(incoming);
                 vel = vessel.Vel(incoming);
 
-                onCollisionCourse = Vector3.Dot(pos.normalized, -vel.normalized) > 0.7;
+                onCollisionCourse = Vector3.Dot(pos.normalized, -vel.normalized) > 0.8;
                 if (!onCollisionCourse)
                     continue;
 

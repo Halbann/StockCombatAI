@@ -21,7 +21,8 @@
 - Removed forwards launch throttle setting. The ship will always kill throttle when launching a missile forwards or from inside an enclosed space, unless it is evading.
 - Added tentative weapon robotics support. Ships deploy KAL-250 controllers when firing missiles if the sequence name matches the weapon code of the missile.
 - Allowed ships to use fireworks when they're pinned by a faster enemy, even if they'd prefer to use missiles.
-- Made ships react more quickly to incoming missiles.
+- Added an experimental option in the config file that might make ships react more quickly to incoming missiles.
+- Ships now ignite their own engines if it's very obvious that they're supposed to be the main engines. Factors include alignment, child parts and staging.
 
 - Experimental changes to combat movement:
 	- Ships no longer make endless minute adjustments to their course when intercepting a target. Trajectories are chosen so that ships maintain a mostly constant attitude and throttle.
