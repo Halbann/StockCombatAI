@@ -543,7 +543,7 @@ namespace KerbalCombatSystems
 
         #endregion
 
-        #region Reflection
+        #region Language Extensions
 
         public static void SetField(this object instance, string name, object value)
         {
@@ -555,6 +555,12 @@ namespace KerbalCombatSystems
         {
             var toolModeField = instance.GetType().GetField(name, BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.Public);
             return (T)toolModeField.GetValue(instance);
+        }
+
+        public static void TryAdd<TKey, TValue>(this Dictionary<TKey, TValue> dictionary, TKey key, TValue value)
+        {
+            if (!dictionary.ContainsKey(key))
+                dictionary.Add(key, value);
         }
 
         #endregion

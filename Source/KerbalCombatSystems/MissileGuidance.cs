@@ -50,6 +50,7 @@ namespace KerbalCombatSystems
         public float maxAcceleration;
         private Vector3 rcs;
         private Vector3 propulsionVector;
+        private float speedLast;
 
 
         // Components
@@ -313,7 +314,7 @@ namespace KerbalCombatSystems
             if (targetShip != null && !targetShip.incomingWeapons.Contains(controller))
                 targetShip.AddIncoming(controller);
 
-            if (!FlightManager.weaponsInFlight.Contains(controller) && !isInterceptor)
+            if (!isInterceptor)
                 FlightManager.weaponsInFlight.Add(controller);
 
             return true;
@@ -419,6 +420,18 @@ namespace KerbalCombatSystems
                 return;
             }
 
+            if (isInterceptor)
+            {
+                float speed = Vector3.Dot(relVel, targetVectorNormal);
+                if (speedLast > 0 && speed < 0 && relVel.magnitude / maxAcceleration > targetWeapon.timeToHit)
+                {
+                    Shutdown();
+                    return;
+                }
+
+                speedLast = speed;
+            }
+
             drift = accuracy > 0.999999
                 && (Vector3.Dot(relVel, targetVectorNormal) > terminalVelocity || isInterceptor);
 
@@ -497,6 +510,9 @@ namespace KerbalCombatSystems
             // Mark the vessel as debris
             vessel.vesselType = VesselType.Debris;
             GameEvents.onVesselRename.Fire(new GameEvents.HostedFromToAction<Vessel, string>(vessel, vessel.name, vessel.name));
+
+            if (isInterceptor)
+                targetWeapon.interceptedBy.Remove(controller);
         }
 
         private void MakeRigidbodiesContinuous()

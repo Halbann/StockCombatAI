@@ -54,8 +54,8 @@ namespace KerbalCombatSystems
 
         public static List<ModuleShipController> ships = new List<ModuleShipController>();
         public static List<ModuleWeaponController> weaponControllers = new List<ModuleWeaponController>();
-        public static List<ModuleWeaponController> weaponsInFlight = new List<ModuleWeaponController>();
-        public static List<ModuleWeaponController> interceptorsInFlight = new List<ModuleWeaponController>();
+        public static HashSet<ModuleWeaponController> weaponsInFlight = new HashSet<ModuleWeaponController>();
+        public static HashSet<ModuleWeaponController> interceptorsInFlight = new HashSet<ModuleWeaponController>();
         private float lastUpdateTime;
         private float lastWeaponUpdateTime;
 
@@ -229,7 +229,7 @@ namespace KerbalCombatSystems
 
             foreach (ModuleWeaponController w in weaponControllers)
             {
-                if (w.missed)
+                if (w.missed || !w.launched)
                     continue;
 
                 if (!w.isInterceptor)

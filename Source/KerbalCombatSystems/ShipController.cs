@@ -1316,7 +1316,7 @@ namespace KerbalCombatSystems
                 return;
             }
 
-            weaponsToIntercept = FlightManager.weaponsInFlight.FindAll(
+            var interceptable = FlightManager.weaponsInFlight.Where(
                 w =>
                 w != null
                 && w.vessel != null
@@ -1327,14 +1327,11 @@ namespace KerbalCombatSystems
                 && VesselDistance(w.vessel, vessel) < maxLockRange
                 && CanInterceptWeapon(w));
 
-            weaponsToIntercept = weaponsToIntercept.OrderBy(w => VesselDistance(w.vessel, vessel)).ToList();
+            interceptable = interceptable.ToList()
+                .OrderByDescending(w => w.target == vessel)
+                .ThenBy(w => VesselDistance(w.vessel, vessel));
 
-            var priorityIntercept = weaponsToIntercept.FindAll(w => w.target == vessel);
-            if (priorityIntercept.Count > 0)
-            {
-                weaponsToIntercept = weaponsToIntercept.Except(priorityIntercept).ToList();
-                weaponsToIntercept = priorityIntercept.Concat(weaponsToIntercept).ToList();
-            }
+            weaponsToIntercept = interceptable.ToList();
         }
 
         private bool CanInterceptWeapon(ModuleWeaponController weaponModule)
