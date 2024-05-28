@@ -9,7 +9,7 @@ namespace KerbalCombatSystems
         virtual public void Fire() { }
 
         virtual public Part AimPart { get; set; }
-        
+
         virtual public Vector3 Aim()
         {
             return Vector3.zero;

@@ -57,6 +57,8 @@ namespace KerbalCombatSystems
         public ModuleMissile Missile => (ModuleMissile)typeModule;
         public ModuleFirework Firework => (ModuleFirework)typeModule;
 
+        public bool IsProjectile => projectileTypes.Contains(weaponType);
+
         #region Weapon Code
 
         // Set persistent weapon code in editor and flight.

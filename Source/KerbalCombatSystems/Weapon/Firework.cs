@@ -19,6 +19,9 @@ namespace KerbalCombatSystems.Weapon
         public int AmmoCount =>
             (int)launchers.Sum(l => l == null ? 0 : l.fireworkShots);
 
+        public bool Overheated =>
+            launchers.All(TooHot);
+
         private readonly List<ModulePartFirework> launchers = new List<ModulePartFirework>();
         private bool firing = false;
         private Transform muzzleTransform;
@@ -380,17 +383,16 @@ namespace KerbalCombatSystems.Weapon
         #region Debug
 
         private static Material debugProjectileMat;
-        public static float debugProjectileSize = 0.5f;
+        public static float debugProjectileSize = 0.25f;
         public static float debugLineSize = 0.2f;
-        public static float debugLineAlpha = 0.3f;
+        public static float debugLineAlpha = 0.8f;
         public static bool debugShell = true;
 
         private void DebugAim()
         {
             Vector3 origin = muzzleTransform.position;
-            Color lime = new Color(196f / 255f, 208f / 255f, 164f / 255f, 1f);
 
-            Line.Draw(origin, muzzleDirection, 15f, lime, debugLineAlpha, debugLineSize);
+            Line.Draw(origin, muzzleDirection, 15f, XKCDColors.Lime, debugLineAlpha, debugLineSize);
             Line.Draw(origin, lead.direction, 15f, Color.red, debugLineAlpha, debugLineSize);
             Line.Draw(origin, sasDirection, 15f, Color.blue, debugLineAlpha, debugLineSize);
 

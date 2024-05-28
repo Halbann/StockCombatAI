@@ -375,20 +375,22 @@ namespace KerbalCombatSystems
             var waitForFixedUpdate = new WaitForFixedUpdate();
             bool hasTarget = Target != null;
 
+            if (hasTarget)
+            {
+                currentWeapon = SelectWeapon(Target, weapons);
+                hasWeapons = hasWeapons && currentWeapon != null;
+
+                if (currentWeapon != null)
+                {
+                    currentProjectile = currentWeapon.IsProjectile ? currentWeapon : SelectProjectile(Target, weapons);
+                    minRange = currentWeapon.MinMaxRange.x;
+                    maxRange = Mathf.Min(currentWeapon.MinMaxRange.y, TargetLockRange());
+                    currentRange = VesselDistance(vessel, Target);
+                }
+            }
+
             if (hasPropulsion)
             {
-                if (hasTarget)
-                {
-                    currentWeapon = GetPreferredWeapon(Target, weapons);
-
-                    if (hasWeapons && currentWeapon != null)
-                    {
-                        minRange = currentWeapon.MinMaxRange.x;
-                        maxRange = Mathf.Min(currentWeapon.MinMaxRange.y, TargetLockRange());
-                        currentRange = VesselDistance(vessel, Target);
-                    }
-                }
-
                 if (useEvasion && CheckEvasion())
                 {
                     // Evade an incoming missile.
@@ -475,8 +477,7 @@ namespace KerbalCombatSystems
                     fc.alignmentToleranceforBurn = previousTolerance;
                     fc.throttle = 0;
                 }
-                else if (hasWeapons && firingEnabled && hasTarget && HasLock() && CanFireProjectile(Target, out currentProjectile)
-                    && (currentWeapon == currentProjectile || IsPinnedDown()))
+                else if (hasWeapons && firingEnabled && hasTarget && HasLock() && currentWeapon.IsProjectile && CanFireProjectile(Target, currentProjectile))
                 {
                     yield return StartCoroutine(UseProjectile());
                 }
@@ -582,7 +583,7 @@ namespace KerbalCombatSystems
             }
             else
             {
-                if (hasWeapons && firingEnabled && hasTarget && HasLock() && CanFireProjectile(Target, out currentProjectile))
+                if (hasWeapons && firingEnabled && hasTarget && HasLock() && CanFireProjectile(Target, currentProjectile))
                 {
                     yield return StartCoroutine(UseProjectile());
                 }
@@ -667,8 +668,10 @@ namespace KerbalCombatSystems
                 float backwardVelocity;
                 float lerpRate = fc.throttleLerpRate;
                 Vector3 aim, vel;
+                bool cooling = currentProjectile.weaponType == "Firework" && currentProjectile.Firework.Overheated;
+                bool overheat;
 
-                while (UnderTimeLimit() && Target != null && currentProjectile.canFire)
+                do
                 {
                     vel = vessel.Vel(Target);
                     aim = currentProjectile.Aim();
@@ -679,8 +682,10 @@ namespace KerbalCombatSystems
                     fc.throttleLerpRate = Map(backwardVelocity, 0, maxAcceleration, 0.5f, lerpRate);
                     fc.throttle = backwardVelocity > 0 ? 1 : 0;
 
+                    overheat = !cooling && currentProjectile.weaponType == "Firework" && currentProjectile.Firework.Overheated;
+
                     yield return wait;
-                }
+                } while (UnderTimeLimit() && Target != null && currentProjectile.canFire && !overheat);
 
                 fc.throttleLerpRate = lerpRate;
 
@@ -921,7 +926,7 @@ namespace KerbalCombatSystems
             // What type of missile do we want to fire?
 
             List<ModuleWeaponController> availableMissiles = GetAvailableMissiles(Target);
-            var preferredType = GetPreferredWeapon(Target, availableMissiles);
+            var preferredType = SelectMissile(Target, availableMissiles);
             
             if (preferredType == null)
                 yield break;
@@ -947,7 +952,7 @@ namespace KerbalCombatSystems
 
             // Get the actual missiles to fire, now that we know the number required.
 
-            List<ModuleWeaponController> salvo = GetPreferredWeapon(Target, availableMissiles, salvoCount);
+            List<ModuleWeaponController> salvo = SelectMissiles(Target, availableMissiles, salvoCount);
 
             // Make a log entry.
 
@@ -986,7 +991,7 @@ namespace KerbalCombatSystems
             for (int i = 0; i < count; i++)
             {
                 var weapon = weaponsToIntercept[i];
-                var interceptor = GetPreferredWeapon(weapon.vessel, interceptors, 1).First();
+                var interceptor = SelectMissiles(weapon.vessel, interceptors, 1).First();
                 interceptors.Remove(interceptor);
 
                 orders[i] = new FireOrder
@@ -1123,29 +1128,53 @@ namespace KerbalCombatSystems
             return dec.part.FindChildParts<Part>(true).Contains(otherWeapon.part);
         }
 
-        private List<ModuleWeaponController> RankWeapons(Vessel target, List<ModuleWeaponController> weapons)
+        private List<ModuleWeaponController> RankMissiles(Vessel target, List<ModuleWeaponController> missiles)
         {
             float targetMass = (float)target.totalMass;
 
             // Order the available weapons based on the suitability of the their mass compared to the target. 
-            return weapons
+            return missiles
                 .OrderBy(w => Mathf.Abs(targetMass - (w.mass * w.targetMassRatio)))
                 .Where(w => w.canFire)
                 .ToList();
         }
 
-        private ModuleWeaponController GetPreferredWeapon(Vessel target, List<ModuleWeaponController> weapons)
+        private ModuleWeaponController RankProjectiles(List<ModuleWeaponController> projectiles)
         {
-            // Used for pre-emptively selecting a weapon for a given target.
-            // So that we can determine range and salvo size before firing.
+            return weapons.FirstOrDefault(w => w.weaponType != "Firework" || !w.Firework.Overheated) ?? weapons.FirstOrDefault();
+        }
 
+        private ModuleWeaponController SelectWeapon(Vessel target, List<ModuleWeaponController> weapons)
+        {
             if (weapons.Count < 1)
                 return null;
 
-            return RankWeapons(target, weapons).First();
+            var missiles = weapons.Where(w => w.weaponType == "Missile").ToList();
+
+            return missiles.Count > 0 && !IsPinnedDown() ? SelectMissile(target, missiles) : SelectProjectile(target, weapons);
         }
 
-        private List<ModuleWeaponController> GetPreferredWeapon(Vessel target, List<ModuleWeaponController> weapons, int count)
+        private ModuleWeaponController SelectMissile(Vessel target, List<ModuleWeaponController> missiles)
+        {
+            if (missiles.Count < 1)
+                return null;
+
+            return RankMissiles(target, missiles).First();
+        }
+
+        private ModuleWeaponController SelectProjectile(Vessel target, List<ModuleWeaponController> weapons)
+        {
+            if (weapons.Count < 1)
+                return null;
+
+            // Sticky preference.
+            if (currentWeapon != null && currentWeapon.canFire && currentWeapon.IsProjectile && (currentWeapon.weaponType != "Firework" || !currentWeapon.Firework.Overheated))
+                return currentWeapon;
+
+            return RankProjectiles(weapons.Where(w => ModuleWeaponController.projectileTypes.Contains(w.weaponType) && w.canFire).ToList());
+        }
+
+        private List<ModuleWeaponController> SelectMissiles(Vessel target, List<ModuleWeaponController> missiles, int count)
         {
             // Build an ordered, ready to fire salvo list, based on the suitability of the weapon for the target.
 
@@ -1153,41 +1182,41 @@ namespace KerbalCombatSystems
             // but it sort of assumes that the final salvo is built entirely out of one type.
             // todo: reduce allocation, reduce LINQ.
 
-            if (weapons.Count < 1)
+            if (missiles.Count < 1)
                 return null;
 
-            var weaponsRanked = RankWeapons(target, weapons);
+            var missilesRanked = RankMissiles(target, missiles);
 
             // Select the most suitable weapons.
-            weaponsRanked = weaponsRanked.Take(count).ToList();
+            missilesRanked = missilesRanked.Take(count).ToList();
 
             // For each weapon that has already been selected, add any identical weapons to the list.
-            var identicalWeapons = new List<ModuleWeaponController>();
+            var identicalMissiles = new List<ModuleWeaponController>();
 
-            foreach (var selectedWeapon in weaponsRanked)
-                identicalWeapons.AddRange(weapons.FindAll(w => (selectedWeapon.Identical(w) || WeaponIsChild(selectedWeapon, w)) && !weaponsRanked.Contains(w) && !identicalWeapons.Contains(w)));
+            foreach (var selectedMissile in missilesRanked)
+                identicalMissiles.AddRange(missiles.FindAll(m => (selectedMissile.Identical(m) || WeaponIsChild(selectedMissile, m)) && !missilesRanked.Contains(m) && !identicalMissiles.Contains(m)));
             
-            weaponsRanked.AddRange(identicalWeapons);
+            missilesRanked.AddRange(identicalMissiles);
 
             // Make doubly sure there aren't any duplicate entries.
-            weaponsRanked = weaponsRanked.Distinct().ToList();
+            missilesRanked = missilesRanked.Distinct().ToList();
 
             // Group and order the identical missiles by their orientation to the target. More lined-up is better. 
             Vector3 targetVector = FromTo(vessel, target).normalized;
-            var bays = weaponsRanked.GroupBy(w => Math.Round(Vector3.Dot(w.part.parent.transform.up, targetVector), 1)).ToList();
+            var bays = missilesRanked.GroupBy(w => Math.Round(Vector3.Dot(w.part.parent.transform.up, targetVector), 1)).ToList();
             bays = bays.OrderByDescending(i => i.Key).ToList();
 
             // Order the groups internally by their position in the stack. No bumper torpedos.
-            weaponsRanked.Clear();
+            missilesRanked.Clear();
 
             foreach (var bay in bays)
             {
                 var orderedBay = bay.OrderBy(w => w.childDecouplers).ToList();
-                weaponsRanked.AddRange(orderedBay);
+                missilesRanked.AddRange(orderedBay);
             }
 
             // Return a list of weapons with a suitable mass for the target, prioritised by alignment to the target, and sorted to fire stacks in the correct sequence.
-            return weaponsRanked.Take(count).ToList();
+            return missilesRanked.Take(count).ToList();
         }
 
         private List<ModuleWeaponController> GetAvailableMissiles(Vessel target)
@@ -1196,22 +1225,15 @@ namespace KerbalCombatSystems
             return weapons.FindAll(w => w.weaponType == "Missile" && targetRange > w.MinMaxRange.x && targetRange < w.MinMaxRange.y);
         }
 
-        private bool CanFireProjectile(Vessel target, out ModuleWeaponController weapon)
+        private bool CanFireProjectile(Vessel target, ModuleWeaponController currentWeapon)
         {
-            // Check if we can enter the firing behaviour.
-            // And update the selected projectile weaponController to use in the process.
-
             float targetRange = FromTo(vessel, target).magnitude;
+            ModuleWeaponController w = currentWeapon;
 
-            var available = weapons.Where(w =>
-                ModuleWeaponController.projectileTypes.Contains(w.weaponType)
+            return ModuleWeaponController.projectileTypes.Contains(w.weaponType)
                 && (targetRange > w.MinMaxRange.x || w.weaponType == "Firework")
                 && targetRange < w.MinMaxRange.y
-                && w.canFire
-            );
-
-            weapon = available.FirstOrDefault();
-            return weapon != null;
+                && w.canFire;
         }
 
         private bool IsPinnedDown(float margin = 0.2f)
