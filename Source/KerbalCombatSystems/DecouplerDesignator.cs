@@ -57,20 +57,17 @@ namespace KerbalCombatSystems
             switch(seperatorType)
             {
                 case "anchor":
-                    part.GetComponent<ModuleAnchoredDecoupler>().Decouple();
+                    part.GetComponent<ModuleAnchoredDecoupler>()?.Decouple();
                     break;
                 case "stack":
-                    part.GetComponent<ModuleDecouple>().Decouple();
+                    part.GetComponent<ModuleDecouple>()?.Decouple();
                     break;
                 case "port":
                     ModuleDockingNode node = part.GetComponent<ModuleDockingNode>();
                     if (node == null || node.state == "Ready")
                         break;
 
-                    if (node.state == "Disengage" || node.state == "PreAttached")
-                        node.Decouple();
-                    else
-                        node.Undock();
+                    node.Undock();
 
                     break;
                 default:

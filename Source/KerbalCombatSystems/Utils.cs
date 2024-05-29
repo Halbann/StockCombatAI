@@ -241,13 +241,18 @@ namespace KerbalCombatSystems
         {
             // Search up the part tree to find a separator.
             Part nextPart = origin.parent;
+            ModuleDecouplerDesignate fallback = null;
 
             while (nextPart != null)
             {
                 Part currentPart = nextPart;
                 nextPart = currentPart.parent;
 
-                if (!CheckDecoupler(currentPart, out ModuleDecouplerDesignate module, type))
+                bool valid = CheckDecoupler(currentPart, out ModuleDecouplerDesignate module, type);
+                if (module != null)
+                    fallback = module;
+
+                if (!valid)
                     continue;
 
                 //strike any decouplers without any child parts
@@ -256,7 +261,7 @@ namespace KerbalCombatSystems
                 return module;
             }
 
-            return null;
+            return fallback;
         }
 
         // Search the children of a specified part for separators.

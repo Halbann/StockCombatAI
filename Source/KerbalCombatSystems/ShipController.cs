@@ -326,6 +326,8 @@ namespace KerbalCombatSystems
 
         private IEnumerator ShipController()
         {
+            UpdatePropulsionInfo();
+
             statusChecker.CheckStatus();
             if (!alive)
             {
@@ -1039,7 +1041,11 @@ namespace KerbalCombatSystems
         private void UpdatePropulsionInfo()
         {
             if (!enginesDirty)
+            {
+                maxThrust = GetMaxThrust(engines);
+                maxAcceleration = (float)(maxThrust / vessel.totalMass);
                 return;
+            }
 
             enginesDirty = false;
             engines = vessel.FindPartModulesImplementing<ModuleEngines>();

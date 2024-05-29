@@ -32,7 +32,7 @@ namespace KerbalCombatSystems
         [UI_MinMaxPow(
             minValueX = 0f,
             maxValueX = 15000f,
-            minValueY = 0f,
+            minValueY = 50,
             maxValueY = 15000f,
             stepIncrement = 50f
         )]

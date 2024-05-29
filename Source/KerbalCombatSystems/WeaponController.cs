@@ -417,8 +417,9 @@ namespace KerbalCombatSystems
 
         public float CalculateAcceleration(Part decoupler = null)
         {
+            decoupler ??= FindDecoupler(part)?.part;
             if (decoupler == null)
-                decoupler = FindDecoupler(part).part;
+                return 0f;
 
             var children = decoupler.FindChildParts<Part>(true).ToList();
 
