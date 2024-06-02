@@ -29,7 +29,7 @@ namespace KerbalCombatSystems.Data
         private static string Config =>
             Path.Combine(PluginData, "settings.cfg");
 
-        internal static string gameDataName = "KCS";
+        internal static string gameDataName = "Kessler";
         internal static int settingsVersion = 1;
 
         private struct CategoryInfo

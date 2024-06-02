@@ -14,7 +14,7 @@ namespace KerbalCombatSystems.Fireworks
     {
         public void Start()
         {
-            var harmony = new Harmony("KCS");
+            var harmony = new Harmony("Kessler");
             harmony.PatchAll();
         }
     }

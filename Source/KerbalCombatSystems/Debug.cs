@@ -269,12 +269,12 @@ namespace KerbalCombatSystems
 
         public static void Log(string message)
         {
-            UnityEngine.Debug.Log("[KCS]: " + message);
+            UnityEngine.Debug.Log("[Kessler]: " + message);
         }
 
         public static void LogError(string message)
         {
-            UnityEngine.Debug.LogError("[KCS]: " + message);
+            UnityEngine.Debug.LogError("[Kessler]: " + message);
         }
 
         #endregion

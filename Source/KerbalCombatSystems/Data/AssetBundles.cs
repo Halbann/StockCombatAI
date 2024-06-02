@@ -26,7 +26,7 @@ namespace KerbalCombatSystems.Data
                 return;
 
             string path = Path.Combine(
-                KSPUtil.ApplicationRootPath, "GameData", "KCS", "AssetBundles");
+                KSPUtil.ApplicationRootPath, "GameData", "Kessler", "AssetBundles");
 
             // Load all KCS asset bundles.
 

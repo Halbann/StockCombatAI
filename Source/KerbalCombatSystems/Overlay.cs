@@ -216,7 +216,7 @@ namespace KerbalCombatSystems
                 }
 
                 // Load the ship and missile icon texture.
-                iconTexture = GameDatabase.Instance.GetTexture("KCS/Icons/OverlayIcon", false);
+                iconTexture = GameDatabase.Instance.GetTexture("Kessler/Icons/OverlayIcon", false);
             }
 
             // Give the transform a unique identifier and place it at the origin.
