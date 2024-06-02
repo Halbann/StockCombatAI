@@ -64,14 +64,15 @@ namespace KerbalCombatSystems
                     break;
                 case "port":
                     ModuleDockingNode node = part.GetComponent<ModuleDockingNode>();
-                    if (node == null || node.state == "Ready")
+                    if (node == null || node.state == "Ready" || node.fsm.CurrentState.name == "Disengage")
                         break;
 
-                    node.Undock();
+                    try { node.Undock(); }
+                    catch { Debug.LogError($"Undocking failed on {vessel.vesselName}. ({node.state} {node.fsm.CurrentState.name})"); }                    
 
                     break;
                 default:
-                    Debug.Log("Improper Decoupler Designation");
+                    Debug.LogError("Improper Decoupler Designation");
                     break;
             }
 

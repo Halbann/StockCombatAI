@@ -274,7 +274,7 @@ namespace KerbalCombatSystems
 
         public static void LogError(string message)
         {
-            UnityEngine.Debug.LogError("[Kessler]: " + message);
+            UnityEngine.Debug.LogError("[Kessler]: ERROR " + message);
         }
 
         #endregion
