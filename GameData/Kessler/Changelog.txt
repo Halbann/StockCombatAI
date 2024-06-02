@@ -1,3 +1,5 @@
+- Fixed an error caused by trying to undock docking ports that are docked to eachother at the exact same time.
+
 # v0.3.0
 
 - Fixed stock firework trajectories. Stock fireworks previously failed to inherit the velocity of the firing vessel. This is the reason for the new dependency on HarmonyKSP.
