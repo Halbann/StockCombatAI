@@ -37,10 +37,10 @@ Source/KerbalCombatSystems/References/
 Source/KerbalCombatSystems/ReferencesThirdParty/
 
 # Build products and files generated during gameplay
-GameData/KCS/Plugins
-GameData/KCS/Plugins/
-GameData/KCS/PluginData
-GameData/KCS/PluginData/
+GameData/Kessler/Plugins
+GameData/Kessler/Plugins/
+GameData/Kessler/PluginData
+GameData/Kessler/PluginData/
 
 # OS Specific
 .DS_STORE*
@@ -59,8 +59,8 @@ netkan.exe
 Source/KerbalCombatSystems/bin/
 Source/KerbalCombatSystems/obj/
 
-GameData/KCS/Parts/@thumbs
-GameData/KCS/Patches/SciencePartsAddControllers.cfg
-GameData/KCS/SciencePartsReplaceModelsAndNames.cfg
+GameData/Kessler/Parts/@thumbs
+GameData/Kessler/Patches/SciencePartsAddControllers.cfg
+GameData/Kessler/SciencePartsReplaceModelsAndNames.cfg
 
 Source/Archive/

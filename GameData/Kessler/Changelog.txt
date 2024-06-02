@@ -23,6 +23,7 @@
 - Allowed ships to use fireworks when they're pinned by a faster enemy, even if they'd prefer to use missiles.
 - Added an experimental option in the config file that might make ships react more quickly to incoming missiles.
 - Ships now ignite their own engines if it's very obvious that they're supposed to be the main engines. Factors include alignment, child parts and staging.
+- Ships will now try to intercept a missile again if the first interceptor misses.
 
 - Experimental changes to combat movement:
 	- Ships no longer make endless minute adjustments to their course when intercepting a target. Trajectories are chosen so that ships maintain a mostly constant attitude and throttle.
@@ -65,7 +66,7 @@
 - Made the camera orientation/distance/mode persist when switching vessels if the overlay is open.
 
 - Fixed controller part model scaling, controllers should be slightly smaller.
-- Fixed missiles being de-selected in the weapons menu after firing.
+- Fixed missiles being deselected in the weapons menu after firing.
 - Fixed out of order firing of stacked missiles, so called "bumper torpedoes", again.
 - Fixed some visual glitches in the overlay.
 - Rewrote status system, fixing various bugs to do with ships being counted as alive.
