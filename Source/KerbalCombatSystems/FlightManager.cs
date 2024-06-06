@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 
@@ -348,6 +348,7 @@ namespace KerbalCombatSystems
                 log.Add(string.Format("<color=#808080>-</color>"));
 
             log.Add(text);
+            Debug.Log(text);
 
             lastLogged = Time.time;
             logScrollPosition.y = int.MaxValue;
@@ -403,6 +404,13 @@ namespace KerbalCombatSystems
 
         private void DrawGUI()
         {
+            // Keep window inside screen space.
+            windowRect.position = new Vector2(
+                Mathf.Clamp(windowRect.position.x, 0, Screen.width - windowRect.width),
+                Mathf.Clamp(windowRect.position.y, 0, Screen.height - windowRect.height)
+            );
+
+            // Draw window.
             windowRect = GUILayout.Window(
                 GUIUtility.GetControlID(FocusType.Passive),
                 windowRect,
@@ -412,6 +420,7 @@ namespace KerbalCombatSystems
                 GUILayout.Width(windowWidth)
             );
 
+            // Update click blocker.
             if (clickBlocker != null)
             {
                 // Update click blocker. This prevents clicking through the IMGUI (important for part action window opening).

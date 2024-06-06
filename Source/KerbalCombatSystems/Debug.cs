@@ -9,6 +9,16 @@ namespace KerbalCombatSystems
     [KSPAddon(KSPAddon.Startup.Flight, false)]
     public class Debug : MonoBehaviour
     {
+        public enum Level
+        {
+            None,
+            Error,
+            Warning,
+            Info,
+        }
+
+        public static Level debugLevel = Level.Info;
+
         private static bool _debugVisible;
         public static bool Visible
         {
@@ -269,11 +279,17 @@ namespace KerbalCombatSystems
 
         public static void Log(string message)
         {
+            if (debugLevel != Level.Info)
+                return;
+
             UnityEngine.Debug.Log($"[{Meta.name}]: " + message);
         }
 
         public static void LogError(string message)
         {
+            if (debugLevel == Level.None)
+                return;
+
             UnityEngine.Debug.LogError($"[{Meta.name}]: ERROR " + message);
         }
 
