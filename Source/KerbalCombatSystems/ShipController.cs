@@ -868,11 +868,9 @@ namespace KerbalCombatSystems
                 {
                     missile.targetWeapon = (ModuleWeaponController)order.targetController;
                     missile.targetWeapon.interceptedBy.Add(missile);
-                    FlightManager.interceptorsInFlight.Add(missile);
                 }
                 else
                 {
-                    FlightManager.weaponsInFlight.Add(missile);
                     TargetController.AddIncoming(missile);
                 }
 
@@ -1677,7 +1675,7 @@ namespace KerbalCombatSystems
 
             roboticsDirty = true;
             enginesDirty = true;
-    }
+        }
 
         #endregion
 

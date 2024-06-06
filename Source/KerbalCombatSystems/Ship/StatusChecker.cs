@@ -28,11 +28,11 @@ namespace KerbalCombatSystems
         private ModuleRCS statusRCS;
         private ModuleEngines statusEngine;
         private ModuleWeaponController statusWeapon;
-        private float lastInControl;
-        private const float controlTimeout = 10;
+        private ControlChecker controlChecker;
 
         internal void Start()
         {
+            controlChecker = new ControlChecker(ship);
             StartCoroutine(Checker());
 
             // Delta V.
@@ -79,7 +79,7 @@ namespace KerbalCombatSystems
             if (ship == null)
                 return;
 
-            bool hasControl = CheckControl();
+            bool hasControl = controlChecker.CheckControl();
             ship.hasControl = hasControl;
 
             // Optimised check for parts.
@@ -94,28 +94,8 @@ namespace KerbalCombatSystems
             ship.hasWeapons = hasWeapons;
         }
 
-        private bool CheckControl()
-        {
-            // Check for control.
-            // todo: could use GameEvents.onVesselControlStateChange if hooking up other status checks to events.
-
-            bool spunOut = false;
-            if (Vessel.angularVelocity.magnitude > 50)
-            {
-                if (Time.time - lastInControl > controlTimeout)
-                    spunOut = true;
-            }
-            else
-                lastInControl = Time.time;
-
-            return !spunOut && Vessel.IsControllable;
-        }
-
-
-        private bool Has(PartModule module)
-        {
-            return module != null && module.vessel == Vessel;
-        }
+        private bool Has(PartModule module) =>
+            module != null && module.vessel == Vessel;
 
         internal static bool Healthy(ModuleEngines engine) =>
             engine.EngineIgnited && engine.isOperational;

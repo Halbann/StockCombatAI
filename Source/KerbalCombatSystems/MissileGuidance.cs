@@ -60,7 +60,7 @@ namespace KerbalCombatSystems
         private ModuleWeaponController controller;
         private List<ModuleRCSFX> rcsThrusters;
         private List<ModuleEngines> engines;
-
+        private ControlChecker controlChecker;
 
         // Debugging variables.
 
@@ -148,6 +148,11 @@ namespace KerbalCombatSystems
             fc.RCSPower = 20;
             fc.Drive();
 
+            // Setup control checker.
+            controlChecker = new ControlChecker(this);
+            controlChecker.controlTimeout = 5f;
+            controlChecker.spinoutThreshold = 20f;
+
             // Turn on reaction wheels.
             var wheels = vessel.FindPartModulesImplementing<ModuleReactionWheel>();
             wheels.ForEach(w => w.wheelState = ModuleReactionWheel.WheelState.Active);
@@ -228,7 +233,7 @@ namespace KerbalCombatSystems
             yield return StartCoroutine(GetClearance());
 
             controller.launched = true;
-
+            FlightManager.UpdateMasterLists();
 
             // 4. Get line of sight to the target.
 
@@ -414,7 +419,10 @@ namespace KerbalCombatSystems
             rcsThrusters.RemoveAll(r =>  r == null || !r.useThrottle || (r.isEnabled && r.flameout) || r.vessel != vessel);
 
             accuracy = Vector3.Dot(targetVectorNormal, relVelNrm);
-            if (targetVector.magnitude < shutoffDistance || (!engines.Any() && !rcsThrusters.Any()) && accuracy < 0.99)
+            if (
+                targetVector.magnitude < shutoffDistance 
+                || !engines.Any() && !rcsThrusters.Any() && accuracy < 0.99
+                || !controlChecker.CheckControl())
             {
                 Shutdown();
                 return;

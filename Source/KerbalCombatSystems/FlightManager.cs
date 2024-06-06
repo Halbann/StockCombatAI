@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 
@@ -220,7 +220,7 @@ namespace KerbalCombatSystems
             weaponControllers.Remove(module);
         }
 
-        private void UpdateMasterLists()
+        public static void UpdateMasterLists()
         {
             // Weapons.
             weaponsInFlight.Clear();
