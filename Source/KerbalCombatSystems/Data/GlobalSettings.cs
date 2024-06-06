@@ -24,12 +24,11 @@ namespace KerbalCombatSystems.Data
     internal class GlobalSettings : MonoBehaviour
     {
         private static string PluginData =>
-            Path.Combine(KSPUtil.ApplicationRootPath, "GameData", gameDataName, "PluginData");
+            Path.Combine(KSPUtil.ApplicationRootPath, "GameData", Meta.name, "PluginData");
 
         private static string Config =>
             Path.Combine(PluginData, "settings.cfg");
 
-        internal static string gameDataName = "Kessler";
         internal static int settingsVersion = 1;
 
         private struct CategoryInfo

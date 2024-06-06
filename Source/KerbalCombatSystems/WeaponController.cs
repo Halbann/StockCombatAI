@@ -399,7 +399,7 @@ namespace KerbalCombatSystems
             }
 
             if (mass <= 0)
-                throw new Exception($"[Kessler]: Trying to calculate mass on {vessel.vesselName} {weaponCode} but mass is {mass}.");
+                throw new Exception($"[{Meta.name}]: Trying to calculate mass on {vessel.vesselName} {weaponCode} but mass is {mass}.");
         }
 
         private void CountChildDecouplers()
@@ -438,7 +438,7 @@ namespace KerbalCombatSystems
 
             // todo: investigate if this happens. I don't think it should?
             if (mass == 0)
-                throw new Exception($"[Kessler]: Trying to calculate acceleration on {vessel.vesselName} {weaponCode} but mass is {mass}.");
+                throw new Exception($"[{Meta.name}]: Trying to calculate acceleration on {vessel.vesselName} {weaponCode} but mass is {mass}.");
 
             return thrust / mass;
         }

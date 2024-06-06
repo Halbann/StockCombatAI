@@ -23,8 +23,8 @@
 
         // Boilerplate.
         
-        public override string Section => "Kessler";
-        public override string DisplaySection => "Kessler";
+        public override string Section => Meta.name;
+        public override string DisplaySection => Meta.name;
         public override int SectionOrder => 1;
         public override string Title => "Combat";
         public override GameParameters.GameMode GameMode => GameParameters.GameMode.ANY;

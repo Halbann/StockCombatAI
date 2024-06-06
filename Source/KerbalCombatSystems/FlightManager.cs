@@ -20,7 +20,7 @@ namespace KerbalCombatSystems
 
         // GUI variables.
 
-        private const string title = "Kessler Beta v0.3.0";
+        private static readonly string title = $"{Meta.name} {Meta.stage} v{Meta.version}";
         private ApplicationLauncherButton appLauncherButton;
         private bool guiEnabled = false;
         private bool guiHidden;
@@ -452,7 +452,7 @@ namespace KerbalCombatSystems
             {
                 lockedScroll = true;
                 scrollLock = true;
-                InputLockManager.SetControlLock(ControlTypes.CAMERACONTROLS, "KesslerGUI");
+                InputLockManager.SetControlLock(ControlTypes.CAMERACONTROLS, Meta.name + "GUI");
             }
 
             if (GUI.Button(new Rect(windowRect.width - 18, 2, 16, 16), ""))
@@ -506,13 +506,13 @@ namespace KerbalCombatSystems
 
             if (!hasPRE)
                 WarningMessage("Missing Physics Range Extender! Without PRE, " +
-                    "Kessler can't control vessels further than 200 metres away.");
+                    "the AI can't control vessels further than 200 metres away.");
 
             GUILayout.EndVertical();
             GUI.DragWindow(new Rect(0, 0, 10000, 500));
 
             if (!lockedScroll && scrollLock)
-                InputLockManager.RemoveControlLock("KesslerGUI");
+                InputLockManager.RemoveControlLock(Meta.name + "GUI");
         }
 
         private void WarningMessage(string message)
@@ -825,7 +825,7 @@ namespace KerbalCombatSystems
                 return;
 
             var scenes = ApplicationLauncher.AppScenes.FLIGHT;
-            Texture buttonTexture = GameDatabase.Instance.GetTexture("Kessler/Icons/Button", false);
+            Texture buttonTexture = GameDatabase.Instance.GetTexture($"{Meta.name}/Icons/Button", false);
             appLauncherButton = ApplicationLauncher.Instance.AddModApplication(EnableGui, DisableGui, null, null, null, null, scenes, buttonTexture);
         }
 
@@ -856,7 +856,7 @@ namespace KerbalCombatSystems
 
         public void DisableGui() 
         {
-            InputLockManager.RemoveControlLock("KesslerGUI");
+            InputLockManager.RemoveControlLock(Meta.name + "GUI");
             guiEnabled = false;
             GlobalSettings.Save();
             clickBlocker.gameObject.SetActive(false);

@@ -135,7 +135,7 @@ namespace KerbalCombatSystems.Fireworks
             if (flareMaterial == null)
             {
                 flareMaterial = new Material(Shader.Find("Legacy Shaders/Particles/Additive"));
-                flareMaterial.mainTexture = GameDatabase.Instance.GetTexture("Kessler/Icons/flare", false);
+                flareMaterial.mainTexture = GameDatabase.Instance.GetTexture($"{Meta.name}/Icons/flare", false);
             }
 
             // Create a pivot for the flare to rotate on.
