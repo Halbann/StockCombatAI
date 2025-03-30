@@ -5,6 +5,8 @@ Developed by Hatbat, Spartwo and MiffedStarfish.
 Distributed under CC BY-SA 4.0. Please read about the license before modifying and redistributing.
 https://creativecommons.org/licenses/by-sa/4.0/
 
+Video tutorial: https://www.youtube.com/watch?v=wx1RSLemyL4
+
 # Requirements
 
 - [Continuous Collisions](https://spacedock.info/mod/3067/Continuous%20Collisions)
